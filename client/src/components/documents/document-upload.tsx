@@ -1,12 +1,6 @@
-import React, { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
-import { Button } from "@/components/ui/button";
-import {
+import React, { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { 
   Dialog,
   DialogContent,
   DialogDescription,
@@ -15,40 +9,41 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
+import { 
+  Form, 
+  FormControl, 
+  FormDescription, 
+  FormField, 
+  FormItem, 
+  FormLabel, 
+  FormMessage 
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { FileUpIcon, Loader2 } from "lucide-react";
+import { FileUpIcon, XIcon, AlertTriangleIcon, FileIcon } from "lucide-react";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
-// Define o esquema de validação do formulário
+// Schema de validação do formulário
 const uploadSchema = z.object({
-  name: z.string().min(3, { message: "Nome deve ter no mínimo 3 caracteres" }),
+  name: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
   description: z.string().optional(),
-  category: z.string(),
-  status: z.string().optional(),
-  patientId: z.string().optional(),
-  facilityId: z.string().optional(),
-  evolutionId: z.string().optional(),
-  appointmentId: z.string().optional(),
+  category: z.string().min(1, "Selecione uma categoria"),
+  status: z.string().min(1, "Selecione um status"),
   needsSignature: z.boolean().optional(),
-  parentDocumentId: z.string().optional()
+  file: z.instanceof(File, { message: "Arquivo é obrigatório" }),
 });
 
 type UploadFormValues = z.infer<typeof uploadSchema>;
@@ -71,16 +66,14 @@ export function DocumentUpload({
   appointmentId,
   parentDocumentId,
   onUploadSuccess,
-  buttonLabel = "Novo Documento",
+  buttonLabel = "Upload de Documento",
   buttonVariant = "default"
 }: DocumentUploadProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  
-  // Inicializa o formulário com os valores padrão
+
   const form = useForm<UploadFormValues>({
     resolver: zodResolver(uploadSchema),
     defaultValues: {
@@ -88,175 +81,195 @@ export function DocumentUpload({
       description: "",
       category: "other",
       status: "active",
-      patientId: patientId ? String(patientId) : undefined,
-      facilityId: facilityId ? String(facilityId) : undefined,
-      evolutionId: evolutionId ? String(evolutionId) : undefined,
-      appointmentId: appointmentId ? String(appointmentId) : undefined,
       needsSignature: false,
-      parentDocumentId: parentDocumentId ? String(parentDocumentId) : undefined
+      file: undefined,
     },
   });
-  
-  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const selectedFile = e.target.files[0];
-      setFile(selectedFile);
-      
-      // Se o nome do documento estiver vazio, preenche com o nome do arquivo
-      if (!form.getValues().name) {
-        // Remove a extensão do arquivo
-        const fileName = selectedFile.name.replace(/\.[^/.]+$/, "");
-        form.setValue("name", fileName);
-      }
-    }
-  };
-  
-  const onSubmit = async (values: UploadFormValues) => {
-    if (!file) {
-      toast({
-        title: "Arquivo necessário",
-        description: "Por favor, selecione um arquivo para upload",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    try {
-      setIsUploading(true);
-      
-      // Criar um FormData para enviar o arquivo
+
+  const uploadMutation = useMutation({
+    mutationFn: async (values: UploadFormValues) => {
       const formData = new FormData();
-      formData.append("file", file);
       
-      // Adicionar todos os valores do formulário
-      Object.entries(values).forEach(([key, value]) => {
-        if (value !== undefined && value !== "") {
-          formData.append(key, String(value));
-        }
-      });
+      // Adicionar campos ao FormData
+      formData.append("name", values.name);
+      if (values.description) formData.append("description", values.description);
+      formData.append("category", values.category);
+      formData.append("status", values.status);
+      formData.append("needsSignature", String(values.needsSignature));
+      formData.append("file", values.file);
       
-      const response = await fetch("/api/documents/upload", {
-        method: "POST",
+      if (patientId) formData.append("patientId", patientId.toString());
+      if (facilityId) formData.append("facilityId", facilityId.toString());
+      if (evolutionId) formData.append("evolutionId", evolutionId.toString());
+      if (appointmentId) formData.append("appointmentId", appointmentId.toString());
+      if (parentDocumentId) formData.append("parentDocumentId", parentDocumentId.toString());
+      
+      const response = await fetch('/api/documents/upload', {
+        method: 'POST',
         body: formData,
-        credentials: "include",
+        // Não definimos o Content-Type pois o navegador vai definir automaticamente para multipart/form-data
       });
       
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Erro ao fazer upload do documento");
+        throw new Error(errorData.error || "Erro ao enviar o documento");
       }
       
-      const document = await response.json();
-      
+      return response.json();
+    },
+    onSuccess: (data) => {
       toast({
-        title: "Upload bem-sucedido",
-        description: "Documento enviado com sucesso",
+        title: "Documento enviado com sucesso",
+        description: "O documento foi adicionado ao sistema.",
       });
-      
-      // Limpa o formulário e fecha o diálogo
-      form.reset();
-      setFile(null);
-      setOpen(false);
-      
-      // Invalida a query de documentos para recarregar a lista
       queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
-      
-      // Notifica o componente pai sobre o upload bem-sucedido
-      if (onUploadSuccess) {
-        onUploadSuccess(document);
-      }
-    } catch (error) {
+      if (onUploadSuccess) onUploadSuccess(data);
+      setIsOpen(false);
+      form.reset();
+      setSelectedFile(null);
+    },
+    onError: (error: Error) => {
       toast({
-        title: "Erro no upload",
-        description: error instanceof Error ? error.message : "Ocorreu um erro inesperado",
         variant: "destructive",
+        title: "Erro ao enviar documento",
+        description: error.message,
       });
-    } finally {
-      setIsUploading(false);
+    },
+  });
+
+  const onSubmit = async (values: UploadFormValues) => {
+    uploadMutation.mutate(values);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    
+    if (files && files.length > 0) {
+      const file = files[0];
+      setSelectedFile(file);
+      form.setValue("file", file);
+      
+      // Se o nome estiver vazio, usar o nome do arquivo
+      if (!form.getValues("name")) {
+        form.setValue("name", file.name.split('.')[0]);
+      }
     }
   };
-  
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant={buttonVariant}>
-          <FileUpIcon className="mr-2 h-4 w-4" />
-          {buttonLabel}
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[550px]">
-        <DialogHeader>
-          <DialogTitle>Upload de Documento</DialogTitle>
-          <DialogDescription>
-            Faça upload de um novo documento para o sistema.
-            {parentDocumentId && " Este documento será registrado como uma nova versão."}
-          </DialogDescription>
-        </DialogHeader>
-        
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            {/* Campo para seleção de arquivo */}
-            <div className="grid w-full max-w-md items-center gap-1.5">
-              <Label htmlFor="file" className="text-left">Arquivo</Label>
-              <Input 
-                id="file" 
-                type="file" 
-                accept=".pdf,.doc,.docx" 
-                onChange={onFileChange}
-                disabled={isUploading}
-                required
-              />
-              <p className="text-sm text-muted-foreground">
-                Formatos aceitos: PDF, DOC, DOCX. Tamanho máximo: 10MB.
-              </p>
-            </div>
-            
-            {/* Campo para nome do documento */}
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Nome do Documento</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Nome do documento" {...field} disabled={isUploading} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            {/* Campo para descrição do documento */}
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Descrição (opcional)</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Descreva o documento" 
-                      className="resize-none" 
-                      {...field} 
-                      disabled={isUploading}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            {/* Campo para categoria do documento */}
+
+  const clearSelectedFile = () => {
+    setSelectedFile(null);
+    form.setValue("file", undefined as any);
+    form.setError("file", { message: "Arquivo é obrigatório" });
+  };
+
+  // Renderizar o conteúdo do modal
+  const renderModalContent = () => (
+    <DialogContent className="max-w-md">
+      <DialogHeader>
+        <DialogTitle>Upload de Documento</DialogTitle>
+        <DialogDescription>
+          Faça upload de um novo documento no sistema.
+        </DialogDescription>
+      </DialogHeader>
+      
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <FormField
+            control={form.control}
+            name="file"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Arquivo</FormLabel>
+                <FormControl>
+                  <div className="flex flex-col gap-2">
+                    {selectedFile ? (
+                      <div className="flex items-center p-2 rounded border gap-2 bg-muted/30">
+                        <FileIcon className="h-5 w-5 text-primary" />
+                        <div className="flex-1 truncate">
+                          <p className="text-sm font-medium truncate">{selectedFile.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {(selectedFile.size / 1024).toFixed(1)} KB
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={clearSelectedFile}
+                        >
+                          <XIcon className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center rounded-md border border-dashed p-4">
+                        <div className="flex flex-col items-center gap-2 text-center">
+                          <FileUpIcon className="h-8 w-8 text-muted-foreground" />
+                          <div className="flex flex-col gap-1">
+                            <p className="text-sm font-medium">
+                              Clique para selecionar ou arraste e solte
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Formatos suportados: PDF, DOC, DOCX, JPG, PNG
+                            </p>
+                          </div>
+                          <Input
+                            type="file"
+                            className="absolute inset-0 cursor-pointer opacity-0"
+                            onChange={handleFileChange}
+                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Nome do documento</FormLabel>
+                <FormControl>
+                  <Input placeholder="Ex: Laudo médico" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Descrição</FormLabel>
+                <FormControl>
+                  <Textarea
+                    placeholder="Adicione uma descrição do documento"
+                    {...field}
+                    value={field.value || ""}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <div className="grid grid-cols-2 gap-4">
             <FormField
               control={form.control}
               name="category"
               render={({ field }) => (
-                <FormItem className="flex flex-col">
+                <FormItem>
                   <FormLabel>Categoria</FormLabel>
                   <Select
+                    value={field.value}
                     onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    disabled={isUploading}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -264,7 +277,7 @@ export function DocumentUpload({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="medical_report">Laudo Médico</SelectItem>
+                      <SelectItem value="medical_report">Relatório Médico</SelectItem>
                       <SelectItem value="exam_result">Resultado de Exame</SelectItem>
                       <SelectItem value="treatment_plan">Plano de Tratamento</SelectItem>
                       <SelectItem value="referral">Encaminhamento</SelectItem>
@@ -280,69 +293,81 @@ export function DocumentUpload({
               )}
             />
             
-            {/* Opção de assinatura */}
             <FormField
               control={form.control}
-              name="needsSignature"
+              name="status"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                  <div className="space-y-0.5">
-                    <FormLabel>Requer Assinatura</FormLabel>
-                    <FormDescription>
-                      Selecione se este documento necessita de uma assinatura eletrônica
-                    </FormDescription>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                      disabled={isUploading}
-                    />
-                  </FormControl>
+                <FormItem>
+                  <FormLabel>Status</FormLabel>
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um status" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="draft">Rascunho</SelectItem>
+                      <SelectItem value="pending_signature">Aguardando Assinatura</SelectItem>
+                      <SelectItem value="active">Ativo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
                 </FormItem>
               )}
             />
-            
-            {/* Campos ocultos para IDs relacionados */}
-            {patientId && (
-              <input type="hidden" name="patientId" value={patientId} />
+          </div>
+          
+          <FormField
+            control={form.control}
+            name="needsSignature"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel>Requer assinatura</FormLabel>
+                  <FormDescription>
+                    Marque se este documento precisa ser assinado por um supervisor ou coordenador
+                  </FormDescription>
+                </div>
+              </FormItem>
             )}
-            {facilityId && (
-              <input type="hidden" name="facilityId" value={facilityId} />
-            )}
-            {evolutionId && (
-              <input type="hidden" name="evolutionId" value={evolutionId} />
-            )}
-            {appointmentId && (
-              <input type="hidden" name="appointmentId" value={appointmentId} />
-            )}
-            {parentDocumentId && (
-              <input type="hidden" name="parentDocumentId" value={parentDocumentId} />
-            )}
-            
-            <DialogFooter>
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => setOpen(false)}
-                disabled={isUploading}
-              >
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={isUploading || !file}>
-                {isUploading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Enviando...
-                  </>
-                ) : (
-                  "Enviar Documento"
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
+          />
+          
+          <DialogFooter>
+            <Button
+              type="submit"
+              disabled={uploadMutation.isPending}
+              className="w-full"
+            >
+              {uploadMutation.isPending ? (
+                <>Enviando...</>
+              ) : (
+                <>Enviar documento</>
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
+      </Form>
+    </DialogContent>
+  );
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button variant={buttonVariant} className="flex items-center gap-1">
+          <FileUpIcon className="h-4 w-4" />
+          <span>{buttonLabel}</span>
+        </Button>
+      </DialogTrigger>
+      {renderModalContent()}
     </Dialog>
   );
 }

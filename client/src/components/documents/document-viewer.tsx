@@ -1,379 +1,409 @@
-import React, { useState } from "react";
-import { Document as PdfDocument } from "@shared/schema";
-import { Button } from "@/components/ui/button";
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  FileText, 
-  Download, 
-  PenTool, 
-  History, 
-  Eye, 
-  Tag, 
-  CalendarClock, 
-  User
-} from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { formatDate } from "@/lib/utils";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { DownloadIcon, FileIcon, PenIcon, FileTextIcon, UserIcon, CalendarIcon, HistoryIcon, InfoIcon } from "lucide-react";
+import { Document } from "@shared/schema";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useToast } from '@/hooks/use-toast';
+import { formatDate } from '@/lib/utils';
 
 interface DocumentViewerProps {
-  document: PdfDocument;
-  showActions?: boolean;
-  onDocumentSigned?: (document: PdfDocument) => void;
+  document: Document;
+  onClose: () => void;
 }
 
-export function DocumentViewer({ 
-  document, 
-  showActions = true,
-  onDocumentSigned
-}: DocumentViewerProps) {
+export function DocumentViewer({ document, onClose }: DocumentViewerProps) {
+  const [isOpen, setIsOpen] = useState(true);
+  const [tab, setTab] = useState("preview");
   const { toast } = useToast();
-  const [isSignDialogOpen, setIsSignDialogOpen] = useState(false);
-  const [isSigning, setIsSigning] = useState(false);
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  
-  const handleSignDocument = async () => {
-    if (!document.id) return;
-    
-    try {
-      setIsSigning(true);
-      
-      const signatureInfo = {
-        userInfo: "Assinado eletronicamente"
-      };
-      
-      const response = await apiRequest(
-        "PUT", 
-        `/api/documents/${document.id}/sign`, 
-        { signatureInfo }
-      );
-      
-      if (response.ok) {
-        const signedDocument = await response.json();
-        
-        toast({
-          title: "Documento assinado",
-          description: "O documento foi assinado com sucesso",
-        });
-        
-        setIsSignDialogOpen(false);
-        
-        if (onDocumentSigned) {
-          onDocumentSigned(signedDocument);
+  const queryClient = useQueryClient();
+
+  // Função para lidar com o fechamento do modal
+  const handleClose = () => {
+    setIsOpen(false);
+    if (onClose) onClose();
+  };
+
+  // Obter extensão do arquivo para determinar o tipo de visualização
+  const fileExtension = document.fileUrl.split('.').pop()?.toLowerCase() || '';
+  const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension);
+  const isPDF = fileExtension === 'pdf';
+
+  // Mutação para assinar documentos
+  const signMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`/api/documents/${document.id}/sign`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
         }
-      } else {
-        const error = await response.json();
-        throw new Error(error.error || "Erro ao assinar documento");
-      }
-    } catch (error) {
-      toast({
-        title: "Erro ao assinar documento",
-        description: error instanceof Error ? error.message : "Ocorreu um erro inesperado",
-        variant: "destructive",
       });
-    } finally {
-      setIsSigning(false);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Erro ao assinar documento");
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Documento assinado com sucesso",
+        description: "O documento foi assinado corretamente."
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
+      handleClose();
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Erro ao assinar documento",
+        description: error.message
+      });
     }
+  });
+
+  const handleDownload = () => {
+    window.open(document.fileUrl, '_blank');
   };
-  
-  const renderStatusBadge = (status: string) => {
-    let variant: "default" | "secondary" | "destructive" | "outline" = "default";
+
+  const handleSignDocument = () => {
+    signMutation.mutate();
+  };
+
+  function getCategoryLabel(category: string): string {
+    const categories: Record<string, string> = {
+      'medical_report': 'Relatório Médico',
+      'exam_result': 'Resultado de Exame',
+      'treatment_plan': 'Plano de Tratamento',
+      'referral': 'Encaminhamento',
+      'legal_document': 'Documento Legal',
+      'consent_form': 'Termo de Consentimento',
+      'evolution_note': 'Nota de Evolução',
+      'administrative': 'Administrativo',
+      'other': 'Outro'
+    };
     
+    return categories[category] || category;
+  }
+  
+  function getStatusLabel(status: string): string {
+    const statuses: Record<string, string> = {
+      'draft': 'Rascunho',
+      'pending_signature': 'Aguardando Assinatura',
+      'signed': 'Assinado',
+      'archived': 'Arquivado',
+      'active': 'Ativo'
+    };
+    
+    return statuses[status] || status;
+  }
+  
+  function getStatusBadgeVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
     switch (status) {
-      case "draft":
-        variant = "outline";
-        break;
-      case "pending_signature":
-        variant = "secondary";
-        break;
-      case "signed":
-        variant = "default";
-        break;
-      case "archived":
-        variant = "destructive";
-        break;
+      case 'draft':
+        return "outline";
+      case 'pending_signature':
+        return "secondary";
+      case 'signed':
+        return "default";
+      case 'archived':
+        return "destructive";
+      case 'active':
+        return "default";
       default:
-        variant = "default";
+        return "outline";
     }
-    
-    return (
-      <Badge variant={variant}>
-        {status === "draft" && "Rascunho"}
-        {status === "pending_signature" && "Aguardando Assinatura"}
-        {status === "signed" && "Assinado"}
-        {status === "archived" && "Arquivado"}
-        {status === "active" && "Ativo"}
-      </Badge>
-    );
+  }
+
+  // Renderizar o conteúdo do documento com base no tipo
+  const renderDocumentContent = () => {
+    if (isImage) {
+      return (
+        <div className="flex justify-center p-4 bg-muted/20 rounded-md">
+          <img 
+            src={document.fileUrl} 
+            alt={document.name} 
+            className="max-h-[60vh] object-contain"
+          />
+        </div>
+      );
+    } else if (isPDF) {
+      return (
+        <div className="flex flex-col items-center justify-center p-4 bg-muted/20 rounded-md h-[60vh]">
+          <iframe 
+            src={`${document.fileUrl}#view=FitH`} 
+            title={document.name}
+            className="w-full h-full border-0"
+          />
+        </div>
+      );
+    } else {
+      // Para outros tipos de documentos que não podem ser exibidos diretamente
+      return (
+        <div className="flex flex-col items-center justify-center p-8 bg-muted/20 rounded-md h-[300px]">
+          <FileIcon className="h-16 w-16 text-muted-foreground mb-4" />
+          <p className="text-center text-muted-foreground mb-2">
+            Não é possível visualizar este tipo de documento diretamente.
+          </p>
+          <Button 
+            variant="outline" 
+            onClick={handleDownload}
+            className="mt-4"
+          >
+            <DownloadIcon className="mr-2 h-4 w-4" />
+            Fazer download
+          </Button>
+        </div>
+      );
+    }
   };
-  
-  const renderCategoryBadge = (category: string) => {
-    return (
-      <Badge variant="outline" className="bg-primary/10">
-        {category === "medical_report" && "Laudo Médico"}
-        {category === "exam_result" && "Resultado de Exame"}
-        {category === "treatment_plan" && "Plano de Tratamento"}
-        {category === "referral" && "Encaminhamento"}
-        {category === "legal_document" && "Documento Legal"}
-        {category === "consent_form" && "Termo de Consentimento"}
-        {category === "evolution_note" && "Nota de Evolução"}
-        {category === "administrative" && "Administrativo"}
-        {category === "other" && "Outro"}
-      </Badge>
-    );
-  };
-  
+
   return (
-    <>
-      <Card className="mb-4 overflow-hidden">
-        <CardHeader className="pb-2">
-          <div className="flex justify-between items-start">
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0">
+        <DialogHeader className="p-6 pb-2">
+          <div className="flex items-start justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
+              <DialogTitle className="text-xl flex items-center gap-2">
+                <FileTextIcon className="h-5 w-5" />
                 {document.name}
-              </CardTitle>
-              <CardDescription>
-                {document.description || "Sem descrição"}
-              </CardDescription>
+              </DialogTitle>
+              <DialogDescription className="mt-1.5">
+                {document.description || "Sem descrição disponível"}
+              </DialogDescription>
             </div>
-            <div className="flex gap-2">
-              {renderStatusBadge(document.status)}
-              {renderCategoryBadge(document.category)}
+            <div className="flex items-center gap-2">
+              <Badge variant={getStatusBadgeVariant(document.status)}>
+                {getStatusLabel(document.status)}
+              </Badge>
+              <Badge variant="outline">{getCategoryLabel(document.category)}</Badge>
             </div>
           </div>
-        </CardHeader>
+        </DialogHeader>
         
-        <CardContent className="pb-2">
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div className="flex items-center gap-1 text-muted-foreground">
-              <CalendarClock className="h-4 w-4" />
-              Criado em: {formatDate(document.createdAt)}
-            </div>
-            
-            {document.uploader && (
-              <div className="flex items-center gap-1 text-muted-foreground">
-                <User className="h-4 w-4" />
-                Por: {document.uploader.name}
-              </div>
-            )}
-            
-            {document.version > 1 && (
-              <div className="flex items-center gap-1 text-muted-foreground">
-                <History className="h-4 w-4" />
-                Versão: {document.version}
-              </div>
-            )}
-          </div>
-        </CardContent>
+        <Separator />
         
-        <CardFooter className="pt-2 flex justify-between">
-          <div className="flex gap-2">
-            <a 
-              href={document.fileUrl} 
-              target="_blank" 
-              rel="noopener noreferrer"
-            >
-              <Button variant="outline" size="sm">
-                <Eye className="h-4 w-4 mr-1" />
-                Visualizar
-              </Button>
-            </a>
-            
-            <a 
-              href={document.fileUrl} 
-              download={document.name}
-              target="_blank" 
-              rel="noopener noreferrer"
-            >
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-1" />
-                Download
-              </Button>
-            </a>
+        <Tabs value={tab} onValueChange={setTab} className="flex-1 flex flex-col">
+          <div className="px-6">
+            <TabsList className="mt-2">
+              <TabsTrigger value="preview" className="flex items-center gap-1.5">
+                <FileTextIcon className="h-4 w-4" />
+                <span>Visualizar</span>
+              </TabsTrigger>
+              <TabsTrigger value="details" className="flex items-center gap-1.5">
+                <InfoIcon className="h-4 w-4" />
+                <span>Detalhes</span>
+              </TabsTrigger>
+              {document.versions && document.versions.length > 0 && (
+                <TabsTrigger value="history" className="flex items-center gap-1.5">
+                  <HistoryIcon className="h-4 w-4" />
+                  <span>Histórico</span>
+                </TabsTrigger>
+              )}
+            </TabsList>
           </div>
           
-          {showActions && (
-            <div className="flex gap-2">
-              <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Tag className="h-4 w-4 mr-1" />
-                    Detalhes
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-3xl">
-                  <DialogHeader>
-                    <DialogTitle>Detalhes do Documento</DialogTitle>
-                  </DialogHeader>
-                  <Tabs defaultValue="info">
-                    <TabsList>
-                      <TabsTrigger value="info">Informações</TabsTrigger>
-                      <TabsTrigger value="preview">Visualizar</TabsTrigger>
-                      {document.versions && document.versions.length > 0 && (
-                        <TabsTrigger value="versions">Versões</TabsTrigger>
-                      )}
-                    </TabsList>
-                    <TabsContent value="info">
-                      <div className="grid grid-cols-2 gap-4 py-4">
-                        <div>
-                          <h4 className="text-sm font-semibold">Nome:</h4>
-                          <p>{document.name}</p>
+          <TabsContent value="preview" className="flex-1 px-6 pb-6 pt-4 m-0">
+            <ScrollArea className="h-full">
+              {renderDocumentContent()}
+            </ScrollArea>
+          </TabsContent>
+          
+          <TabsContent value="details" className="flex-1 px-6 pb-6 pt-4 m-0">
+            <ScrollArea className="h-full">
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Card>
+                    <CardContent className="pt-6">
+                      <h3 className="text-sm font-medium flex items-center gap-1.5 mb-3">
+                        <FileTextIcon className="h-4 w-4" />
+                        <span>Informações do Documento</span>
+                      </h3>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Nome:</span>
+                          <span className="font-medium">{document.name}</span>
                         </div>
-                        <div>
-                          <h4 className="text-sm font-semibold">Status:</h4>
-                          <p>{renderStatusBadge(document.status)}</p>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Tipo de arquivo:</span>
+                          <span className="font-medium">{document.fileType}</span>
                         </div>
-                        <div>
-                          <h4 className="text-sm font-semibold">Categoria:</h4>
-                          <p>{renderCategoryBadge(document.category)}</p>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Tamanho:</span>
+                          <span className="font-medium">
+                            {document.fileSize 
+                              ? (document.fileSize / 1024).toFixed(1) + ' KB' 
+                              : 'Desconhecido'}
+                          </span>
                         </div>
-                        <div>
-                          <h4 className="text-sm font-semibold">Tipo de Arquivo:</h4>
-                          <p>{document.fileType}</p>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Categoria:</span>
+                          <span className="font-medium">{getCategoryLabel(document.category)}</span>
                         </div>
-                        <div>
-                          <h4 className="text-sm font-semibold">Tamanho:</h4>
-                          <p>{(document.fileSize / 1024).toFixed(2)} KB</p>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Status:</span>
+                          <Badge variant={getStatusBadgeVariant(document.status)}>
+                            {getStatusLabel(document.status)}
+                          </Badge>
                         </div>
-                        <div>
-                          <h4 className="text-sm font-semibold">Criado em:</h4>
-                          <p>{formatDate(document.createdAt)}</p>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Requer assinatura:</span>
+                          <span className="font-medium">{document.needsSignature ? 'Sim' : 'Não'}</span>
                         </div>
-                        <div>
-                          <h4 className="text-sm font-semibold">Última atualização:</h4>
-                          <p>{formatDate(document.updatedAt)}</p>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Versão:</span>
+                          <span className="font-medium">{document.version || 1}</span>
                         </div>
-                        <div>
-                          <h4 className="text-sm font-semibold">Versão:</h4>
-                          <p>{document.version}</p>
-                        </div>
-                        {document.uploader && (
-                          <div>
-                            <h4 className="text-sm font-semibold">Enviado por:</h4>
-                            <p>{document.uploader.name}</p>
-                          </div>
-                        )}
-                        {document.needsSignature && (
-                          <div>
-                            <h4 className="text-sm font-semibold">Requer Assinatura:</h4>
-                            <p>{document.status === 'signed' ? 'Assinado' : 'Sim, aguardando assinatura'}</p>
-                          </div>
-                        )}
-                        {document.description && (
-                          <div className="col-span-2">
-                            <h4 className="text-sm font-semibold">Descrição:</h4>
-                            <p>{document.description}</p>
-                          </div>
-                        )}
                       </div>
-                    </TabsContent>
-                    <TabsContent value="preview">
-                      <div className="py-4">
-                        <iframe 
-                          src={document.fileUrl} 
-                          className="w-full h-[60vh] border rounded"
-                          title={document.name}
-                        />
-                      </div>
-                    </TabsContent>
-                    {document.versions && document.versions.length > 0 && (
-                      <TabsContent value="versions">
-                        <div className="py-4">
-                          <h3 className="text-lg font-semibold mb-2">Histórico de Versões</h3>
-                          <div className="space-y-2">
-                            {document.versions.map((version) => (
-                              <Card key={version.id}>
-                                <CardHeader className="py-2">
-                                  <CardTitle className="text-sm font-medium">
-                                    Versão {version.version} - {formatDate(version.createdAt)}
-                                  </CardTitle>
-                                </CardHeader>
-                                <CardFooter className="py-2">
-                                  <div className="flex gap-2">
-                                    <a 
-                                      href={version.fileUrl} 
-                                      target="_blank" 
-                                      rel="noopener noreferrer"
-                                    >
-                                      <Button variant="outline" size="sm">
-                                        <Eye className="h-3 w-3 mr-1" />
-                                        Visualizar
-                                      </Button>
-                                    </a>
-                                  </div>
-                                </CardFooter>
-                              </Card>
-                            ))}
-                          </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardContent className="pt-6">
+                      <h3 className="text-sm font-medium flex items-center gap-1.5 mb-3">
+                        <UserIcon className="h-4 w-4" />
+                        <span>Informações de Criação</span>
+                      </h3>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Adicionado por:</span>
+                          <span className="font-medium">
+                            {document.uploader?.name || 'Desconhecido'}
+                          </span>
                         </div>
-                      </TabsContent>
-                    )}
-                  </Tabs>
-                </DialogContent>
-              </Dialog>
-              
-              {document.needsSignature && document.status !== 'signed' && (
-                <Dialog open={isSignDialogOpen} onOpenChange={setIsSignDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="default" size="sm">
-                      <PenTool className="h-4 w-4 mr-1" />
-                      Assinar
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Assinar Documento</DialogTitle>
-                    </DialogHeader>
-                    <div className="py-4">
-                      <p className="mb-4">
-                        Você está prestes a assinar digitalmente o documento "{document.name}".
-                        Esta ação não pode ser desfeita.
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Data de criação:</span>
+                          <span className="font-medium">{formatDate(document.createdAt)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Última atualização:</span>
+                          <span className="font-medium">{formatDate(document.updatedAt)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Paciente:</span>
+                          <span className="font-medium">
+                            {document.patient?.fullName || 'Nenhum'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Unidade:</span>
+                          <span className="font-medium">
+                            {document.facility?.name || 'Nenhuma'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Evolução:</span>
+                          <span className="font-medium">
+                            {document.evolution?.title || 'Nenhuma'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Consulta:</span>
+                          <span className="font-medium">
+                            {document.appointment ? formatDate(document.appointment.startTime) : 'Nenhuma'}
+                          </span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+                
+                {document.description && (
+                  <Card>
+                    <CardContent className="pt-6">
+                      <h3 className="text-sm font-medium mb-2">Descrição</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {document.description}
                       </p>
-                      <iframe 
-                        src={document.fileUrl} 
-                        className="w-full h-[300px] border rounded mb-4"
-                        title={document.name}
-                      />
-                      <div className="flex justify-end gap-2">
-                        <Button 
-                          variant="outline" 
-                          onClick={() => setIsSignDialogOpen(false)}
-                          disabled={isSigning}
-                        >
-                          Cancelar
-                        </Button>
-                        <Button 
-                          onClick={handleSignDocument}
-                          disabled={isSigning}
-                        >
-                          {isSigning ? "Assinando..." : "Confirmar Assinatura"}
-                        </Button>
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </ScrollArea>
+          </TabsContent>
+          
+          {document.versions && document.versions.length > 0 && (
+            <TabsContent value="history" className="flex-1 px-6 pb-6 pt-4 m-0">
+              <ScrollArea className="h-full">
+                <div className="space-y-4">
+                  <h3 className="text-sm font-medium flex items-center gap-1.5">
+                    <HistoryIcon className="h-4 w-4" />
+                    <span>Histórico de Versões</span>
+                  </h3>
+                  
+                  <div className="space-y-3">
+                    {document.versions.map((version, index) => (
+                      <Card key={version.id} className="overflow-hidden">
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <h4 className="text-sm font-medium">
+                                Versão {version.version || index + 1}
+                              </h4>
+                              <p className="text-xs text-muted-foreground">
+                                {formatDate(version.createdAt)}
+                              </p>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => window.open(version.fileUrl, '_blank')}
+                              >
+                                <DownloadIcon className="h-3.5 w-3.5 mr-1" />
+                                Download
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              </ScrollArea>
+            </TabsContent>
+          )}
+        </Tabs>
+        
+        <Separator />
+        
+        <DialogFooter className="p-6 pt-4">
+          <div className="flex gap-3 w-full justify-between">
+            <Button variant="outline" onClick={handleClose}>
+              Fechar
+            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={handleDownload}>
+                <DownloadIcon className="mr-2 h-4 w-4" />
+                Download
+              </Button>
+              
+              {document.status === 'pending_signature' && document.needsSignature && (
+                <Button 
+                  onClick={handleSignDocument}
+                  disabled={signMutation.isPending}
+                >
+                  <PenIcon className="mr-2 h-4 w-4" />
+                  {signMutation.isPending ? 'Assinando...' : 'Assinar'}
+                </Button>
               )}
             </div>
-          )}
-        </CardFooter>
-      </Card>
-    </>
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
