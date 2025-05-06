@@ -170,6 +170,28 @@ export const evolutions = pgTable('evolutions', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+// Document Category Enum
+export const documentCategoryEnum = pgEnum('document_category', [
+  'medical_report', 
+  'exam_result', 
+  'treatment_plan', 
+  'referral', 
+  'legal_document', 
+  'consent_form',
+  'evolution_note',
+  'administrative',
+  'other'
+]);
+
+// Document Status Enum
+export const documentStatusEnum = pgEnum('document_status', [
+  'draft', 
+  'pending_signature', 
+  'signed', 
+  'archived',
+  'active'
+]);
+
 // Documents Table
 export const documents = pgTable('documents', {
   id: serial('id').primaryKey(),
@@ -177,10 +199,19 @@ export const documents = pgTable('documents', {
   fileUrl: text('file_url').notNull(),
   fileType: text('file_type').notNull(),
   fileSize: integer('file_size').notNull(),
+  description: text('description'),
+  category: documentCategoryEnum('category').default('other').notNull(),
+  status: documentStatusEnum('status').default('active').notNull(),
   patientId: integer('patient_id').references(() => patients.id),
   facilityId: integer('facility_id').references(() => facilities.id),
+  evolutionId: integer('evolution_id').references(() => evolutions.id),
+  appointmentId: integer('appointment_id').references(() => appointments.id),
   uploadedBy: integer('uploaded_by').references(() => users.id).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  version: integer('version').default(1).notNull(),
+  parentDocumentId: integer('parent_document_id').references(() => documents.id),
+  needsSignature: boolean('needs_signature').default(false).notNull(),
 });
 
 // Chat Messages Table
