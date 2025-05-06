@@ -1143,6 +1143,186 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Documents endpoints
+  app.get(`${apiPrefix}/documents`, async (req: Request, res: Response) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Não autenticado" });
+      }
+
+      // Extrair parâmetros de consulta
+      const { 
+        patientId, 
+        facilityId, 
+        evolutionId, 
+        appointmentId, 
+        category, 
+        status,
+        onlyLatestVersions,
+        includeUploaderInfo,
+        search
+      } = req.query;
+
+      // Construir a consulta base
+      let query = db.select().from(documents);
+      
+      // Aplicar filtros conforme necessário
+      if (patientId) {
+        query = query.where(eq(documents.patientId, Number(patientId)));
+      }
+      
+      if (facilityId) {
+        query = query.where(eq(documents.facilityId, Number(facilityId)));
+      }
+      
+      if (evolutionId) {
+        query = query.where(eq(documents.evolutionId, Number(evolutionId)));
+      }
+      
+      if (appointmentId) {
+        query = query.where(eq(documents.appointmentId, Number(appointmentId)));
+      }
+      
+      if (category && category !== 'all') {
+        query = query.where(eq(documents.category, String(category)));
+      }
+      
+      if (status && status !== 'all') {
+        query = query.where(eq(documents.status, String(status)));
+      }
+      
+      // Se solicitado, apenas mostrar as versões mais recentes
+      if (onlyLatestVersions === 'true') {
+        query = query.where(isNull(documents.parentDocumentId));
+      }
+      
+      // Se houver uma pesquisa, aplicar à descrição e nome
+      if (search) {
+        const searchTerm = `%${search}%`;
+        query = query.where(
+          or(
+            ilike(documents.name, searchTerm),
+            ilike(documents.description || '', searchTerm)
+          )
+        );
+      }
+      
+      // Ordenar por data de criação (mais recentes primeiro)
+      query = query.orderBy(desc(documents.createdAt));
+      
+      // Executar a consulta
+      const documentsList = await query;
+      
+      // Se solicitado, incluir informações do uploader
+      if (includeUploaderInfo === 'true') {
+        const userIds = [...new Set(documentsList.map(doc => doc.uploadedBy))];
+        const users = await db.query.users.findMany({
+          where: inArray(users.id, userIds),
+          columns: {
+            id: true,
+            username: true,
+            name: true,
+            role: true
+          }
+        });
+        
+        const usersMap = users.reduce((acc, user) => {
+          acc[user.id] = user;
+          return acc;
+        }, {} as Record<number, typeof users[number]>);
+        
+        // Combinar informações de documentos e usuários
+        const documentsWithUploader = documentsList.map(doc => ({
+          ...doc,
+          uploader: usersMap[doc.uploadedBy] || null
+        }));
+        
+        res.json(documentsWithUploader);
+      } else {
+        res.json(documentsList);
+      }
+    } catch (error) {
+      console.error("Error fetching documents:", error);
+      res.status(500).json({ error: "Erro ao buscar documentos" });
+    }
+  });
+  
+  app.get(`${apiPrefix}/documents/:id`, async (req: Request, res: Response) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Não autenticado" });
+      }
+      
+      const documentId = Number(req.params.id);
+      const document = await db.query.documents.findFirst({
+        where: eq(documents.id, documentId),
+        with: {
+          uploader: {
+            columns: {
+              id: true,
+              username: true,
+              name: true,
+              role: true
+            }
+          },
+          patient: true,
+          facility: true,
+          evolution: true,
+          appointment: true,
+          versions: {
+            orderBy: desc(documents.version)
+          }
+        }
+      });
+      
+      if (!document) {
+        return res.status(404).json({ error: "Documento não encontrado" });
+      }
+      
+      res.json(document);
+    } catch (error) {
+      console.error("Error fetching document:", error);
+      res.status(500).json({ error: "Erro ao buscar documento" });
+    }
+  });
+  
+  app.put(`${apiPrefix}/documents/:id/sign`, async (req: Request, res: Response) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Não autenticado" });
+      }
+      
+      const documentId = Number(req.params.id);
+      const document = await db.query.documents.findFirst({
+        where: eq(documents.id, documentId)
+      });
+      
+      if (!document) {
+        return res.status(404).json({ error: "Documento não encontrado" });
+      }
+      
+      if (document.status === 'signed') {
+        return res.status(400).json({ error: "Documento já foi assinado" });
+      }
+      
+      if (!document.needsSignature) {
+        return res.status(400).json({ error: "Este documento não requer assinatura" });
+      }
+      
+      const [signedDocument] = await db.update(documents)
+        .set({
+          status: 'signed',
+          updatedAt: new Date()
+        })
+        .where(eq(documents.id, documentId))
+        .returning();
+      
+      res.json(signedDocument);
+    } catch (error) {
+      console.error("Error signing document:", error);
+      res.status(500).json({ error: "Erro ao assinar documento" });
+    }
+  });
+  
   app.post(`${apiPrefix}/documents/upload`, upload.single("file"), async (req: Request, res: Response) => {
     try {
       if (!req.isAuthenticated()) {
@@ -1263,182 +1443,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get document by ID, with optional version history
-  app.get(`${apiPrefix}/documents/:id`, async (req, res) => {
-    try {
-      if (!req.isAuthenticated()) {
-        return res.status(403).json({ error: "Acesso não autorizado" });
-      }
-
-      const { id } = req.params;
-      const includeVersions = req.query.includeVersions === 'true';
-      const includeRelated = req.query.includeRelated === 'true';
-      
-      const document = await db.query.documents.findFirst({
-        where: eq(documents.id, parseInt(id)),
-        with: {
-          uploader: {
-            columns: {
-              id: true,
-              name: true,
-              username: true,
-              role: true
-            }
-          }
-        }
-      });
-      
-      if (!document) {
-        return res.status(404).json({ error: "Documento não encontrado" });
-      }
-      
-      // Prepare response with base document
-      const response = { ...document };
-      
-      // Add versions information if requested
-      if (includeVersions) {
-        // If this is a parent document, get all child versions
-        if (!document.parentDocumentId) {
-          const versions = await db.query.documents.findMany({
-            where: eq(documents.parentDocumentId, document.id),
-            orderBy: asc(documents.version)
-          });
-          
-          response.versions = versions;
-        } 
-        // If this is a child document, get parent and siblings
-        else {
-          const parent = await db.query.documents.findFirst({
-            where: eq(documents.id, document.parentDocumentId)
-          });
-          
-          const siblings = await db.query.documents.findMany({
-            where: eq(documents.parentDocumentId, document.parentDocumentId),
-            orderBy: asc(documents.version)
-          });
-          
-          response.parent = parent;
-          response.siblings = siblings;
-        }
-      }
-      
-      // Add related records information if requested
-      if (includeRelated) {
-        if (document.patientId) {
-          response.patient = await db.query.patients.findFirst({
-            where: eq(patients.id, document.patientId),
-            columns: {
-              id: true,
-              name: true,
-              dateOfBirth: true,
-              contactInfo: true
-            }
-          });
-        }
-        
-        if (document.facilityId) {
-          response.facility = await db.query.facilities.findFirst({
-            where: eq(facilities.id, document.facilityId),
-            columns: {
-              id: true,
-              name: true,
-              address: true,
-              phone: true
-            }
-          });
-        }
-        
-        if (document.evolutionId) {
-          response.evolution = await db.query.evolutions.findFirst({
-            where: eq(evolutions.id, document.evolutionId),
-            columns: {
-              id: true,
-              title: true,
-              date: true,
-              status: true
-            }
-          });
-        }
-        
-        if (document.appointmentId) {
-          response.appointment = await db.query.appointments.findFirst({
-            where: eq(appointments.id, document.appointmentId),
-            columns: {
-              id: true,
-              startTime: true,
-              endTime: true,
-              status: true,
-              procedureType: true
-            }
-          });
-        }
-      }
-      
-      res.json(response);
-    } catch (error) {
-      console.error("Error fetching document:", error);
-      res.status(500).json({ error: "Erro ao buscar documento" });
-    }
-  });
-  
-  // Sign a document
-  app.put(`${apiPrefix}/documents/:id/sign`, async (req, res) => {
-    try {
-      if (!req.isAuthenticated()) {
-        return res.status(403).json({ error: "Acesso não autorizado" });
-      }
-      
-      const { id } = req.params;
-      const { signatureInfo } = req.body;
-      
-      // Get document
-      const document = await db.query.documents.findFirst({
-        where: eq(documents.id, parseInt(id))
-      });
-      
-      if (!document) {
-        return res.status(404).json({ error: "Documento não encontrado" });
-      }
-      
-      if (!document.needsSignature) {
-        return res.status(400).json({ error: "Documento não requer assinatura" });
-      }
-      
-      if (document.status === 'signed') {
-        return res.status(400).json({ error: "Documento já foi assinado" });
-      }
-      
-      // Update document
-      const [updatedDocument] = await db.update(documents)
-        .set({ 
-          status: 'signed',
-          description: signatureInfo 
-            ? `${document.description ? document.description + ' | ' : ''}Assinado por ${req.user.name} em ${new Date().toISOString()}`
-            : document.description,
-          updatedAt: new Date()
-        })
-        .where(eq(documents.id, parseInt(id)))
-        .returning();
-        
-      // Create notification for document owner
-      if (updatedDocument.uploadedBy !== req.user.id) {
-        await db.insert(notifications).values({
-          userId: updatedDocument.uploadedBy,
-          title: "Documento assinado",
-          content: `O documento "${updatedDocument.name}" foi assinado por ${req.user.name}.`,
-          type: "document_signed",
-          referenceId: updatedDocument.id,
-          referenceType: "document"
-        });
-      }
-      
-      res.json(updatedDocument);
-    } catch (error) {
-      console.error("Error signing document:", error);
-      res.status(500).json({ error: "Erro ao assinar documento" });
-    }
-  });
-  
+  // Endpoint para listar documentos
   app.get(`${apiPrefix}/documents`, async (req, res) => {
     try {
       const patientId = req.query.patientId as string | undefined;

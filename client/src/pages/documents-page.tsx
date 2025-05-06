@@ -1,304 +1,358 @@
-import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { 
+  Card, 
+  CardContent, 
+  CardHeader, 
+  CardTitle,
+  CardDescription 
+} from "@/components/ui/card";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import { 
+  Tabs, 
+  TabsContent, 
+  TabsList, 
+  TabsTrigger 
+} from "@/components/ui/tabs";
+import { 
+  Form, 
+  FormControl, 
+  FormField, 
+  FormItem, 
+  FormLabel, 
+  FormMessage 
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { FileUpIcon, FileTextIcon, FolderIcon, SearchIcon, FilterIcon } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { cn, formatDate, getStatusClass } from "@/lib/utils";
 import { DocumentList } from "@/components/documents/document-list";
 import { DocumentUpload } from "@/components/documents/document-upload";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import { 
-  BookOpen, 
-  Building, 
-  Calendar, 
-  User,
-  FileArchive,
-  FileCheck,
-  FilePenLine,
-} from "lucide-react";
+import { Document, documentCategoryEnum, documentStatusEnum } from "@shared/schema";
+import { Loader2 } from "lucide-react";
+
+const searchSchema = z.object({
+  search: z.string().optional(),
+  category: z.string().optional(),
+  status: z.string().optional(),
+});
+
+type SearchValues = z.infer<typeof searchSchema>;
 
 export default function DocumentsPage() {
-  const [selectedPatient, setSelectedPatient] = useState<string>("all");
-  const [selectedFacility, setSelectedFacility] = useState<string>("all");
-  
-  // Buscar pacientes
-  const { data: patients } = useQuery({
+  const [activeTab, setActiveTab] = useState("todos");
+  const [selectedPatientId, setSelectedPatientId] = useState<number | null>(null);
+  const [selectedFacilityId, setSelectedFacilityId] = useState<number | null>(null);
+  const [searchParams, setSearchParams] = useState<SearchValues>({ 
+    search: "", 
+    category: "all", 
+    status: "all" 
+  });
+
+  const form = useForm<SearchValues>({
+    resolver: zodResolver(searchSchema),
+    defaultValues: {
+      search: "",
+      category: "all",
+      status: "all",
+    },
+  });
+
+  const { data: patients, isLoading: isLoadingPatients } = useQuery({
     queryKey: ['/api/patients'],
+    enabled: activeTab === "pacientes"
   });
-  
-  // Buscar unidades
-  const { data: facilities } = useQuery({
+
+  const { data: facilities, isLoading: isLoadingFacilities } = useQuery({
     queryKey: ['/api/facilities'],
+    enabled: activeTab === "unidades"
   });
-  
+
+  const onSubmit = (values: SearchValues) => {
+    setSearchParams(values);
+  };
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case "todos":
+        return (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Todos os Documentos</CardTitle>
+                <CardDescription>
+                  Visualize e gerencie todos os documentos do sistema
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <DocumentList 
+                  showFilters 
+                  showAddButton 
+                  className="mt-4" 
+                  statusFilter={searchParams.status !== "all" ? searchParams.status : undefined}
+                  searchQuery={searchParams.search}
+                  categoryFilter={searchParams.category !== "all" ? searchParams.category : undefined}
+                />
+              </CardContent>
+            </Card>
+          </div>
+        );
+      
+      case "pacientes":
+        return (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Documentos por Paciente</CardTitle>
+                <CardDescription>
+                  Selecione um paciente para visualizar seus documentos
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-4 mb-8">
+                  <div className="w-full">
+                    <Select
+                      value={selectedPatientId?.toString() || ""}
+                      onValueChange={(value) => setSelectedPatientId(value ? parseInt(value) : null)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Selecione um paciente" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="select_patient">Selecione um paciente</SelectItem>
+                        {isLoadingPatients ? (
+                          <div className="flex items-center justify-center py-2">
+                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                          </div>
+                        ) : (
+                          patients?.map((patient: any) => (
+                            <SelectItem key={patient.id} value={patient.id.toString()}>
+                              {patient.fullName}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                {selectedPatientId && (
+                  <DocumentList 
+                    patientId={selectedPatientId} 
+                    showFilters 
+                    showAddButton 
+                    statusFilter={searchParams.status !== "all" ? searchParams.status : undefined}
+                    searchQuery={searchParams.search}
+                    categoryFilter={searchParams.category !== "all" ? searchParams.category : undefined}
+                  />
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        );
+      
+      case "unidades":
+        return (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Documentos por Unidade</CardTitle>
+                <CardDescription>
+                  Selecione uma unidade para visualizar seus documentos
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-4 mb-8">
+                  <div className="w-full">
+                    <Select
+                      value={selectedFacilityId?.toString() || ""}
+                      onValueChange={(value) => setSelectedFacilityId(value ? parseInt(value) : null)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Selecione uma unidade" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="select_facility">Selecione uma unidade</SelectItem>
+                        {isLoadingFacilities ? (
+                          <div className="flex items-center justify-center py-2">
+                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                          </div>
+                        ) : (
+                          facilities?.map((facility: any) => (
+                            <SelectItem key={facility.id} value={facility.id.toString()}>
+                              {facility.name}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                {selectedFacilityId && (
+                  <DocumentList 
+                    facilityId={selectedFacilityId} 
+                    showFilters 
+                    showAddButton 
+                    statusFilter={searchParams.status !== "all" ? searchParams.status : undefined}
+                    searchQuery={searchParams.search}
+                    categoryFilter={searchParams.category !== "all" ? searchParams.category : undefined}
+                  />
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        );
+      
+      case "adicionar":
+        return (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Adicionar Novo Documento</CardTitle>
+                <CardDescription>
+                  Faça upload de um novo documento no sistema
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <DocumentUpload 
+                  onUploadSuccess={() => setActiveTab("todos")}
+                />
+              </CardContent>
+            </Card>
+          </div>
+        );
+      
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="container py-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Documentos</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Documentos</h1>
           <p className="text-muted-foreground">
-            Gerencie todos os documentos da clínica
+            Gerencie documentos, visualize relatórios e arquivos dos pacientes
           </p>
         </div>
-        <DocumentUpload buttonLabel="Novo Documento" />
+        
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex space-x-2">
+            <FormField
+              control={form.control}
+              name="search"
+              render={({ field }) => (
+                <FormItem className="w-40 md:w-60">
+                  <FormControl>
+                    <div className="relative">
+                      <SearchIcon className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input placeholder="Pesquisar..." className="pl-8" {...field} />
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="category"
+              render={({ field }) => (
+                <FormItem className="w-40 md:w-48">
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Categoria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas Categorias</SelectItem>
+                      <SelectItem value="medical_report">Relatório Médico</SelectItem>
+                      <SelectItem value="exam_result">Resultado de Exame</SelectItem>
+                      <SelectItem value="treatment_plan">Plano de Tratamento</SelectItem>
+                      <SelectItem value="referral">Encaminhamento</SelectItem>
+                      <SelectItem value="legal_document">Documento Legal</SelectItem>
+                      <SelectItem value="consent_form">Termo de Consentimento</SelectItem>
+                      <SelectItem value="evolution_note">Nota de Evolução</SelectItem>
+                      <SelectItem value="administrative">Administrativo</SelectItem>
+                      <SelectItem value="other">Outro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem className="w-36 md:w-44">
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos Status</SelectItem>
+                      <SelectItem value="draft">Rascunho</SelectItem>
+                      <SelectItem value="pending_signature">Aguardando Assinatura</SelectItem>
+                      <SelectItem value="signed">Assinado</SelectItem>
+                      <SelectItem value="archived">Arquivado</SelectItem>
+                      <SelectItem value="active">Ativo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <Button type="submit" size="icon" variant="secondary">
+              <FilterIcon className="h-4 w-4" />
+            </Button>
+          </form>
+        </Form>
       </div>
       
-      <Separator />
-      
-      <Card>
-        <CardHeader>
-          <CardTitle>Filtros Rápidos</CardTitle>
-          <CardDescription>
-            Filtre documentos por paciente ou unidade
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="patient-select" className="block text-sm font-medium mb-1">
-                Paciente
-              </label>
-              <Select
-                value={selectedPatient}
-                onValueChange={setSelectedPatient}
-              >
-                <SelectTrigger id="patient-select">
-                  <SelectValue placeholder="Selecionar Paciente" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os Pacientes</SelectItem>
-                  {patients?.map((patient) => (
-                    <SelectItem key={patient.id} value={String(patient.id)}>
-                      {patient.fullName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div>
-              <label htmlFor="facility-select" className="block text-sm font-medium mb-1">
-                Unidade
-              </label>
-              <Select
-                value={selectedFacility}
-                onValueChange={setSelectedFacility}
-              >
-                <SelectTrigger id="facility-select">
-                  <SelectValue placeholder="Selecionar Unidade" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas as Unidades</SelectItem>
-                  {facilities?.map((facility) => (
-                    <SelectItem key={facility.id} value={String(facility.id)}>
-                      {facility.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      
-      <Tabs defaultValue="all">
-        <TabsList className="grid grid-cols-4 w-full md:w-[600px]">
-          <TabsTrigger value="all">Todos</TabsTrigger>
-          <TabsTrigger value="need-signature">Aguardando Assinatura</TabsTrigger>
-          <TabsTrigger value="signed">Assinados</TabsTrigger>
-          <TabsTrigger value="recent">Recentes</TabsTrigger>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="todos" className="flex items-center space-x-2">
+            <FileTextIcon className="h-4 w-4" />
+            <span>Todos</span>
+          </TabsTrigger>
+          <TabsTrigger value="pacientes" className="flex items-center space-x-2">
+            <FolderIcon className="h-4 w-4" />
+            <span>Por Paciente</span>
+          </TabsTrigger>
+          <TabsTrigger value="unidades" className="flex items-center space-x-2">
+            <FolderIcon className="h-4 w-4" />
+            <span>Por Unidade</span>
+          </TabsTrigger>
+          <TabsTrigger value="adicionar" className="flex items-center space-x-2">
+            <FileUpIcon className="h-4 w-4" />
+            <span>Adicionar</span>
+          </TabsTrigger>
         </TabsList>
         
-        <TabsContent value="all">
-          <DocumentList
-            patientId={selectedPatient !== "all" ? parseInt(selectedPatient) : undefined}
-            facilityId={selectedFacility !== "all" ? parseInt(selectedFacility) : undefined}
-            showAddButton={false}
-            title="Todos os Documentos"
-          />
-        </TabsContent>
-        
-        <TabsContent value="need-signature">
-          <DocumentList
-            patientId={selectedPatient !== "all" ? parseInt(selectedPatient) : undefined}
-            facilityId={selectedFacility !== "all" ? parseInt(selectedFacility) : undefined}
-            showAddButton={false}
-            title="Documentos Aguardando Assinatura"
-            statusFilter="pending_signature"
-          />
-        </TabsContent>
-        
-        <TabsContent value="signed">
-          <DocumentList
-            patientId={selectedPatient !== "all" ? parseInt(selectedPatient) : undefined}
-            facilityId={selectedFacility !== "all" ? parseInt(selectedFacility) : undefined}
-            showAddButton={false}
-            title="Documentos Assinados"
-            statusFilter="signed"
-          />
-        </TabsContent>
-        
-        <TabsContent value="recent">
-          <DocumentList
-            patientId={selectedPatient !== "all" ? parseInt(selectedPatient) : undefined}
-            facilityId={selectedFacility !== "all" ? parseInt(selectedFacility) : undefined}
-            showAddButton={false}
-            title="Documentos Recentes"
-            maxItems={10}
-          />
+        <TabsContent value={activeTab}>
+          {renderTabContent()}
         </TabsContent>
       </Tabs>
-      
-      <Separator />
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <User className="w-5 h-5" />
-              Por Paciente
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">
-              Visualize documentos de pacientes específicos
-            </p>
-            <Button variant="outline" className="w-full">
-              Gerenciar
-            </Button>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Building className="w-5 h-5" />
-              Por Unidade
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">
-              Visualize documentos por unidade
-            </p>
-            <Button variant="outline" className="w-full">
-              Gerenciar
-            </Button>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Calendar className="w-5 h-5" />
-              Por Consulta
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">
-              Documentos relacionados a consultas
-            </p>
-            <Button variant="outline" className="w-full">
-              Gerenciar
-            </Button>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <BookOpen className="w-5 h-5" />
-              Por Evolução
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">
-              Documentos relacionados a evoluções
-            </p>
-            <Button variant="outline" className="w-full">
-              Gerenciar
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <FilePenLine className="w-5 h-5" />
-              Aguardando Assinatura
-            </CardTitle>
-            <CardDescription>
-              Documentos que requerem sua assinatura
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <DocumentList
-              statusFilter="pending_signature"
-              showFilters={false}
-              maxItems={3}
-              className="border-0 shadow-none"
-            />
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <FileCheck className="w-5 h-5" />
-              Recentemente Assinados
-            </CardTitle>
-            <CardDescription>
-              Últimos documentos assinados
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <DocumentList
-              statusFilter="signed"
-              showFilters={false}
-              maxItems={3}
-              className="border-0 shadow-none"
-            />
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <FileArchive className="w-5 h-5" />
-              Arquivados
-            </CardTitle>
-            <CardDescription>
-              Documentos arquivados recentemente
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <DocumentList
-              statusFilter="archived"
-              showFilters={false}
-              maxItems={3}
-              className="border-0 shadow-none"
-            />
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }

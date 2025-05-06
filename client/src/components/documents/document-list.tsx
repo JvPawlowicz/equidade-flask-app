@@ -1,19 +1,13 @@
-import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Document as DocumentType } from "@shared/schema";
-import { DocumentViewer } from "./document-viewer";
-import { DocumentUpload } from "./document-upload";
-import { Loader2, Search, Filter } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Select,
   SelectContent,
@@ -21,17 +15,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
+import { FileIcon, MoreHorizontalIcon, DownloadIcon, PenIcon, EyeIcon, FileUpIcon, SearchIcon, TrashIcon } from "lucide-react";
+import { DocumentUpload } from "./document-upload";
+import { DocumentViewer } from "./document-viewer";
+import { cn, formatDate, getStatusClass } from "@/lib/utils";
+import { Document } from "@shared/schema";
+import { Loader2 } from "lucide-react";
 
 interface DocumentListProps {
   patientId?: number;
@@ -44,6 +45,8 @@ interface DocumentListProps {
   title?: string;
   className?: string;
   statusFilter?: string;
+  categoryFilter?: string;
+  searchQuery?: string;
 }
 
 export function DocumentList({
@@ -51,205 +54,275 @@ export function DocumentList({
   facilityId,
   evolutionId,
   appointmentId,
-  showFilters = true,
+  showFilters = false,
   maxItems,
-  showAddButton = true,
-  title = "Documentos",
-  className = "",
-  statusFilter: initialStatusFilter,
+  showAddButton = false,
+  title,
+  className,
+  statusFilter,
+  categoryFilter,
+  searchQuery,
 }: DocumentListProps) {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string>(initialStatusFilter || "all");
-  const [onlyLatestVersions, setOnlyLatestVersions] = useState(true);
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState<string>("all");
+  const [category, setCategory] = useState<string>("all");
+  const [viewingDocument, setViewingDocument] = useState<Document | null>(null);
+  const [showUploadModal, setShowUploadModal] = useState(false);
   
-  // Parâmetros para a consulta
+  // Use the passed filters if provided, otherwise use local state
+  const effectiveStatus = statusFilter !== undefined ? statusFilter : status;
+  const effectiveCategory = categoryFilter !== undefined ? categoryFilter : category;
+  const effectiveSearch = searchQuery !== undefined ? searchQuery : search;
+
   const queryParams = new URLSearchParams();
-  if (patientId) queryParams.append("patientId", String(patientId));
-  if (facilityId) queryParams.append("facilityId", String(facilityId));
-  if (evolutionId) queryParams.append("evolutionId", String(evolutionId));
-  if (appointmentId) queryParams.append("appointmentId", String(appointmentId));
-  if (categoryFilter !== "all") queryParams.append("category", categoryFilter);
-  if (statusFilter !== "all") queryParams.append("status", statusFilter);
-  if (onlyLatestVersions) queryParams.append("onlyLatestVersions", "true");
-  queryParams.append("includeUploaderInfo", "true");
   
-  // Consulta para buscar documentos
-  const {
-    data: documents,
-    isLoading,
-    isError,
-    refetch
-  } = useQuery<DocumentType[]>({
-    queryKey: [`/api/documents?${queryParams.toString()}`],
+  if (patientId) queryParams.append('patientId', patientId.toString());
+  if (facilityId) queryParams.append('facilityId', facilityId.toString());
+  if (evolutionId) queryParams.append('evolutionId', evolutionId.toString());
+  if (appointmentId) queryParams.append('appointmentId', appointmentId.toString());
+  if (effectiveStatus && effectiveStatus !== 'all') queryParams.append('status', effectiveStatus);
+  if (effectiveCategory && effectiveCategory !== 'all') queryParams.append('category', effectiveCategory);
+  if (effectiveSearch) queryParams.append('search', effectiveSearch);
+  queryParams.append('includeUploaderInfo', 'true');
+  queryParams.append('onlyLatestVersions', 'true');
+  
+  const { data: documents, isLoading } = useQuery({
+    queryKey: ['/api/documents', queryParams.toString()],
+    queryFn: async () => {
+      const response = await fetch(`/api/documents?${queryParams.toString()}`);
+      if (!response.ok) {
+        throw new Error('Erro ao buscar documentos');
+      }
+      return response.json();
+    },
   });
+
+  function getCategoryLabel(category: string): string {
+    const categories: Record<string, string> = {
+      'medical_report': 'Relatório Médico',
+      'exam_result': 'Resultado de Exame',
+      'treatment_plan': 'Plano de Tratamento',
+      'referral': 'Encaminhamento',
+      'legal_document': 'Documento Legal',
+      'consent_form': 'Termo de Consentimento',
+      'evolution_note': 'Nota de Evolução',
+      'administrative': 'Administrativo',
+      'other': 'Outro'
+    };
+    
+    return categories[category] || category;
+  }
   
-  // Filtra documentos pelo termo de busca
-  const filteredDocuments = documents
-    ? documents.filter(doc => 
-        doc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (doc.description && doc.description.toLowerCase().includes(searchTerm.toLowerCase()))
-      )
-    : [];
+  function getStatusLabel(status: string): string {
+    const statuses: Record<string, string> = {
+      'draft': 'Rascunho',
+      'pending_signature': 'Aguardando Assinatura',
+      'signed': 'Assinado',
+      'archived': 'Arquivado',
+      'active': 'Ativo'
+    };
+    
+    return statuses[status] || status;
+  }
   
-  // Limita o número de documentos exibidos se necessário
-  const displayDocuments = maxItems 
-    ? filteredDocuments.slice(0, maxItems) 
-    : filteredDocuments;
-  
-  // Manipula a atualização de um documento (após assinatura, por exemplo)
-  const handleDocumentUpdated = () => {
-    refetch();
+  function getStatusBadgeVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
+    switch (status) {
+      case 'draft':
+        return "outline";
+      case 'pending_signature':
+        return "secondary";
+      case 'signed':
+        return "default";
+      case 'archived':
+        return "destructive";
+      case 'active':
+        return "default";
+      default:
+        return "outline";
+    }
+  }
+
+  const handleDownload = (document: Document) => {
+    window.open(document.fileUrl, '_blank');
   };
-  
+
+  const handleView = (document: Document) => {
+    setViewingDocument(document);
+  };
+
+  const handleUploadSuccess = () => {
+    setShowUploadModal(false);
+  };
+
+  const filteredDocuments = maxItems && documents ? documents.slice(0, maxItems) : documents;
+
   return (
-    <Card className={className}>
-      <CardHeader>
-        <div className="flex flex-row justify-between items-center">
-          <div>
-            <CardTitle>{title}</CardTitle>
-            <CardDescription>
-              {documents?.length ?? 0} documentos encontrados
-            </CardDescription>
-          </div>
-          {showAddButton && (
-            <DocumentUpload
-              patientId={patientId}
-              facilityId={facilityId}
-              evolutionId={evolutionId}
-              appointmentId={appointmentId}
-              onUploadSuccess={handleDocumentUpdated}
+    <div className={cn("space-y-4", className)}>
+      {showUploadModal && (
+        <DocumentUpload
+          patientId={patientId}
+          facilityId={facilityId}
+          evolutionId={evolutionId}
+          appointmentId={appointmentId}
+          onUploadSuccess={handleUploadSuccess}
+        />
+      )}
+
+      {viewingDocument && (
+        <DocumentViewer 
+          document={viewingDocument} 
+          onClose={() => setViewingDocument(null)} 
+        />
+      )}
+
+      <div className="flex items-center justify-between">
+        {title && <h3 className="text-lg font-medium">{title}</h3>}
+        
+        {showAddButton && (
+          <Button
+            onClick={() => setShowUploadModal(true)}
+            size="sm"
+            className="flex items-center gap-1"
+          >
+            <FileUpIcon className="h-4 w-4" />
+            <span>Upload</span>
+          </Button>
+        )}
+      </div>
+
+      {showFilters && (
+        <div className="flex flex-col sm:flex-row gap-2 mb-4">
+          <div className="relative w-full sm:w-auto flex-1">
+            <SearchIcon className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Pesquisar documentos..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-8"
             />
+          </div>
+          
+          <Select
+            value={category}
+            onValueChange={(value) => setCategory(value)}
+          >
+            <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectValue placeholder="Categoria" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas Categorias</SelectItem>
+              <SelectItem value="medical_report">Relatório Médico</SelectItem>
+              <SelectItem value="exam_result">Resultado de Exame</SelectItem>
+              <SelectItem value="treatment_plan">Plano de Tratamento</SelectItem>
+              <SelectItem value="referral">Encaminhamento</SelectItem>
+              <SelectItem value="legal_document">Documento Legal</SelectItem>
+              <SelectItem value="consent_form">Termo de Consentimento</SelectItem>
+              <SelectItem value="evolution_note">Nota de Evolução</SelectItem>
+              <SelectItem value="administrative">Administrativo</SelectItem>
+              <SelectItem value="other">Outro</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <Select
+            value={status}
+            onValueChange={(value) => setStatus(value)}
+          >
+            <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos Status</SelectItem>
+              <SelectItem value="draft">Rascunho</SelectItem>
+              <SelectItem value="pending_signature">Aguardando Assinatura</SelectItem>
+              <SelectItem value="signed">Assinado</SelectItem>
+              <SelectItem value="archived">Arquivado</SelectItem>
+              <SelectItem value="active">Ativo</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {isLoading ? (
+        <div className="flex justify-center items-center h-32">
+          <Loader2 className="h-8 w-8 animate-spin text-primary/70" />
+        </div>
+      ) : documents && documents.length > 0 ? (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Nome</TableHead>
+              <TableHead>Categoria</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Adicionado por</TableHead>
+              <TableHead>Data</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredDocuments.map((doc: Document) => (
+              <TableRow key={doc.id}>
+                <TableCell className="font-medium flex items-center gap-2">
+                  <FileIcon className="h-4 w-4 text-muted-foreground" />
+                  <span className="truncate max-w-[200px]">{doc.name}</span>
+                </TableCell>
+                <TableCell>{getCategoryLabel(doc.category)}</TableCell>
+                <TableCell>
+                  <Badge variant={getStatusBadgeVariant(doc.status)}>
+                    {getStatusLabel(doc.status)}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  {doc.uploader?.name || 'Desconhecido'}
+                </TableCell>
+                <TableCell>{formatDate(doc.createdAt)}</TableCell>
+                <TableCell className="text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <MoreHorizontalIcon className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => handleView(doc)}>
+                        <EyeIcon className="mr-2 h-4 w-4" />
+                        Visualizar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDownload(doc)}>
+                        <DownloadIcon className="mr-2 h-4 w-4" />
+                        Download
+                      </DropdownMenuItem>
+                      {doc.status === 'draft' && (
+                        <DropdownMenuItem>
+                          <PenIcon className="mr-2 h-4 w-4" />
+                          Editar
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      ) : (
+        <div className="flex flex-col items-center justify-center text-center h-32 border rounded-md bg-muted/10">
+          <FileIcon className="h-10 w-10 text-muted-foreground mb-2" />
+          <p className="text-muted-foreground">
+            Nenhum documento encontrado
+          </p>
+          {showAddButton && (
+            <Button 
+              variant="link" 
+              className="mt-2"
+              onClick={() => setShowUploadModal(true)}
+            >
+              Adicionar documento
+            </Button>
           )}
         </div>
-      </CardHeader>
-      
-      {showFilters && (
-        <CardContent className="pb-0">
-          <div className="flex flex-col md:flex-row gap-4 mb-4">
-            {/* Campo de busca */}
-            <div className="relative flex-1">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar documentos..."
-                className="pl-8"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-
-            {/* Filtros */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2">
-                  <Filter className="h-4 w-4" />
-                  Filtros
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56">
-                <DropdownMenuLabel>Filtros</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuGroup>
-                  <DropdownMenuItem className="p-0 focus:bg-transparent">
-                    <div className="px-2 py-1.5 w-full">
-                      <Label htmlFor="category-filter">Categoria</Label>
-                      <Select
-                        value={categoryFilter}
-                        onValueChange={setCategoryFilter}
-                      >
-                        <SelectTrigger id="category-filter" className="mt-1">
-                          <SelectValue placeholder="Todas as categorias" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Todas as categorias</SelectItem>
-                          <SelectItem value="medical_report">Laudo Médico</SelectItem>
-                          <SelectItem value="exam_result">Resultado de Exame</SelectItem>
-                          <SelectItem value="treatment_plan">Plano de Tratamento</SelectItem>
-                          <SelectItem value="referral">Encaminhamento</SelectItem>
-                          <SelectItem value="legal_document">Documento Legal</SelectItem>
-                          <SelectItem value="consent_form">Termo de Consentimento</SelectItem>
-                          <SelectItem value="evolution_note">Nota de Evolução</SelectItem>
-                          <SelectItem value="administrative">Administrativo</SelectItem>
-                          <SelectItem value="other">Outro</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className="p-0 focus:bg-transparent">
-                    <div className="px-2 py-1.5 w-full">
-                      <Label htmlFor="status-filter">Status</Label>
-                      <Select
-                        value={statusFilter}
-                        onValueChange={setStatusFilter}
-                      >
-                        <SelectTrigger id="status-filter" className="mt-1">
-                          <SelectValue placeholder="Todos os status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Todos os status</SelectItem>
-                          <SelectItem value="active">Ativo</SelectItem>
-                          <SelectItem value="draft">Rascunho</SelectItem>
-                          <SelectItem value="pending_signature">Aguardando Assinatura</SelectItem>
-                          <SelectItem value="signed">Assinado</SelectItem>
-                          <SelectItem value="archived">Arquivado</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className="p-0 focus:bg-transparent">
-                    <div className="px-2 py-1.5 w-full">
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id="only-latest"
-                          checked={onlyLatestVersions}
-                          onCheckedChange={setOnlyLatestVersions}
-                        />
-                        <Label htmlFor="only-latest">Apenas versões mais recentes</Label>
-                      </div>
-                    </div>
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </CardContent>
       )}
-      
-      <CardContent>
-        {isLoading ? (
-          <div className="flex justify-center items-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : isError ? (
-          <div className="text-center py-8 text-destructive">
-            Ocorreu um erro ao carregar os documentos.
-          </div>
-        ) : displayDocuments.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            {searchTerm
-              ? "Nenhum documento encontrado para esta busca."
-              : "Nenhum documento disponível."}
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {displayDocuments.map((document) => (
-              <DocumentViewer
-                key={document.id}
-                document={document}
-                onDocumentSigned={handleDocumentUpdated}
-              />
-            ))}
-          </div>
-        )}
-      </CardContent>
-      
-      {maxItems && documents && documents.length > maxItems && (
-        <CardFooter className="flex justify-center">
-          <Button variant="outline">Ver todos os documentos</Button>
-        </CardFooter>
-      )}
-    </Card>
+    </div>
   );
 }
