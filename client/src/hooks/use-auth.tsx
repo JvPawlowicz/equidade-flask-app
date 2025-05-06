@@ -70,9 +70,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
-      console.log("Tentando fazer login com:", credentials);
+      // Limpar espaços extras
+      const cleanedCredentials = {
+        username: credentials.username.trim(),
+        password: credentials.password
+      };
+      
+      console.log("Tentando fazer login com:", cleanedCredentials);
       try {
-        const res = await apiRequest("POST", "/api/login", credentials);
+        const res = await apiRequest("POST", "/api/login", cleanedCredentials);
         const userData = await res.json();
         console.log("Resposta do login:", userData);
         return userData;
@@ -114,7 +120,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const registerMutation = useMutation({
     mutationFn: async (userData: InsertUser) => {
-      const res = await apiRequest("POST", "/api/register", userData);
+      // Limpar espaços extras dos campos
+      const cleanedUserData = {
+        ...userData,
+        username: userData.username.trim(),
+        email: userData.email.trim(),
+        fullName: userData.fullName.trim(),
+        phone: userData.phone?.trim()
+      };
+      
+      console.log("Tentando registrar usuário:", cleanedUserData);
+      const res = await apiRequest("POST", "/api/register", cleanedUserData);
       return await res.json();
     },
     onSuccess: (user: User) => {

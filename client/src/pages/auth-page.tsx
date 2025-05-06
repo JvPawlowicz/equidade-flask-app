@@ -85,7 +85,13 @@ export default function AuthPage() {
   });
 
   const onLoginSubmit = async (data: LoginFormValues) => {
-    console.log("Tentando fazer login com:", data);
+    // Limpar espaços extras dos campos
+    const cleanedData = {
+      username: data.username.trim(),
+      password: data.password
+    };
+    
+    console.log("Tentando fazer login com:", cleanedData);
     
     try {
       // Fazer login diretamente sem usar a mutação
@@ -94,7 +100,7 @@ export default function AuthPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify(cleanedData),
         credentials: 'include',
       });
       
@@ -130,7 +136,16 @@ export default function AuthPage() {
   };
 
   const onRegisterSubmit = async (data: RegisterFormValues) => {
-    console.log("Tentando registrar:", data);
+    // Limpar espaços extras dos campos
+    const cleanedData = {
+      ...data,
+      username: data.username.trim(),
+      email: data.email.trim(),
+      fullName: data.fullName.trim(),
+      phone: data.phone?.trim()
+    };
+    
+    console.log("Tentando registrar:", cleanedData);
     
     try {
       // Fazer registro diretamente sem usar a mutação
@@ -139,7 +154,7 @@ export default function AuthPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify(cleanedData),
         credentials: 'include',
       });
       
