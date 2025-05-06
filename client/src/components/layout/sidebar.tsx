@@ -16,19 +16,48 @@ import {
 } from "lucide-react";
 import { formatDate, getCurrentLocation } from "@/lib/utils";
 import { useMobile } from "@/hooks/use-mobile";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { Separator } from "../ui/separator";
 import { Button } from "../ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { useAccessibility } from "@/hooks/use-accessibility";
 
-export function Sidebar() {
+interface SidebarProps {
+  isOpen?: boolean;
+  setIsOpen?: (isOpen: boolean) => void;
+}
+
+export function Sidebar({ isOpen: externalIsOpen, setIsOpen: setExternalIsOpen }: SidebarProps) {
   const { user, logoutMutation } = useAuth();
+  const { announce } = useAccessibility();
   const [location] = useLocation();
   const isMobile = useMobile();
-  const [isOpen, setIsOpen] = useState(!isMobile);
+  const [internalIsOpen, setInternalIsOpen] = useState(!isMobile);
   const [currentDate, setCurrentDate] = useState<string>(formatDate(new Date(), "dd 'de' MMMM 'de' yyyy"));
   const [currentCity, setCurrentCity] = useState<string>(getCurrentLocation());
+  
+  // Determine if we're using controlled or uncontrolled state
+  const isControlled = externalIsOpen !== undefined;
+  const isOpen = isControlled ? externalIsOpen : internalIsOpen;
+  const setIsOpen = isControlled 
+    ? setExternalIsOpen as (isOpen: boolean) => void 
+    : setInternalIsOpen;
+  
+  // Reference to first navigation item for keyboard navigation
+  const firstNavItemRef = useRef<HTMLAnchorElement>(null);
+  
+  // Focus management after opening sidebar
+  useEffect(() => {
+    if (isOpen && isMobile) {
+      // Set focus to first nav item when sidebar opens on mobile
+      setTimeout(() => {
+        if (firstNavItemRef.current) {
+          firstNavItemRef.current.focus();
+        }
+      }, 100);
+    }
+  }, [isOpen, isMobile]);
   
   // Update date every minute
   useEffect(() => {
@@ -39,16 +68,24 @@ export function Sidebar() {
     return () => clearInterval(intervalId);
   }, []);
 
+  // Handle keyboard navigation for sidebar
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape' && isMobile && isOpen) {
+      setIsOpen(false);
+      announce("Menu lateral fechado");
+    }
+  };
+
   const navItems = [
-    { path: "/", label: "Dashboard", icon: <BarChart className="h-5 w-5" /> },
-    { path: "/agenda", label: "Agenda", icon: <Calendar className="h-5 w-5" /> },
-    { path: "/pacientes", label: "Pacientes", icon: <Users className="h-5 w-5" /> },
-    { path: "/profissionais", label: "Profissionais", icon: <User className="h-5 w-5" /> },
-    { path: "/unidades", label: "Unidades", icon: <Building2 className="h-5 w-5" /> },
-    { path: "/evolucoes", label: "Evoluções", icon: <FileText className="h-5 w-5" /> },
-    { path: "/documentos", label: "Documentos", icon: <File className="h-5 w-5" /> },
-    { path: "/relatorios", label: "Relatórios", icon: <FileBarChart className="h-5 w-5" /> },
-    { path: "/chat", label: "Chat", icon: <MessageCircle className="h-5 w-5" /> },
+    { path: "/", label: "Dashboard", icon: <BarChart className="h-5 w-5" aria-hidden="true" /> },
+    { path: "/agenda", label: "Agenda", icon: <Calendar className="h-5 w-5" aria-hidden="true" /> },
+    { path: "/pacientes", label: "Pacientes", icon: <Users className="h-5 w-5" aria-hidden="true" /> },
+    { path: "/profissionais", label: "Profissionais", icon: <User className="h-5 w-5" aria-hidden="true" /> },
+    { path: "/unidades", label: "Unidades", icon: <Building2 className="h-5 w-5" aria-hidden="true" /> },
+    { path: "/evolucoes", label: "Evoluções", icon: <FileText className="h-5 w-5" aria-hidden="true" /> },
+    { path: "/documentos", label: "Documentos", icon: <File className="h-5 w-5" aria-hidden="true" /> },
+    { path: "/relatorios", label: "Relatórios", icon: <FileBarChart className="h-5 w-5" aria-hidden="true" /> },
+    { path: "/chat", label: "Chat", icon: <MessageCircle className="h-5 w-5" aria-hidden="true" /> },
   ];
 
   // Filter items based on user role
@@ -63,22 +100,59 @@ export function Sidebar() {
     return true;
   });
 
-  if (isMobile && !isOpen) return null;
+  // Handle logout with accessibility announcement
+  const handleLogout = () => {
+    announce("Saindo do sistema");
+    logoutMutation.mutate();
+  };
+  
+  // Handle toggle sidebar with accessibility announcement
+  const handleToggleSidebar = () => {
+    const newState = !isOpen;
+    setIsOpen(newState);
+    announce(`Menu lateral ${newState ? "aberto" : "fechado"}`);
+  };
+
+  if (isMobile && !isOpen) return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="fixed top-4 left-4 z-20 bg-primary text-white rounded-full shadow-lg"
+      onClick={handleToggleSidebar}
+      aria-label="Abrir menu de navegação"
+      aria-expanded="false"
+      aria-controls="sidebar-navigation"
+    >
+      <ChevronRight className="h-4 w-4" aria-hidden="true" />
+    </Button>
+  );
 
   return (
     <>
+      {/* Overlay for mobile */}
       {isMobile && isOpen && (
         <div 
           className="fixed inset-0 z-10 bg-gray-900 bg-opacity-50"
-          onClick={() => setIsOpen(false)}
+          onClick={() => {
+            setIsOpen(false);
+            announce("Menu lateral fechado");
+          }}
+          aria-hidden="true"
+          role="presentation"
         />
       )}
       
-      <aside className={cn(
-        "fixed inset-y-0 left-0 z-20 w-64 bg-sidebar-background text-sidebar-foreground shadow-lg border-r border-sidebar-border transition-transform duration-300",
-        isMobile && !isOpen && "-translate-x-full",
-        isMobile && isOpen && "translate-x-0"
-      )}>
+      {/* Sidebar */}
+      <aside 
+        className={cn(
+          "fixed inset-y-0 left-0 z-20 w-64 bg-sidebar-background text-sidebar-foreground shadow-lg border-r border-sidebar-border transition-transform duration-300",
+          isMobile && !isOpen && "-translate-x-full",
+          isMobile && isOpen && "translate-x-0"
+        )}
+        role="navigation"
+        aria-label="Menu principal"
+        onKeyDown={handleKeyDown}
+      >
         <div className="flex flex-col h-full">
           {/* Toggle for mobile view */}
           {isMobile && (
@@ -86,18 +160,20 @@ export function Sidebar() {
               variant="ghost"
               size="icon"
               className="absolute top-4 right-0 translate-x-full rounded-l-none bg-primary text-white"
-              onClick={() => setIsOpen(!isOpen)}
+              onClick={handleToggleSidebar}
+              aria-label="Fechar menu de navegação"
+              aria-expanded="true"
+              aria-controls="sidebar-navigation"
             >
-              {isOpen ? (
-                <ChevronLeft className="h-4 w-4" />
-              ) : (
-                <ChevronRight className="h-4 w-4" />
-              )}
+              <ChevronLeft className="h-4 w-4" aria-hidden="true" />
             </Button>
           )}
 
           {/* Logo */}
-          <div className="flex items-center justify-center h-16 px-6 border-b border-sidebar-border">
+          <div 
+            className="flex items-center justify-center h-16 px-6 border-b border-sidebar-border"
+            role="banner"
+          >
             <h1 className="text-xl font-semibold text-primary">
               EQUIDADE
             </h1>
@@ -105,16 +181,27 @@ export function Sidebar() {
 
           {/* User Info */}
           {user && (
-            <div className="flex items-center px-6 py-3 border-b border-sidebar-border">
+            <div 
+              className="flex items-center px-6 py-3 border-b border-sidebar-border"
+              role="region"
+              aria-label="Informações do usuário"
+            >
               <Avatar>
-                <AvatarImage src={user.profileImageUrl || undefined} alt={user.fullName} />
-                <AvatarFallback className="bg-primary/10 text-primary">
+                <AvatarImage src={user.profileImageUrl || undefined} alt="" />
+                <AvatarFallback className="bg-primary/10 text-primary" aria-hidden="true">
                   {user.fullName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <div className="ml-3">
                 <p className="text-sm font-semibold">{user.fullName}</p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground" aria-label={`Função: ${
+                  user.role === "admin" ? "Administrador" : 
+                  user.role === "coordinator" ? "Coordenador" : 
+                  user.role === "professional" ? "Profissional" : 
+                  user.role === "intern" ? "Estagiário" : 
+                  user.role === "secretary" ? "Secretário(a)" : 
+                  user.role
+                }`}>
                   {user.role === "admin" ? "Administrador" : 
                    user.role === "coordinator" ? "Coordenador" : 
                    user.role === "professional" ? "Profissional" : 
@@ -127,8 +214,12 @@ export function Sidebar() {
           )}
 
           {/* Navigation */}
-          <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
-            {filteredNavItems.map((item) => (
+          <nav 
+            className="flex-1 px-4 py-4 space-y-1 overflow-y-auto"
+            id="sidebar-navigation"
+            aria-label="Menu de navegação"
+          >
+            {filteredNavItems.map((item, index) => (
               <Link 
                 key={item.path} 
                 href={item.path}
@@ -138,6 +229,8 @@ export function Sidebar() {
                     ? "text-primary bg-primary/10"
                     : "text-sidebar-foreground hover:text-primary hover:bg-primary/10"
                 )}
+                aria-current={location === item.path ? "page" : undefined}
+                ref={index === 0 ? firstNavItemRef : undefined}
               >
                 {item.icon}
                 <span className="ml-3">{item.label}</span>
@@ -146,7 +239,11 @@ export function Sidebar() {
           </nav>
 
           {/* Footer */}
-          <div className="px-4 py-3 border-t border-sidebar-border">
+          <div 
+            className="px-4 py-3 border-t border-sidebar-border"
+            role="contentinfo"
+            aria-label="Data atual e localização"
+          >
             <div className="text-xs text-sidebar-foreground/70">
               <p className="mb-1">{currentDate}</p>
               <p>{currentCity}, Brasil</p>
@@ -154,9 +251,10 @@ export function Sidebar() {
             <Button
               variant="ghost"
               className="flex items-center w-full mt-3 text-sm justify-start p-2 font-medium"
-              onClick={() => logoutMutation.mutate()}
+              onClick={handleLogout}
+              aria-label="Sair do sistema"
             >
-              <LogOut className="mr-2 h-4 w-4" />
+              <LogOut className="mr-2 h-4 w-4" aria-hidden="true" />
               Sair
             </Button>
           </div>

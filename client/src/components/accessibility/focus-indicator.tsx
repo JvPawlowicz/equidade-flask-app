@@ -1,88 +1,104 @@
-import { useEffect } from "react";
+import { useEffect, useState, useRef } from "react";
 
-/**
- * Focus indicator component that adds visual focus indicators
- * to improve keyboard navigation accessibility.
- */
 export function FocusIndicator() {
+  const [activeElement, setActiveElement] = useState<Element | null>(null);
+  const indicatorRef = useRef<HTMLDivElement>(null);
+  
   useEffect(() => {
-    // Add class to body to style focus rings globally
-    document.body.classList.add("js-focus-visible");
-
-    // Setup event listeners to detect keyboard navigation vs mouse
-    let hadKeyboardEvent = false;
-    const keyboardModalityWhitelist = [
-      "Tab",
-      "ArrowUp",
-      "ArrowDown",
-      "ArrowLeft",
-      "ArrowRight",
-      "Enter",
-      "Space",
-      "Escape",
-      "Home",
-      "End",
-      "PageUp",
-      "PageDown",
-    ];
-
-    // Handler to track keyboard interactions
-    function handleKeyDown(e: KeyboardEvent) {
-      if (keyboardModalityWhitelist.includes(e.key)) {
-        hadKeyboardEvent = true;
-        
-        // Remove the class from body to show focus outlines
-        document.body.classList.add("user-is-tabbing");
-      }
-    }
-
-    // Handler for mouse interactions to hide focus outlines
-    function handleMouseDown() {
-      hadKeyboardEvent = false;
-      
-      // Add the class to body to hide focus outlines
-      document.body.classList.remove("user-is-tabbing");
-    }
-
-    // Add event listeners
-    document.addEventListener("keydown", handleKeyDown);
-    document.addEventListener("mousedown", handleMouseDown);
+    let usingKeyboard = false;
     
-    // Add styles to head
-    const styleElement = document.createElement("style");
-    styleElement.innerHTML = `
-      /* Hide focus outlines by default (when using mouse) */
-      body:not(.user-is-tabbing) button:focus,
-      body:not(.user-is-tabbing) input:focus,
-      body:not(.user-is-tabbing) select:focus,
-      body:not(.user-is-tabbing) textarea:focus,
-      body:not(.user-is-tabbing) a:focus,
-      body:not(.user-is-tabbing) [tabindex]:focus {
-        outline: none !important;
-        box-shadow: none !important;
+    // Verificar se usuário está navegando por teclado
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Tab') {
+        usingKeyboard = true;
+      }
+    };
+    
+    // Rastrear elemento em foco
+    const handleFocusIn = (e: FocusEvent) => {
+      if (!usingKeyboard) return;
+      
+      // Ignorar elementos não visíveis ou que não devem receber foco visual
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === 'BODY' || 
+        target.hasAttribute('data-focus-ignore') ||
+        target.classList.contains('skip-link')
+      ) {
+        hideIndicator();
+        return;
       }
       
-      /* Show focus outlines for keyboard users */
-      body.user-is-tabbing button:focus,
-      body.user-is-tabbing input:focus,
-      body.user-is-tabbing select:focus,
-      body.user-is-tabbing textarea:focus,
-      body.user-is-tabbing a:focus,
-      body.user-is-tabbing [tabindex]:focus {
-        outline: 2px solid var(--primary) !important;
-        outline-offset: 2px !important;
-        box-shadow: 0 0 0 2px var(--background) !important;
-      }
-    `;
-    document.head.appendChild(styleElement);
-
-    // Clean up event listeners on unmount
+      setActiveElement(e.target as Element);
+    };
+    
+    // Remover indicador quando foco é perdido
+    const handleFocusOut = () => {
+      hideIndicator();
+    };
+    
+    // Resetar estado de navegação por teclado quando mouse é usado
+    const handleMouseDown = () => {
+      usingKeyboard = false;
+      hideIndicator();
+    };
+    
+    // Esconder indicador
+    const hideIndicator = () => {
+      setActiveElement(null);
+    };
+    
+    // Adicionar event listeners
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('focusin', handleFocusIn);
+    document.addEventListener('focusout', handleFocusOut);
+    document.addEventListener('mousedown', handleMouseDown);
+    
+    // Limpar event listeners
     return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      document.removeEventListener("mousedown", handleMouseDown);
-      document.head.removeChild(styleElement);
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('focusin', handleFocusIn);
+      document.removeEventListener('focusout', handleFocusOut);
+      document.removeEventListener('mousedown', handleMouseDown);
     };
   }, []);
-
-  return null; // This component doesn't render anything
+  
+  // Atualizar posição do indicador quando activeElement muda
+  useEffect(() => {
+    if (!activeElement || !indicatorRef.current) return;
+    
+    const updatePosition = () => {
+      const element = activeElement as HTMLElement;
+      const rect = element.getBoundingClientRect();
+      const indicator = indicatorRef.current;
+      
+      if (!indicator) return;
+      
+      // Ajustar posição considerando padding/margin
+      indicator.style.top = `${rect.top + window.scrollY - 2}px`;
+      indicator.style.left = `${rect.left + window.scrollX - 2}px`;
+      indicator.style.width = `${rect.width + 4}px`;
+      indicator.style.height = `${rect.height + 4}px`;
+      indicator.classList.add('active');
+    };
+    
+    updatePosition();
+    
+    // Atualizar posição durante scroll e redimensionamento
+    window.addEventListener('scroll', updatePosition);
+    window.addEventListener('resize', updatePosition);
+    
+    return () => {
+      window.removeEventListener('scroll', updatePosition);
+      window.removeEventListener('resize', updatePosition);
+    };
+  }, [activeElement]);
+  
+  return (
+    <div 
+      ref={indicatorRef} 
+      className={`focus-indicator ${activeElement ? 'active' : ''}`}
+      aria-hidden="true"
+    />
+  );
 }

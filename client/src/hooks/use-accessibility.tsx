@@ -1,7 +1,8 @@
-import { createContext, ReactNode, useContext, useEffect, useState } from "react";
+import { createContext, ReactNode, useContext, useEffect, useState, useCallback, useRef } from "react";
 
 type FontSize = "normal" | "large" | "x-large";
 type ColorMode = "normal" | "high-contrast";
+type AnnouncementListener = (message: string, politeness?: "polite" | "assertive") => void;
 
 interface AccessibilityContextType {
   // Font size
@@ -16,6 +17,8 @@ interface AccessibilityContextType {
   
   // Screen reader announcements
   announce: (message: string, politeness?: "polite" | "assertive") => void;
+  addAnnouncementListener: (listener: AnnouncementListener) => void;
+  removeAnnouncementListener: (listener: AnnouncementListener) => void;
   
   // Focus trap and keyboard navigation
   trapFocus: (elementId: string) => void;
@@ -32,6 +35,8 @@ const defaultContext: AccessibilityContextType = {
   toggleHighContrast: () => {},
   
   announce: () => {},
+  addAnnouncementListener: () => {},
+  removeAnnouncementListener: () => {},
   
   trapFocus: () => {},
   releaseFocus: () => {},
@@ -84,6 +89,7 @@ export function AccessibilityProvider({ children }: { children: ReactNode }) {
   
   // For screen reader announcements
   const [announcer, setAnnouncer] = useState<HTMLElement | null>(null);
+  const announcementListenersRef = useRef<AnnouncementListener[]>([]);
   
   // For focus trapping
   const [focusTrap, setFocusTrap] = useState<HTMLElement | null>(null);
@@ -259,8 +265,23 @@ export function AccessibilityProvider({ children }: { children: ReactNode }) {
     setColorMode(current => current === "normal" ? "high-contrast" : "normal");
   };
   
+  // Add announcement listener
+  const addAnnouncementListener = useCallback((listener: AnnouncementListener) => {
+    announcementListenersRef.current.push(listener);
+  }, []);
+  
+  // Remove announcement listener
+  const removeAnnouncementListener = useCallback((listener: AnnouncementListener) => {
+    announcementListenersRef.current = announcementListenersRef.current.filter(l => l !== listener);
+  }, []);
+  
   // Screen reader announcement function
-  const announce = (message: string, politeness: "polite" | "assertive" = "polite") => {
+  const announce = useCallback((message: string, politeness: "polite" | "assertive" = "polite") => {
+    // Notify any registered listeners
+    announcementListenersRef.current.forEach(listener => {
+      listener(message, politeness);
+    });
+    
     if (!announcer) return;
     
     // Update aria-live attribute if needed
@@ -277,7 +298,7 @@ export function AccessibilityProvider({ children }: { children: ReactNode }) {
         announcer.textContent = "";
       }
     }, 3000);
-  };
+  }, [announcer]);
   
   // Focus trap functions
   const trapFocus = (elementId: string) => {
@@ -307,6 +328,8 @@ export function AccessibilityProvider({ children }: { children: ReactNode }) {
         toggleHighContrast,
         
         announce,
+        addAnnouncementListener,
+        removeAnnouncementListener,
         
         trapFocus,
         releaseFocus,

@@ -16,43 +16,146 @@ import ChatPage from "@/pages/chat-page";
 import DocumentsPage from "@/pages/documents-page";
 import AuthPage from "@/pages/auth-page";
 import { ProtectedRoute } from "@/lib/protected-route";
+import { SkipLink } from "@/components/accessibility/skip-link";
+import { FocusIndicator } from "@/components/accessibility/focus-indicator";
+import { AccessibilityToolbar } from "@/components/accessibility/accessibility-toolbar";
+import NotFound from "@/pages/not-found";
+import { useAccessibility } from "@/hooks/use-accessibility";
+import { useState, useEffect } from "react";
+
+// Componente para anúncios de leitores de tela
+function ScreenReaderAnnouncer() {
+  const [announcements, setAnnouncements] = useState<Array<{id: number, text: string, politeness: 'polite' | 'assertive'}>>([]);
+  const { announce, addAnnouncementListener, removeAnnouncementListener } = useAccessibility();
+  
+  useEffect(() => {
+    let idCounter = 0;
+    
+    // Handler para novos anúncios
+    const handleAnnouncement = (text: string, politeness: 'polite' | 'assertive' = 'polite') => {
+      const id = idCounter++;
+      setAnnouncements(prev => [...prev, { id, text, politeness }]);
+      
+      // Remover anúncios antigos após 10 segundos
+      setTimeout(() => {
+        setAnnouncements(prev => prev.filter(a => a.id !== id));
+      }, 10000);
+    };
+    
+    // Adicionar listener
+    addAnnouncementListener(handleAnnouncement);
+    
+    // Limpar listener
+    return () => {
+      removeAnnouncementListener(handleAnnouncement);
+    };
+  }, [addAnnouncementListener, removeAnnouncementListener]);
+  
+  return (
+    <>
+      {/* Região de anúncios polite (não interrompe a fala atual) */}
+      <div 
+        aria-live="polite" 
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {announcements
+          .filter(a => a.politeness === 'polite')
+          .map(a => (
+            <div key={a.id}>{a.text}</div>
+          ))
+        }
+      </div>
+      
+      {/* Região de anúncios assertive (interrompe a fala atual) */}
+      <div 
+        aria-live="assertive" 
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {announcements
+          .filter(a => a.politeness === 'assertive')
+          .map(a => (
+            <div key={a.id}>{a.text}</div>
+          ))
+        }
+      </div>
+    </>
+  );
+}
 
 // Aplicação com todas as rotas
 function App() {
   const { user, isLoading } = useAuth();
+  const { announce } = useAccessibility();
+  
+  // Anunciar carregamento para leitores de tela
+  useEffect(() => {
+    if (isLoading) {
+      announce("Carregando aplicação, por favor aguarde...", "polite");
+    }
+  }, [isLoading, announce]);
   
   if (isLoading) {
-    return <div className="flex items-center justify-center min-h-screen">Carregando...</div>;
+    return (
+      <div 
+        className="flex items-center justify-center min-h-screen"
+        aria-live="polite" 
+        aria-busy="true"
+      >
+        <div className="animate-pulse">Carregando...</div>
+      </div>
+    );
   }
   
   return (
-    <Switch>
-      {/* Rotas simplificadas para fallback */}
-      <Route path="/simple-login" component={SimpleLogin} />
-      <Route path="/simple-dashboard" component={SimpleDashboard} />
+    <>
+      {/* Componente para anúncios de screen readers */}
+      <ScreenReaderAnnouncer />
       
-      {/* Rota de autenticação */}
-      <Route path="/auth" component={AuthPage} />
+      {/* Indicador de foco para navegação por teclado */}
+      <FocusIndicator />
       
-      {/* Rotas protegidas */}
-      <ProtectedRoute path="/" component={DashboardPage} />
-      <ProtectedRoute path="/pacientes" component={PatientsPage} />
-      <ProtectedRoute path="/pacientes/:id" component={PatientDetails} />
-      <ProtectedRoute path="/profissionais" component={ProfessionalsPage} />
-      <ProtectedRoute path="/profissionais/:id" component={ProfessionalDetails} />
-      <ProtectedRoute path="/agenda" component={AppointmentsPage} />
-      <ProtectedRoute path="/evolucoes" component={EvolutionsPage} />
-      <ProtectedRoute path="/unidades" component={FacilitiesPage} />
-      <ProtectedRoute path="/unidades/:id" component={FacilityDetails} />
-      <ProtectedRoute path="/relatorios" component={ReportsPage} />
-      <ProtectedRoute path="/chat" component={ChatPage} />
-      <ProtectedRoute path="/documentos" component={DocumentsPage} />
+      {/* Barra de ferramentas de acessibilidade */}
+      <AccessibilityToolbar />
       
-      {/* Redirecionar para autenticação quando não estiver logado */}
-      <Route path="/:rest*">
-        {user ? <Redirect to="/" /> : <Redirect to="/auth" />}
-      </Route>
-    </Switch>
+      {/* Skip link para acessibilidade */}
+      <SkipLink targetId="main-content" />
+      
+      {/* Conteúdo principal da aplicação */}
+      <main id="main-content" tabIndex={-1}>
+        <Switch>
+          {/* Rotas simplificadas para fallback */}
+          <Route path="/simple-login" component={SimpleLogin} />
+          <Route path="/simple-dashboard" component={SimpleDashboard} />
+          
+          {/* Rota de autenticação */}
+          <Route path="/auth" component={AuthPage} />
+          
+          {/* Rotas protegidas */}
+          <ProtectedRoute path="/" component={DashboardPage} />
+          <ProtectedRoute path="/pacientes" component={PatientsPage} />
+          <ProtectedRoute path="/pacientes/:id" component={PatientDetails} />
+          <ProtectedRoute path="/profissionais" component={ProfessionalsPage} />
+          <ProtectedRoute path="/profissionais/:id" component={ProfessionalDetails} />
+          <ProtectedRoute path="/agenda" component={AppointmentsPage} />
+          <ProtectedRoute path="/evolucoes" component={EvolutionsPage} />
+          <ProtectedRoute path="/unidades" component={FacilitiesPage} />
+          <ProtectedRoute path="/unidades/:id" component={FacilityDetails} />
+          <ProtectedRoute path="/relatorios" component={ReportsPage} />
+          <ProtectedRoute path="/chat" component={ChatPage} />
+          <ProtectedRoute path="/documentos" component={DocumentsPage} />
+          
+          {/* Página 404 para rotas não encontradas */}
+          <Route path="/404" component={NotFound} />
+          
+          {/* Redirecionar para autenticação quando não estiver logado */}
+          <Route path="/:rest*">
+            {user ? <Redirect to="/" /> : <Redirect to="/auth" />}
+          </Route>
+        </Switch>
+      </main>
+    </>
   );
 }
 

@@ -1,81 +1,50 @@
-import { useState, useEffect } from "react";
+import { useAccessibility } from "@/hooks/use-accessibility";
+import { useEffect, useRef } from "react";
 
 interface SkipLinkProps {
-  mainContentId?: string;
+  targetId: string;
+  label?: string;
 }
 
-/**
- * Skip link component that allows keyboard users to skip navigation
- * and jump directly to the main content.
- * 
- * This component should be placed at the very beginning of your layout.
- */
-export function SkipLink({ mainContentId = "main-content" }: SkipLinkProps) {
-  const [isVisible, setIsVisible] = useState(false);
+export function SkipLink({ targetId, label = "Pular para o conteúdo principal" }: SkipLinkProps) {
+  const { announce } = useAccessibility();
+  const linkRef = useRef<HTMLAnchorElement>(null);
   
-  // Handle focus events
-  const handleFocus = () => setIsVisible(true);
-  const handleBlur = () => setIsVisible(false);
+  // Anunciar presença do link para leitores de tela quando a página carrega
+  useEffect(() => {
+    // Pequeno delay para garantir que leitores de tela capturem o anúncio
+    const timer = setTimeout(() => {
+      announce("Pressione Tab para acessar o link de pular para o conteúdo principal", "polite");
+    }, 1000);
+    
+    return () => clearTimeout(timer);
+  }, [announce]);
   
-  // Handle click events
-  const handleClick = () => {
-    const mainContent = document.getElementById(mainContentId);
-    if (mainContent) {
-      // Focus the main content
-      mainContent.focus();
-      // Also set tabIndex temporarily to make it focusable
-      if (!mainContent.hasAttribute("tabindex")) {
-        mainContent.setAttribute("tabindex", "-1");
-        // Remove tabindex after blur to maintain correct DOM semantics
-        const handleBlurOnce = () => {
-          mainContent.removeAttribute("tabindex");
-          mainContent.removeEventListener("blur", handleBlurOnce);
-        };
-        mainContent.addEventListener("blur", handleBlurOnce);
-      }
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    
+    // Encontrar o elemento de destino
+    const targetElement = document.getElementById(targetId);
+    
+    if (targetElement) {
+      // Focar no elemento de destino
+      targetElement.focus();
+      targetElement.scrollIntoView({ behavior: 'smooth' });
+      announce(`Navegado para ${label}`, "assertive");
+    } else {
+      announce("Destino não encontrado", "assertive");
     }
   };
   
-  // Add CSS for the skip link
-  useEffect(() => {
-    const style = document.createElement("style");
-    style.innerHTML = `
-      .skip-link {
-        position: absolute;
-        top: -40px;
-        left: 0;
-        background: var(--primary);
-        color: var(--primary-foreground);
-        padding: 8px;
-        z-index: 100;
-        transition: top 0.2s;
-        border-bottom-right-radius: 4px;
-      }
-      
-      .skip-link:focus {
-        top: 0;
-      }
-      
-      .skip-link.visible {
-        top: 0;
-      }
-    `;
-    document.head.appendChild(style);
-    
-    return () => {
-      document.head.removeChild(style);
-    };
-  }, []);
-  
   return (
-    <a
-      href={`#${mainContentId}`}
-      className={`skip-link ${isVisible ? "visible" : ""}`}
-      onFocus={handleFocus}
-      onBlur={handleBlur}
+    <a 
+      href={`#${targetId}`}
+      className="skip-link"
       onClick={handleClick}
+      ref={linkRef}
+      onFocus={() => announce("Link de pular para o conteúdo principal encontrado. Pressione Enter para ativar.")}
     >
-      Pular para o conteúdo principal
+      {label}
     </a>
   );
 }
