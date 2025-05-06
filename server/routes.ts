@@ -269,8 +269,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const appointmentsQuery = await db.query.appointments.findMany({
         where: and(
           eq(appointments.professionalId, professionalId),
-          gte(appointments.date, firstDayOfMonth),
-          lte(appointments.date, lastDayOfMonth)
+          gte(appointments.startTime, firstDayOfMonth),
+          lte(appointments.endTime, lastDayOfMonth)
         )
       });
       
@@ -279,8 +279,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calculate total hours
       let totalHours = 0;
       appointmentsQuery.forEach(appointment => {
-        const startTime = new Date(`${appointment.date.toISOString().split('T')[0]}T${appointment.startTime}`);
-        const endTime = new Date(`${appointment.date.toISOString().split('T')[0]}T${appointment.endTime}`);
+        const startTime = new Date(appointment.startTime);
+        const endTime = new Date(appointment.endTime);
         const durationHours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
         totalHours += durationHours;
       });
