@@ -11,7 +11,8 @@ import {
   LogOut, 
   FileBarChart,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  File
 } from "lucide-react";
 import { formatDate, getCurrentLocation } from "@/lib/utils";
 import { useMobile } from "@/hooks/use-mobile";
@@ -45,6 +46,7 @@ export function Sidebar() {
     { path: "/profissionais", label: "Profissionais", icon: <User className="h-5 w-5" /> },
     { path: "/unidades", label: "Unidades", icon: <Building2 className="h-5 w-5" /> },
     { path: "/evolucoes", label: "Evoluções", icon: <FileText className="h-5 w-5" /> },
+    { path: "/documentos", label: "Documentos", icon: <File className="h-5 w-5" /> },
     { path: "/relatorios", label: "Relatórios", icon: <FileBarChart className="h-5 w-5" /> },
     { path: "/chat", label: "Chat", icon: <MessageCircle className="h-5 w-5" /> },
   ];
