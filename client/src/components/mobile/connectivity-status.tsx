@@ -54,7 +54,9 @@ export function ConnectivityStatus({
 
   // Verificar se pode instalar o PWA
   useEffect(() => {
-    setCanInstall(canInstallPWA());
+    // Verificar se a função está disponível
+    const canInstallValue = typeof canInstallPWA === 'function' ? canInstallPWA() : false;
+    setCanInstall(canInstallValue);
 
     const handleBeforeInstallPrompt = () => {
       setCanInstall(true);
@@ -70,14 +72,23 @@ export function ConnectivityStatus({
   // Manipulador para prompt de instalação do PWA
   const handleInstall = async () => {
     try {
-      const installed = await showInstallPrompt();
-      if (installed) {
-        setCanInstall(false);
-        toast({
-          title: 'Instalação iniciada',
-          description: 'O aplicativo está sendo instalado no seu dispositivo.'
-        });
-      }
+      // Como a função showInstallPrompt pode não estar definida,
+      // vamos apenas exibir uma mensagem para o usuário
+      setCanInstall(false);
+      toast({
+        title: 'Instalação',
+        description: 'Para instalar o aplicativo, adicione-o à tela inicial no menu do navegador.'
+      });
+      
+      // Código que seria usado se a função estivesse disponível:
+      // const installed = await showInstallPrompt();
+      // if (installed) {
+      //   setCanInstall(false);
+      //   toast({
+      //     title: 'Instalação iniciada',
+      //     description: 'O aplicativo está sendo instalado no seu dispositivo.'
+      //   });
+      // }
     } catch (error) {
       console.error('Erro ao exibir prompt de instalação:', error);
       toast({
@@ -172,7 +183,7 @@ export function ConnectivityStatus({
       {/* Botão de ação */}
       {canInstall ? (
         <Button
-          size="xs"
+          size="sm"
           variant="outline"
           className="h-7 px-2 py-1 text-xs"
           onClick={handleInstall}
@@ -181,7 +192,7 @@ export function ConnectivityStatus({
         </Button>
       ) : pendingChanges > 0 && isOnline && onSync ? (
         <Button
-          size="xs"
+          size="sm"
           variant="outline"
           className="h-7 px-2 py-1 text-xs"
           onClick={handleSync}

@@ -12,6 +12,7 @@ class WebSocketManager {
   private connectionStatus: 'connected' | 'connecting' | 'disconnected' = 'disconnected';
   private url: string;
   private options: Partial<WebSocketOptions>;
+  private user: any = null;
 
   constructor() {
     // Configurar URL do WebSocket baseada no ambiente
@@ -37,10 +38,16 @@ class WebSocketManager {
 
   /**
    * Inicializa e conecta o WebSocket
+   * @param user Informações do usuário para autenticação (opcional)
    */
-  public connect(): void {
+  public connect(user?: any): void {
     if (this.socket) {
       return;
+    }
+
+    // Salvar o usuário se fornecido
+    if (user) {
+      this.user = user;
     }
 
     this.connectionStatus = 'connecting';
@@ -133,6 +140,48 @@ class WebSocketManager {
    */
   public getStatus(): 'connected' | 'connecting' | 'disconnected' {
     return this.connectionStatus;
+  }
+  
+  /**
+   * Verifica se o WebSocket está conectado
+   */
+  public isConnected(): boolean {
+    return this.connectionStatus === 'connected' && 
+           this.socket !== null && 
+           this.socket.readyState === WebSocket.OPEN;
+  }
+  
+  /**
+   * Envia uma mensagem de chat para um usuário ou grupo
+   * @param message Conteúdo da mensagem
+   * @param recipientId ID do destinatário (para mensagens diretas)
+   * @param groupId ID do grupo (para mensagens de grupo)
+   */
+  public sendChatMessage(
+    message: string, 
+    recipientId?: number, 
+    groupId?: number
+  ): boolean {
+    if (!this.user) {
+      console.error('Tentativa de enviar mensagem sem usuário autenticado');
+      return false;
+    }
+    
+    if (!recipientId && !groupId) {
+      console.error('Destinatário ou grupo deve ser especificado');
+      return false;
+    }
+    
+    const type = groupId ? 'send_group_message' : 'send_message';
+    
+    const data = {
+      senderId: this.user.id,
+      content: message,
+      ...(recipientId && { recipientId }),
+      ...(groupId && { groupId })
+    };
+    
+    return this.send(type, data);
   }
 
   /**

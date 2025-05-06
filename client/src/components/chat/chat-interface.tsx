@@ -12,7 +12,7 @@ import { AvatarInitials } from "@/components/common/avatar-initials";
 import { Loader2, Users, UserPlus, Send, PlusCircle } from "lucide-react";
 import { formatRelativeTime } from "@/lib/utils";
 import { queryClient } from "@/lib/queryClient";
-import { webSocketManager } from "@/lib/websocket";
+import { webSocketManager } from "@/lib/websocket-manager";
 
 export function ChatInterface() {
   const { user } = useAuth();
