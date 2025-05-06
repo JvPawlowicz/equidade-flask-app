@@ -5,7 +5,6 @@ import { AppLayout } from "@/components/layout/app-layout";
 import { StatsCard } from "@/components/dashboard/stats-card";
 import { TodaySchedule } from "@/components/dashboard/today-schedule";
 import { PendingEvolutions } from "@/components/dashboard/pending-evolutions";
-import { WeeklyCalendar } from "@/components/dashboard/weekly-calendar";
 import { Loader2, CalendarCheck, FileWarning, Users, Building2 } from "lucide-react";
 
 export default function DashboardPage() {
@@ -122,11 +121,6 @@ export default function DashboardPage() {
         {/* Pending Evolutions Section */}
         <div className="mb-6">
           <PendingEvolutions />
-        </div>
-
-        {/* Calendar Preview */}
-        <div className="mb-6">
-          <WeeklyCalendar />
         </div>
       </div>
     </AppLayout>
