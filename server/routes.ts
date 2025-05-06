@@ -23,7 +23,7 @@ import {
   rooms,
   users,
 } from "@shared/schema";
-import { and, desc, eq, gte, ilike, inArray, lte, or } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, inArray, lte, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import multer from "multer";
 import path from "path";
@@ -1431,9 +1431,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let query = db.select({
         professionalId: appointments.professionalId,
-        totalHours: db.sql`SUM(EXTRACT(EPOCH FROM (${appointments.endTime} - ${appointments.startTime})) / 3600)`,
-        planningHours: db.sql`SUM(CASE WHEN ${appointments.procedureType} = 'planning' THEN EXTRACT(EPOCH FROM (${appointments.endTime} - ${appointments.startTime})) / 3600 ELSE 0 END)`,
-        freeTimeHours: db.sql`SUM(CASE WHEN ${appointments.procedureType} = 'free_time' THEN EXTRACT(EPOCH FROM (${appointments.endTime} - ${appointments.startTime})) / 3600 ELSE 0 END)`,
+        totalHours: sql`SUM(EXTRACT(EPOCH FROM (${appointments.endTime} - ${appointments.startTime})) / 3600)`,
+        planningHours: sql`SUM(CASE WHEN ${appointments.procedureType} = 'planning' THEN EXTRACT(EPOCH FROM (${appointments.endTime} - ${appointments.startTime})) / 3600 ELSE 0 END)`,
+        freeTimeHours: sql`SUM(CASE WHEN ${appointments.procedureType} = 'free_time' THEN EXTRACT(EPOCH FROM (${appointments.endTime} - ${appointments.startTime})) / 3600 ELSE 0 END)`,
       })
       .from(appointments)
       .where(

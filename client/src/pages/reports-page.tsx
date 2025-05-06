@@ -374,7 +374,7 @@ export default function ReportsPage() {
                     <SelectValue placeholder="Todas as unidades" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todas as unidades</SelectItem>
+                    <SelectItem value="all">Todas as unidades</SelectItem>
                     {facilities?.map((facility) => (
                       <SelectItem key={facility.id} value={facility.id.toString()}>
                         {facility.name}
@@ -413,7 +413,7 @@ export default function ReportsPage() {
                         <SelectValue placeholder="Selecione um paciente" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Selecione um paciente</SelectItem>
+                        <SelectItem value="select_patient">Selecione um paciente</SelectItem>
                         {patientsList?.map((patient) => (
                           <SelectItem key={patient.id} value={patient.id.toString()}>
                             {patient.fullName}
@@ -430,7 +430,7 @@ export default function ReportsPage() {
                         <SelectValue placeholder="Todos os profissionais" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Todos os profissionais</SelectItem>
+                        <SelectItem value="all_professionals">Todos os profissionais</SelectItem>
                         {professionalsList?.map((professional) => (
                           <SelectItem key={professional.id} value={professional.id.toString()}>
                             {professional.user?.fullName || `Profissional #${professional.id}`}
