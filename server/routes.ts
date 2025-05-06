@@ -69,41 +69,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
   setupAuth(app);
 
-  // Rotas para páginas HTML estáticas (sem depender do React)
-  // Estas rotas devem ter precedência sobre as rotas do Vite
-  app.get('/login.html', (req, res) => {
-    res.sendFile(path.join(process.cwd(), 'client/public/login.html'));
-  });
-
-  app.get('/dashboard.html', (req, res) => {
-    res.sendFile(path.join(process.cwd(), 'client/public/dashboard.html'));
-  });
-  
-  app.get('/patients.html', (req, res) => {
-    res.sendFile(path.join(process.cwd(), 'client/public/patients.html'));
-  });
-  
-  app.get('/appointments.html', (req, res) => {
-    res.sendFile(path.join(process.cwd(), 'client/public/appointments.html'));
-  });
-  
-  app.get('/evolutions.html', (req, res) => {
-    res.sendFile(path.join(process.cwd(), 'client/public/evolutions.html'));
-  });
-  
-  app.get('/facilities.html', (req, res) => {
-    res.sendFile(path.join(process.cwd(), 'client/public/facilities.html'));
-  });
-  
-  app.get('/professionals.html', (req, res) => {
-    res.sendFile(path.join(process.cwd(), 'client/public/professionals.html'));
-  });
-  
-  // Rota raiz para redirecionar para a página de login HTML
-  app.get('/pure-html', (req, res) => {
-    res.redirect('/login.html');
-  });
-
   // API prefix
   const apiPrefix = "/api";
 
