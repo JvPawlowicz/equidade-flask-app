@@ -270,6 +270,9 @@ export function CalendarView({ facilityId, professionalId, patientId }: Calendar
                 height="100%"
                 stickyHeaderDates
                 nowIndicator
+                slotEventOverlap={false}
+                eventMaxStack={3}
+                slotDuration="00:15:00"
                 businessHours={{
                   daysOfWeek: [1, 2, 3, 4, 5, 6],
                   startTime: '08:00',
@@ -278,6 +281,12 @@ export function CalendarView({ facilityId, professionalId, patientId }: Calendar
                 datesSet={(dateInfo) => {
                   setCurrentDate(dateInfo.view.currentStart);
                   setView(dateInfo.view.type as any);
+                }}
+                eventTimeFormat={{
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  meridiem: false,
+                  hour12: false
                 }}
               />
             </div>
