@@ -115,8 +115,14 @@ export default function AuthPage() {
           description: `Bem-vindo(a), ${userData.fullName}!`,
         });
         
-        // Redirecionar para a página inicial
-        navigate('/');
+        // Verificamos se há algum erro
+        setTimeout(() => {
+          console.log("Verificando usuário após login:", queryClient.getQueryData(['/api/user']));
+          
+          // Forçar recarregamento da página para garantir redirecionamento correto
+          // Isso resolve problemas de estado no cliente
+          window.location.href = '/';
+        }, 500);
       })
       .catch(error => {
         console.error('Erro no login:', error);
@@ -130,11 +136,48 @@ export default function AuthPage() {
 
   const onRegisterSubmit = (data: RegisterFormValues) => {
     console.log("Tentando registrar:", data);
-    if (registerMutation && typeof registerMutation.mutate === 'function') {
-      registerMutation.mutate(data);
-    } else {
-      console.error("registerMutation.mutate não é uma função", registerMutation);
-    }
+    
+    // Realizar registro manual sem depender da mutação
+    fetch('/api/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+      credentials: 'include',
+    })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Falha no registro');
+        }
+        return response.json();
+      })
+      .then(userData => {
+        console.log('Registro bem-sucedido:', userData);
+        
+        // Atualizar manualmente o cache do query client
+        queryClient.setQueryData(['/api/user'], userData);
+        queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+        
+        // Mostrar toast de sucesso
+        toast({
+          title: 'Registro bem-sucedido',
+          description: `Bem-vindo(a), ${userData.fullName}!`,
+        });
+        
+        // Forçar recarregamento da página para garantir redirecionamento correto
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 500);
+      })
+      .catch(error => {
+        console.error('Erro no registro:', error);
+        toast({
+          title: 'Falha no registro',
+          description: error.message,
+          variant: 'destructive',
+        });
+      });
   };
 
   if (user) {

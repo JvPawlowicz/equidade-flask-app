@@ -7,7 +7,8 @@ import {
 import { User, loginUserSchema, insertUserSchema, InsertUser } from "@shared/schema";
 import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import webSocketManager from "../lib/websocket";
+// WebSocket temporariamente desativado até corrigirmos o login
+// import webSocketManager from "../lib/websocket";
 
 type AuthContextType = {
   user: User | null;
@@ -141,6 +142,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Gerenciar a conexão WebSocket com base no estado de autenticação
   useEffect(() => {
+    // Atualmente o WebSocket está temporariamente desativado enquanto consertamos o login
+    // O código comentado será reativado quando o login estiver estável
+    /*
     if (user) {
       console.log("Usuário autenticado, iniciando WebSocket");
       webSocketManager.connect(user);
@@ -153,6 +157,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Desconectar durante o cleanup do componente
       webSocketManager.disconnect();
     };
+    */
   }, [user]);
 
   return (
