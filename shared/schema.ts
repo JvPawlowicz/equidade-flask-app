@@ -374,7 +374,7 @@ export const evolutionRelations = relations(evolutions, ({ one }) => ({
   }),
 }));
 
-export const documentRelations = relations(documents, ({ one }) => ({
+export const documentRelations = relations(documents, ({ one, many }) => ({
   patient: one(patients, {
     fields: [documents.patientId],
     references: [patients.id],
@@ -387,6 +387,20 @@ export const documentRelations = relations(documents, ({ one }) => ({
     fields: [documents.uploadedBy],
     references: [users.id],
   }),
+  evolution: one(evolutions, {
+    fields: [documents.evolutionId],
+    references: [evolutions.id],
+  }),
+  appointment: one(appointments, {
+    fields: [documents.appointmentId],
+    references: [appointments.id],
+  }),
+  parentDocument: one(documents, {
+    fields: [documents.parentDocumentId],
+    references: [documents.id],
+    relationName: 'parent',
+  }),
+  versions: many(documents, { relationName: 'parent' }),
 }));
 
 export const chatMessageRelations = relations(chatMessages, ({ one }) => ({

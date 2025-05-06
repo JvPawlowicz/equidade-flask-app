@@ -23,7 +23,7 @@ import {
   rooms,
   users,
 } from "@shared/schema";
-import { and, desc, eq, gte, ilike, inArray, lte, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, inArray, isNull, lte, not, notExists, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import multer from "multer";
 import path from "path";
@@ -1153,11 +1153,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Nenhum arquivo enviado" });
       }
 
-      const { patientId, facilityId, name } = req.body;
+      const { 
+        patientId, 
+        facilityId, 
+        evolutionId, 
+        appointmentId, 
+        name, 
+        description, 
+        category, 
+        status,
+        needsSignature,
+        parentDocumentId
+      } = req.body;
 
-      // Validate at least one ID is provided
-      if (!patientId && !facilityId) {
-        return res.status(400).json({ error: "É necessário associar o documento a um paciente ou unidade" });
+      // Validate at least one association is provided
+      if (!patientId && !facilityId && !evolutionId && !appointmentId) {
+        return res.status(400).json({ 
+          error: "É necessário associar o documento a um paciente, unidade, evolução ou consulta" 
+        });
+      }
+
+      // If this is a new version of an existing document, check if the parent exists
+      let version = 1;
+      if (parentDocumentId) {
+        const parentDoc = await db.query.documents.findFirst({
+          where: eq(documents.id, parseInt(parentDocumentId))
+        });
+        
+        if (!parentDoc) {
+          return res.status(404).json({ error: "Documento original não encontrado" });
+        }
+        
+        // Increment version number
+        version = (parentDoc.version || 0) + 1;
       }
 
       const documentData = {
@@ -1165,12 +1193,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fileUrl: `/uploads/${req.file.filename}`,
         fileType: req.file.mimetype,
         fileSize: req.file.size,
+        description: description || null,
+        category: category || 'other',
+        status: status || 'active',
         patientId: patientId ? parseInt(patientId) : null,
         facilityId: facilityId ? parseInt(facilityId) : null,
+        evolutionId: evolutionId ? parseInt(evolutionId) : null,
+        appointmentId: appointmentId ? parseInt(appointmentId) : null,
         uploadedBy: req.user.id,
+        needsSignature: needsSignature === 'true' || needsSignature === true,
+        parentDocumentId: parentDocumentId ? parseInt(parentDocumentId) : null,
+        version: version,
+        updatedAt: new Date()
       };
 
       const [newDocument] = await db.insert(documents).values(documentData).returning();
+      
+      // If this document needs a signature, create a notification for the appropriate users
+      if (documentData.needsSignature) {
+        // Determine who should receive the notification
+        let recipientId;
+        
+        if (evolutionId) {
+          // For evolution documents, notify the supervisor or professional
+          const evolution = await db.query.evolutions.findFirst({
+            where: eq(evolutions.id, parseInt(evolutionId))
+          });
+          
+          if (evolution && evolution.supervisorId) {
+            recipientId = evolution.supervisorId;
+          } else if (evolution) {
+            recipientId = evolution.professionalId;
+          }
+        } else if (patientId) {
+          // For patient documents without a specific evolution, notify facility coordinators
+          const patient = await db.query.patients.findFirst({
+            where: eq(patients.id, parseInt(patientId))
+          });
+          
+          if (patient) {
+            // Find coordinators (simplified - in a real scenario you'd look for associated professionals)
+            const coordinator = await db.query.users.findFirst({
+              where: eq(users.role, 'coordinator')
+            });
+            
+            if (coordinator) {
+              recipientId = coordinator.id;
+            }
+          }
+        }
+        
+        // Create notification if we found someone to notify
+        if (recipientId) {
+          await db.insert(notifications).values({
+            userId: recipientId,
+            title: "Documento requer assinatura",
+            content: `O documento "${documentData.name}" requer sua assinatura.`,
+            type: "document",
+            referenceId: newDocument.id,
+            referenceType: "document"
+          });
+        }
+      }
+      
       res.status(201).json(newDocument);
     } catch (error) {
       console.error("Error uploading document:", error);
@@ -1178,22 +1263,283 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get document by ID, with optional version history
+  app.get(`${apiPrefix}/documents/:id`, async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(403).json({ error: "Acesso não autorizado" });
+      }
+
+      const { id } = req.params;
+      const includeVersions = req.query.includeVersions === 'true';
+      const includeRelated = req.query.includeRelated === 'true';
+      
+      const document = await db.query.documents.findFirst({
+        where: eq(documents.id, parseInt(id)),
+        with: {
+          uploader: {
+            columns: {
+              id: true,
+              name: true,
+              username: true,
+              role: true
+            }
+          }
+        }
+      });
+      
+      if (!document) {
+        return res.status(404).json({ error: "Documento não encontrado" });
+      }
+      
+      // Prepare response with base document
+      const response = { ...document };
+      
+      // Add versions information if requested
+      if (includeVersions) {
+        // If this is a parent document, get all child versions
+        if (!document.parentDocumentId) {
+          const versions = await db.query.documents.findMany({
+            where: eq(documents.parentDocumentId, document.id),
+            orderBy: asc(documents.version)
+          });
+          
+          response.versions = versions;
+        } 
+        // If this is a child document, get parent and siblings
+        else {
+          const parent = await db.query.documents.findFirst({
+            where: eq(documents.id, document.parentDocumentId)
+          });
+          
+          const siblings = await db.query.documents.findMany({
+            where: eq(documents.parentDocumentId, document.parentDocumentId),
+            orderBy: asc(documents.version)
+          });
+          
+          response.parent = parent;
+          response.siblings = siblings;
+        }
+      }
+      
+      // Add related records information if requested
+      if (includeRelated) {
+        if (document.patientId) {
+          response.patient = await db.query.patients.findFirst({
+            where: eq(patients.id, document.patientId),
+            columns: {
+              id: true,
+              name: true,
+              dateOfBirth: true,
+              contactInfo: true
+            }
+          });
+        }
+        
+        if (document.facilityId) {
+          response.facility = await db.query.facilities.findFirst({
+            where: eq(facilities.id, document.facilityId),
+            columns: {
+              id: true,
+              name: true,
+              address: true,
+              phone: true
+            }
+          });
+        }
+        
+        if (document.evolutionId) {
+          response.evolution = await db.query.evolutions.findFirst({
+            where: eq(evolutions.id, document.evolutionId),
+            columns: {
+              id: true,
+              title: true,
+              date: true,
+              status: true
+            }
+          });
+        }
+        
+        if (document.appointmentId) {
+          response.appointment = await db.query.appointments.findFirst({
+            where: eq(appointments.id, document.appointmentId),
+            columns: {
+              id: true,
+              startTime: true,
+              endTime: true,
+              status: true,
+              procedureType: true
+            }
+          });
+        }
+      }
+      
+      res.json(response);
+    } catch (error) {
+      console.error("Error fetching document:", error);
+      res.status(500).json({ error: "Erro ao buscar documento" });
+    }
+  });
+  
+  // Sign a document
+  app.put(`${apiPrefix}/documents/:id/sign`, async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(403).json({ error: "Acesso não autorizado" });
+      }
+      
+      const { id } = req.params;
+      const { signatureInfo } = req.body;
+      
+      // Get document
+      const document = await db.query.documents.findFirst({
+        where: eq(documents.id, parseInt(id))
+      });
+      
+      if (!document) {
+        return res.status(404).json({ error: "Documento não encontrado" });
+      }
+      
+      if (!document.needsSignature) {
+        return res.status(400).json({ error: "Documento não requer assinatura" });
+      }
+      
+      if (document.status === 'signed') {
+        return res.status(400).json({ error: "Documento já foi assinado" });
+      }
+      
+      // Update document
+      const [updatedDocument] = await db.update(documents)
+        .set({ 
+          status: 'signed',
+          description: signatureInfo 
+            ? `${document.description ? document.description + ' | ' : ''}Assinado por ${req.user.name} em ${new Date().toISOString()}`
+            : document.description,
+          updatedAt: new Date()
+        })
+        .where(eq(documents.id, parseInt(id)))
+        .returning();
+        
+      // Create notification for document owner
+      if (updatedDocument.uploadedBy !== req.user.id) {
+        await db.insert(notifications).values({
+          userId: updatedDocument.uploadedBy,
+          title: "Documento assinado",
+          content: `O documento "${updatedDocument.name}" foi assinado por ${req.user.name}.`,
+          type: "document_signed",
+          referenceId: updatedDocument.id,
+          referenceType: "document"
+        });
+      }
+      
+      res.json(updatedDocument);
+    } catch (error) {
+      console.error("Error signing document:", error);
+      res.status(500).json({ error: "Erro ao assinar documento" });
+    }
+  });
+  
   app.get(`${apiPrefix}/documents`, async (req, res) => {
     try {
       const patientId = req.query.patientId as string | undefined;
       const facilityId = req.query.facilityId as string | undefined;
+      const evolutionId = req.query.evolutionId as string | undefined;
+      const appointmentId = req.query.appointmentId as string | undefined;
+      const category = req.query.category as string | undefined;
+      const status = req.query.status as string | undefined;
+      const needsSignature = req.query.needsSignature as string | undefined;
+      const onlyLatestVersions = req.query.onlyLatestVersions === 'true';
+      const includeUploaderInfo = req.query.includeUploaderInfo === 'true';
 
+      // Start with a query builder
       let query = db.select().from(documents);
 
+      // Apply filters
+      const conditions = [];
+
       if (patientId) {
-        query = query.where(eq(documents.patientId, parseInt(patientId)));
+        conditions.push(eq(documents.patientId, parseInt(patientId)));
       }
 
       if (facilityId) {
-        query = query.where(eq(documents.facilityId, parseInt(facilityId)));
+        conditions.push(eq(documents.facilityId, parseInt(facilityId)));
       }
 
-      const documentsList = await query.orderBy(desc(documents.createdAt));
+      if (evolutionId) {
+        conditions.push(eq(documents.evolutionId, parseInt(evolutionId)));
+      }
+
+      if (appointmentId) {
+        conditions.push(eq(documents.appointmentId, parseInt(appointmentId)));
+      }
+
+      if (category) {
+        conditions.push(eq(documents.category, category));
+      }
+
+      if (status) {
+        conditions.push(eq(documents.status, status));
+      }
+
+      if (needsSignature === 'true') {
+        conditions.push(eq(documents.needsSignature, true));
+      } else if (needsSignature === 'false') {
+        conditions.push(eq(documents.needsSignature, false));
+      }
+
+      // Only get the latest versions of documents (no parent document or is the latest version)
+      if (onlyLatestVersions) {
+        // This is a simplification - in a real app we'd need a more complex query
+        // to find the latest version of each document lineage
+        conditions.push(
+          or(
+            isNull(documents.parentDocumentId),
+            notExists(
+              db.select()
+                .from(documents)
+                .where(eq(documents.parentDocumentId, documents.id))
+            )
+          )
+        );
+      }
+
+      // Apply all conditions if any exist
+      if (conditions.length > 0) {
+        if (conditions.length === 1) {
+          query = query.where(conditions[0]);
+        } else {
+          query = query.where(and(...conditions));
+        }
+      }
+
+      let documentsList = await query.orderBy(desc(documents.createdAt));
+
+      // If we need to include uploader information, fetch that separately
+      if (includeUploaderInfo && documentsList.length > 0) {
+        const uploaderIds = [...new Set(documentsList.map(doc => doc.uploadedBy))];
+        
+        const uploaders = await db.query.users.findMany({
+          where: inArray(users.id, uploaderIds),
+          columns: {
+            id: true,
+            name: true,
+            username: true,
+            role: true
+          }
+        });
+        
+        const uploadersMap = new Map();
+        uploaders.forEach(uploader => {
+          uploadersMap.set(uploader.id, uploader);
+        });
+        
+        // Attach uploader info to each document
+        documentsList = documentsList.map(doc => ({
+          ...doc,
+          uploader: uploadersMap.get(doc.uploadedBy) || null
+        }));
+      }
+
       res.json(documentsList);
     } catch (error) {
       console.error("Error fetching documents:", error);
