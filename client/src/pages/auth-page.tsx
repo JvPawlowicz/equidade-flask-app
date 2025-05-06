@@ -87,97 +87,15 @@ export default function AuthPage() {
   const onLoginSubmit = (data: LoginFormValues) => {
     console.log("Tentando fazer login com:", data);
     
-    // Realizar login manual sem depender da mutação
-    fetch('/api/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-      credentials: 'include',
-    })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Falha na autenticação');
-        }
-        return response.json();
-      })
-      .then(userData => {
-        console.log('Login bem-sucedido:', userData);
-        
-        // Atualizar manualmente o cache do query client
-        queryClient.setQueryData(['/api/user'], userData);
-        queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-        
-        // Mostrar toast de sucesso
-        toast({
-          title: 'Login bem-sucedido',
-          description: `Bem-vindo(a), ${userData.fullName}!`,
-        });
-        
-        // Verificamos se há algum erro
-        setTimeout(() => {
-          console.log("Verificando usuário após login:", queryClient.getQueryData(['/api/user']));
-          
-          // Redirecionamento usando wouter (sem recarregar a página)
-          // O router vai verificar que o usuário está autenticado e redirecionar para /
-          window.location.href = '/dashboard';
-        }, 500);
-      })
-      .catch(error => {
-        console.error('Erro no login:', error);
-        toast({
-          title: 'Falha no login',
-          description: error.message,
-          variant: 'destructive',
-        });
-      });
+    // Usar a mutação de login do contexto de autenticação
+    loginMutation.mutate(data);
   };
 
   const onRegisterSubmit = (data: RegisterFormValues) => {
     console.log("Tentando registrar:", data);
     
-    // Realizar registro manual sem depender da mutação
-    fetch('/api/register', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-      credentials: 'include',
-    })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Falha no registro');
-        }
-        return response.json();
-      })
-      .then(userData => {
-        console.log('Registro bem-sucedido:', userData);
-        
-        // Atualizar manualmente o cache do query client
-        queryClient.setQueryData(['/api/user'], userData);
-        queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-        
-        // Mostrar toast de sucesso
-        toast({
-          title: 'Registro bem-sucedido',
-          description: `Bem-vindo(a), ${userData.fullName}!`,
-        });
-        
-        // Forçar recarregamento da página para garantir redirecionamento correto
-        setTimeout(() => {
-          window.location.href = '/dashboard';
-        }, 500);
-      })
-      .catch(error => {
-        console.error('Erro no registro:', error);
-        toast({
-          title: 'Falha no registro',
-          description: error.message,
-          variant: 'destructive',
-        });
-      });
+    // Usar a mutação de registro do contexto de autenticação
+    registerMutation.mutate(data);
   };
 
   if (user) {

@@ -57,9 +57,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     data: user,
     error,
     isLoading,
+    refetch: refetchUser,
   } = useQuery<User | null, Error>({
     queryKey: ["/api/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
+    enabled: true,
+    refetchOnMount: true,
+    staleTime: 0, // Sempre considerar os dados como obsoletos para garantir refetch
   });
 
   const loginMutation = useMutation({
@@ -79,11 +83,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log("Login bem-sucedido, usuário:", user);
       queryClient.setQueryData(["/api/user"], user);
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      
+      // Recarregar os dados do usuário explicitamente
+      refetchUser();
+      
+      // Mostrar mensagem de sucesso
       toast({
         title: "Login realizado com sucesso",
         description: `Bem-vindo(a), ${user.fullName}!`,
         variant: "default",
       });
+      
+      // Redirecionar para o dashboard
+      setTimeout(() => {
+        window.location.href = '/dashboard';
+      }, 500);
     },
     onError: (error: Error) => {
       console.error("Erro no login:", error);
@@ -103,11 +117,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     onSuccess: (user: User) => {
       queryClient.setQueryData(["/api/user"], user);
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      
+      // Recarregar os dados do usuário explicitamente
+      refetchUser();
+      
       toast({
         title: "Cadastro realizado com sucesso",
         description: `Bem-vindo(a), ${user.fullName}!`,
         variant: "default",
       });
+      
+      // Redirecionar para o dashboard
+      setTimeout(() => {
+        window.location.href = '/dashboard';
+      }, 500);
     },
     onError: (error: Error) => {
       toast({
