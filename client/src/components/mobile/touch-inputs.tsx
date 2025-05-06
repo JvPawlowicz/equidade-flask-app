@@ -1,523 +1,333 @@
-import * as React from 'react';
+import React, { useState, ReactNode } from 'react';
 import { cn } from '@/lib/utils';
-import { useResponsive } from '@/hooks/use-mobile';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Calendar } from '@/components/ui/calendar';
+import { CalendarIcon } from 'lucide-react';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon, ChevronDown, ChevronUp, Plus, X } from 'lucide-react';
+} from '@/components/ui/popover';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-interface TouchInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  label?: string;
-  error?: string;
-  className?: string;
-  inputClassName?: string;
-  labelClassName?: string;
-  touchOptimized?: boolean;
+// Estilos comuns para inputs otimizados para toque
+const TOUCH_STYLES = {
+  base: 'min-h-12 text-base',
+  active: 'border-primary',
+  icon: 'h-5 w-5',
+  hoverScale: 'transition-transform hover:scale-[1.01] active:scale-[0.98]'
+};
+
+interface TouchInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> {
+  fullWidth?: boolean;
+  icon?: ReactNode;
+  iconPosition?: 'left' | 'right';
+  enhanced?: boolean;
+  size?: 'default' | 'large';
 }
 
 /**
- * Input otimizado para dispositivos touch com área de clique maior
+ * Input otimizado para interações em dispositivos touchscreen
  */
 export function TouchInput({
-  label,
-  error,
   className,
-  inputClassName,
-  labelClassName,
-  touchOptimized = true,
+  fullWidth = false,
+  icon,
+  iconPosition = 'left',
+  enhanced = true,
+  size = 'default',
   ...props
 }: TouchInputProps) {
-  const { isTouchDevice } = useResponsive();
-  const optimizeForTouch = touchOptimized && isTouchDevice;
+  const [isFocused, setIsFocused] = useState(false);
+  
+  const containerClasses = cn(
+    fullWidth && 'w-full',
+    'relative'
+  );
+  
+  const inputClasses = cn(
+    enhanced && TOUCH_STYLES.base,
+    enhanced && TOUCH_STYLES.hoverScale,
+    isFocused && TOUCH_STYLES.active,
+    size === 'large' && 'min-h-14',
+    icon && iconPosition === 'left' && 'pl-10',
+    icon && iconPosition === 'right' && 'pr-10',
+    className
+  );
   
   return (
-    <div className={cn("space-y-2", className)}>
-      {label && (
-        <Label 
-          htmlFor={props.id} 
+    <div className={containerClasses}>
+      {icon && (
+        <div 
           className={cn(
-            optimizeForTouch && "text-base",
-            labelClassName
+            "absolute top-1/2 -translate-y-1/2 text-muted-foreground",
+            iconPosition === 'left' ? "left-3" : "right-3"
           )}
         >
-          {label}
-        </Label>
+          {icon}
+        </div>
       )}
       
       <Input
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
+        className={inputClasses}
         {...props}
-        className={cn(
-          optimizeForTouch && "h-12 text-base px-4",
-          error && "border-red-500 focus:ring-red-500",
-          inputClassName
-        )}
       />
-      
-      {error && (
-        <p className="text-sm text-red-500 mt-1">{error}</p>
-      )}
     </div>
   );
 }
 
 interface TouchTextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
-  label?: string;
-  error?: string;
-  className?: string;
-  textareaClassName?: string;
-  labelClassName?: string;
-  touchOptimized?: boolean;
+  fullWidth?: boolean;
+  enhanced?: boolean;
 }
 
 /**
- * Textarea otimizada para dispositivos touch
+ * Textarea otimizado para interações em dispositivos touchscreen
  */
 export function TouchTextarea({
-  label,
-  error,
   className,
-  textareaClassName,
-  labelClassName,
-  touchOptimized = true,
+  fullWidth = false,
+  enhanced = true,
   ...props
 }: TouchTextareaProps) {
-  const { isTouchDevice } = useResponsive();
-  const optimizeForTouch = touchOptimized && isTouchDevice;
+  const [isFocused, setIsFocused] = useState(false);
+  
+  const textareaClasses = cn(
+    enhanced && TOUCH_STYLES.base,
+    enhanced && TOUCH_STYLES.hoverScale,
+    isFocused && TOUCH_STYLES.active,
+    'min-h-[100px]',
+    fullWidth && 'w-full',
+    className
+  );
   
   return (
-    <div className={cn("space-y-2", className)}>
-      {label && (
-        <Label 
-          htmlFor={props.id} 
-          className={cn(
-            optimizeForTouch && "text-base",
-            labelClassName
-          )}
-        >
-          {label}
-        </Label>
-      )}
-      
-      <Textarea
-        {...props}
-        className={cn(
-          optimizeForTouch && "text-base px-4 py-3",
-          error && "border-red-500 focus:ring-red-500",
-          textareaClassName
-        )}
-      />
-      
-      {error && (
-        <p className="text-sm text-red-500 mt-1">{error}</p>
-      )}
-    </div>
+    <Textarea
+      onFocus={() => setIsFocused(true)}
+      onBlur={() => setIsFocused(false)}
+      className={textareaClasses}
+      {...props}
+    />
   );
 }
 
 interface TouchSelectProps {
-  label?: string;
-  error?: string;
-  className?: string;
-  selectClassName?: string;
-  labelClassName?: string;
-  options: { value: string; label: string }[];
-  value: string;
-  onChange: (value: string) => void;
+  options: Array<{ label: string; value: string }>;
+  value?: string;
+  onValueChange?: (value: string) => void;
   placeholder?: string;
+  className?: string;
+  fullWidth?: boolean;
+  enhanced?: boolean;
+  size?: 'default' | 'large';
   disabled?: boolean;
-  touchOptimized?: boolean;
-  showSearch?: boolean;
 }
 
 /**
- * Select customizado para melhor experiência em dispositivos touch
- * Abre um popover com opções maiores para facilitar a seleção
+ * Select otimizado para interações em dispositivos touchscreen
  */
 export function TouchSelect({
-  label,
-  error,
-  className,
-  selectClassName,
-  labelClassName,
   options,
   value,
-  onChange,
+  onValueChange,
   placeholder = "Selecione uma opção",
+  className,
+  fullWidth = false,
+  enhanced = true,
+  size = 'default',
   disabled = false,
-  touchOptimized = true,
-  showSearch = false,
 }: TouchSelectProps) {
-  const { isTouchDevice } = useResponsive();
-  const optimizeForTouch = touchOptimized && isTouchDevice;
-  const [open, setOpen] = React.useState(false);
-  const [searchTerm, setSearchTerm] = React.useState('');
+  const triggerClasses = cn(
+    fullWidth && 'w-full',
+    enhanced && TOUCH_STYLES.base,
+    enhanced && TOUCH_STYLES.hoverScale,
+    size === 'large' && 'min-h-14',
+    className
+  );
   
-  const selectedOption = options.find(option => option.value === value);
-  
-  const filteredOptions = showSearch
-    ? options.filter(option => 
-        option.label.toLowerCase().includes(searchTerm.toLowerCase()))
-    : options;
+  const contentClasses = cn(
+    enhanced && 'text-base'
+  );
   
   return (
-    <div className={cn("space-y-2", className)}>
-      {label && (
-        <Label className={cn(
-          optimizeForTouch && "text-base",
-          labelClassName
-        )}>
-          {label}
-        </Label>
-      )}
-      
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className={cn(
-              "w-full justify-between",
-              optimizeForTouch && "h-12 text-base px-4",
-              error && "border-red-500",
-              !selectedOption && "text-muted-foreground",
-              selectClassName
-            )}
-            disabled={disabled}
+    <Select 
+      value={value} 
+      onValueChange={onValueChange}
+      disabled={disabled}
+    >
+      <SelectTrigger className={triggerClasses}>
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+      <SelectContent className={contentClasses}>
+        {options.map((option) => (
+          <SelectItem 
+            key={option.value} 
+            value={option.value}
+            className={enhanced ? 'text-base py-2.5' : undefined}
           >
-            {selectedOption ? selectedOption.label : placeholder}
-            <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className={cn(
-          "w-full p-0",
-          optimizeForTouch && "max-h-80"
-        )}>
-          {showSearch && (
-            <div className="p-2 pb-0">
-              <Input
-                placeholder="Pesquisar..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className={optimizeForTouch ? "h-10" : ""}
-              />
-            </div>
-          )}
-          <div className={cn(
-            "overflow-y-auto max-h-60",
-            optimizeForTouch && "max-h-72"
-          )}>
-            {filteredOptions.length > 0 ? (
-              filteredOptions.map((option) => (
-                <div
-                  key={option.value}
-                  className={cn(
-                    "flex items-center px-4 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800",
-                    optimizeForTouch && "py-3",
-                    option.value === value && "bg-gray-100 dark:bg-gray-800"
-                  )}
-                  onClick={() => {
-                    onChange(option.value);
-                    setOpen(false);
-                  }}
-                >
-                  {option.label}
-                </div>
-              ))
-            ) : (
-              <div className="p-4 text-center text-sm text-gray-500">
-                Nenhuma opção encontrada.
-              </div>
-            )}
-          </div>
-        </PopoverContent>
-      </Popover>
-      
-      {error && (
-        <p className="text-sm text-red-500 mt-1">{error}</p>
-      )}
-    </div>
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 
 interface TouchDatePickerProps {
-  label?: string;
-  error?: string;
-  className?: string;
-  value: Date | undefined;
-  onChange: (date: Date | undefined) => void;
+  value?: Date;
+  onChange?: (date: Date | undefined) => void;
   placeholder?: string;
+  className?: string;
+  fullWidth?: boolean;
+  enhanced?: boolean;
+  size?: 'default' | 'large';
   disabled?: boolean;
-  touchOptimized?: boolean;
-  showTime?: boolean;
-  minDate?: Date;
-  maxDate?: Date;
 }
 
 /**
- * DatePicker otimizado para dispositivos touch
+ * DatePicker otimizado para interações em dispositivos touchscreen
  */
 export function TouchDatePicker({
-  label,
-  error,
-  className,
   value,
   onChange,
   placeholder = "Selecione uma data",
+  className,
+  fullWidth = false,
+  enhanced = true,
+  size = 'default',
   disabled = false,
-  touchOptimized = true,
-  showTime = false,
-  minDate,
-  maxDate,
 }: TouchDatePickerProps) {
-  const { isTouchDevice } = useResponsive();
-  const optimizeForTouch = touchOptimized && isTouchDevice;
-  const [open, setOpen] = React.useState(false);
-  const [hours, setHours] = React.useState<number>(value ? value.getHours() : 8);
-  const [minutes, setMinutes] = React.useState<number>(value ? value.getMinutes() : 0);
+  const [open, setOpen] = useState(false);
   
-  const handleDateChange = (date: Date | undefined) => {
-    if (!date) {
-      onChange(undefined);
-      return;
-    }
-    
-    if (showTime && date) {
-      const newDate = new Date(date);
-      newDate.setHours(hours);
-      newDate.setMinutes(minutes);
-      onChange(newDate);
-    } else {
-      onChange(date);
-    }
-  };
-  
-  const handleTimeChange = () => {
-    if (!value) return;
-    
-    const newDate = new Date(value);
-    newDate.setHours(hours);
-    newDate.setMinutes(minutes);
-    onChange(newDate);
-  };
-  
-  const incrementHours = () => {
-    setHours((prev) => (prev === 23 ? 0 : prev + 1));
-  };
-  
-  const decrementHours = () => {
-    setHours((prev) => (prev === 0 ? 23 : prev - 1));
-  };
-  
-  const incrementMinutes = () => {
-    setMinutes((prev) => (prev === 59 ? 0 : prev + 1));
-  };
-  
-  const decrementMinutes = () => {
-    setMinutes((prev) => (prev === 0 ? 59 : prev - 1));
-  };
-  
-  React.useEffect(() => {
-    if (value) {
-      setHours(value.getHours());
-      setMinutes(value.getMinutes());
-    }
-  }, [value]);
+  const triggerClasses = cn(
+    "justify-start text-left font-normal",
+    fullWidth && 'w-full',
+    enhanced && TOUCH_STYLES.base,
+    enhanced && TOUCH_STYLES.hoverScale,
+    size === 'large' && 'min-h-14',
+    !value && "text-muted-foreground",
+    className
+  );
   
   return (
-    <div className={cn("space-y-2", className)}>
-      {label && <Label>{label}</Label>}
-      
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            className={cn(
-              "w-full justify-between",
-              optimizeForTouch && "h-12 text-base px-4",
-              !value && "text-muted-foreground",
-              error && "border-red-500"
-            )}
-            disabled={disabled}
-          >
-            {value ? format(value, showTime ? 'PPp' : 'PP', { locale: ptBR }) : placeholder}
-            <CalendarIcon className="ml-2 h-4 w-4" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
-          <Calendar
-            mode="single"
-            selected={value}
-            onSelect={handleDateChange}
-            initialFocus
-            disabled={disabled}
-            className={cn(optimizeForTouch && "touch-manipulation")}
-            fromDate={minDate}
-            toDate={maxDate}
-          />
-          
-          {showTime && value && (
-            <div className="p-3 border-t">
-              <div className="flex justify-between items-center">
-                <div className="text-sm font-medium">Hora:</div>
-                
-                <div className="flex items-center space-x-3">
-                  {/* Selector de hora */}
-                  <div className="flex flex-col items-center">
-                    <Button 
-                      size="icon" 
-                      variant="ghost" 
-                      className="h-7 w-7" 
-                      onClick={incrementHours}
-                    >
-                      <ChevronUp size={16} />
-                    </Button>
-                    <div 
-                      className={cn(
-                        "w-12 h-9 border rounded flex items-center justify-center", 
-                        optimizeForTouch && "h-10"
-                      )}
-                    >
-                      {hours.toString().padStart(2, '0')}
-                    </div>
-                    <Button 
-                      size="icon" 
-                      variant="ghost" 
-                      className="h-7 w-7"
-                      onClick={decrementHours}
-                    >
-                      <ChevronDown size={16} />
-                    </Button>
-                  </div>
-                  
-                  <div className="text-xl">:</div>
-                  
-                  {/* Selector de minutos */}
-                  <div className="flex flex-col items-center">
-                    <Button 
-                      size="icon" 
-                      variant="ghost" 
-                      className="h-7 w-7" 
-                      onClick={incrementMinutes}
-                    >
-                      <ChevronUp size={16} />
-                    </Button>
-                    <div 
-                      className={cn(
-                        "w-12 h-9 border rounded flex items-center justify-center", 
-                        optimizeForTouch && "h-10"
-                      )}
-                    >
-                      {minutes.toString().padStart(2, '0')}
-                    </div>
-                    <Button 
-                      size="icon" 
-                      variant="ghost" 
-                      className="h-7 w-7"
-                      onClick={decrementMinutes}
-                    >
-                      <ChevronDown size={16} />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-              
-              <Button 
-                className="w-full mt-3" 
-                size="sm"
-                onClick={() => {
-                  handleTimeChange();
-                  setOpen(false);
-                }}
-              >
-                Confirmar
-              </Button>
-            </div>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          disabled={disabled}
+          className={triggerClasses}
+          onClick={() => setOpen(true)}
+        >
+          <CalendarIcon className="mr-2 h-4 w-4" />
+          {value ? (
+            format(value, "PPP", { locale: ptBR })
+          ) : (
+            <span>{placeholder}</span>
           )}
-        </PopoverContent>
-      </Popover>
-      
-      {error && (
-        <p className="text-sm text-red-500 mt-1">{error}</p>
-      )}
-    </div>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <Calendar
+          mode="single"
+          selected={value}
+          onSelect={(date) => {
+            onChange?.(date);
+            setOpen(false);
+          }}
+          initialFocus
+          disabled={disabled}
+        />
+      </PopoverContent>
+    </Popover>
   );
 }
 
-interface DynamicFieldListProps {
-  fields: any[];
-  renderField: (field: any, index: number) => React.ReactNode;
-  onAdd: () => void;
-  onRemove: (index: number) => void;
-  addLabel?: string;
-  emptyMessage?: string;
-  maxFields?: number;
-  className?: string;
+interface TouchButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'default' | 'outline' | 'secondary' | 'ghost' | 'link' | 'destructive';
+  size?: 'default' | 'large' | 'icon';
+  icon?: ReactNode;
+  fullWidth?: boolean;
+  ripple?: boolean;
+  children?: ReactNode;
 }
 
 /**
- * Componente para lista de campos dinâmicos em formulários
- * otimizado para entrada mobile
+ * Botão otimizado para interações em dispositivos touchscreen
  */
-export function DynamicFieldList({
-  fields,
-  renderField,
-  onAdd,
-  onRemove,
-  addLabel = "Adicionar item",
-  emptyMessage = "Nenhum item adicionado",
-  maxFields,
+export function TouchButton({
   className,
-}: DynamicFieldListProps) {
-  const { isTouchDevice } = useResponsive();
+  variant = 'default',
+  size = 'default',
+  icon,
+  fullWidth = false,
+  ripple = true,
+  children,
+  ...props
+}: TouchButtonProps) {
+  const [rippleEffect, setRippleEffect] = useState<{
+    x: number;
+    y: number;
+    visible: boolean;
+  }>({ x: 0, y: 0, visible: false });
+  
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (ripple) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      
+      setRippleEffect({ x, y, visible: true });
+      
+      setTimeout(() => {
+        setRippleEffect(prev => ({ ...prev, visible: false }));
+      }, 400);
+    }
+    
+    props.onClick?.(e);
+  };
+  
+  const buttonClasses = cn(
+    "relative overflow-hidden",
+    size === 'large' && 'min-h-14 text-base px-6',
+    fullWidth && 'w-full',
+    TOUCH_STYLES.hoverScale,
+    className
+  );
   
   return (
-    <div className={className}>
-      {fields.length === 0 ? (
-        <div className="text-center p-4 border border-dashed rounded-md text-gray-500">
-          {emptyMessage}
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {fields.map((field, index) => (
-            <div key={index} className="relative border rounded-md p-3">
-              {renderField(field, index)}
-              
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="absolute top-2 right-2 h-6 w-6"
-                onClick={() => onRemove(index)}
-              >
-                <X size={isTouchDevice ? 18 : 16} />
-              </Button>
-            </div>
-          ))}
-        </div>
+    <Button
+      variant={variant}
+      size={size === 'large' ? 'default' : size}
+      className={buttonClasses}
+      onClick={handleClick}
+      {...props}
+    >
+      {ripple && rippleEffect.visible && (
+        <span 
+          className="absolute rounded-full bg-white/20 dark:bg-black/20 animate-ripple"
+          style={{
+            top: rippleEffect.y - 50,
+            left: rippleEffect.x - 50,
+            width: '100px',
+            height: '100px',
+          }}
+        />
       )}
       
-      {(!maxFields || fields.length < maxFields) && (
-        <Button
-          type="button"
-          variant="outline"
-          size={isTouchDevice ? "default" : "sm"}
-          className="mt-3"
-          onClick={onAdd}
-        >
-          <Plus size={isTouchDevice ? 18 : 16} className="mr-1" />
-          {addLabel}
-        </Button>
-      )}
-    </div>
+      {icon && <span className="mr-2">{icon}</span>}
+      {children}
+    </Button>
   );
 }
