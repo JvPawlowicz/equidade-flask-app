@@ -555,7 +555,7 @@ export default function PatientsPage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="">Sem plano</SelectItem>
+                              <SelectItem value="no_plan">Sem plano</SelectItem>
                               {insurancePlans?.map((plan) => (
                                 <SelectItem key={plan.id} value={plan.id.toString()}>
                                   {plan.name} - {plan.provider}

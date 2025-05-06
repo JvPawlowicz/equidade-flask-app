@@ -86,14 +86,14 @@ export default function AppointmentsPage() {
               <div>
                 <label className="text-sm font-medium block mb-2">Unidade</label>
                 <Select 
-                  value={filterFacilityId?.toString() || ""}
-                  onValueChange={(value) => setFilterFacilityId(value ? parseInt(value) : undefined)}
+                  value={filterFacilityId?.toString() || "all_facilities"}
+                  onValueChange={(value) => setFilterFacilityId(value !== "all_facilities" ? parseInt(value) : undefined)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Todas as unidades" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todas as unidades</SelectItem>
+                    <SelectItem value="all_facilities">Todas as unidades</SelectItem>
                     {facilities?.map((facility) => (
                       <SelectItem key={facility.id} value={facility.id.toString()}>
                         {facility.name}
@@ -105,14 +105,14 @@ export default function AppointmentsPage() {
               <div>
                 <label className="text-sm font-medium block mb-2">Profissional</label>
                 <Select 
-                  value={filterProfessionalId?.toString() || ""}
-                  onValueChange={(value) => setFilterProfessionalId(value ? parseInt(value) : undefined)}
+                  value={filterProfessionalId?.toString() || "all_professionals"}
+                  onValueChange={(value) => setFilterProfessionalId(value !== "all_professionals" ? parseInt(value) : undefined)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Todos os profissionais" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos os profissionais</SelectItem>
+                    <SelectItem value="all_professionals">Todos os profissionais</SelectItem>
                     {professionals?.map((professional) => (
                       <SelectItem key={professional.id} value={professional.id.toString()}>
                         {professional.user.fullName}
@@ -152,14 +152,14 @@ export default function AppointmentsPage() {
               <div>
                 <label className="text-sm font-medium block mb-2">Status</label>
                 <Select 
-                  value={filterStatus || ""}
-                  onValueChange={(value) => setFilterStatus(value || undefined)}
+                  value={filterStatus || "all_statuses"}
+                  onValueChange={(value) => setFilterStatus(value !== "all_statuses" ? value : undefined)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Todos os status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos os status</SelectItem>
+                    <SelectItem value="all_statuses">Todos os status</SelectItem>
                     <SelectItem value="scheduled">Agendado</SelectItem>
                     <SelectItem value="confirmed">Confirmado</SelectItem>
                     <SelectItem value="completed">Finalizado</SelectItem>
