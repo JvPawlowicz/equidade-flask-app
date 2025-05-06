@@ -2,7 +2,7 @@ import express, { type Express, Request, Response, NextFunction } from "express"
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
-import { checkPermission, requireApproval, isOwnerOrSupervisor } from "./permissions";
+import { checkPermission, requireApproval, isOwnerOrSupervisor, getResourceText, getActionText, resourceTranslations, actionTranslations } from "./permissions";
 import WebSocket, { WebSocketServer } from "ws";
 import { db } from "@db";
 import {
@@ -1757,6 +1757,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Reports endpoints
+  // Metadata para logs de auditoria - nomes dos recursos e tipos de ação
+  app.get(`${apiPrefix}/audit-logs/metadata`, checkPermission('users', 'read'), async (req, res) => {
+    try {
+      // Verificar se é admin (dupla camada de segurança)
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ error: "Acesso negado. Apenas administradores podem acessar metadados de logs." });
+      }
+      
+      // Retornar mapeamentos de traduções
+      res.json({
+        resourceTranslations: Object.entries(resourceTranslations).map(([key, value]) => ({
+          key,
+          text: value
+        })),
+        actionTranslations: Object.entries(actionTranslations).map(([key, value]) => ({
+          key,
+          text: value
+        }))
+      });
+    } catch (error) {
+      console.error("Erro ao buscar metadados de logs de auditoria:", error);
+      res.status(500).json({ error: "Erro ao buscar metadados de logs de auditoria" });
+    }
+  });
+
   // Audit Logs - Acessível apenas por admin
   app.get(`${apiPrefix}/audit-logs`, checkPermission('users', 'read'), async (req, res) => {
     try {
