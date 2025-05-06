@@ -21,10 +21,11 @@ import { Separator } from "../ui/separator";
 import { Button } from "../ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 
-export function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean; setIsOpen: (value: boolean) => void }) {
+export function Sidebar() {
   const { user, logoutMutation } = useAuth();
   const [location] = useLocation();
   const isMobile = useMobile();
+  const [isOpen, setIsOpen] = useState(!isMobile);
   const [currentDate, setCurrentDate] = useState<string>(formatDate(new Date(), "dd 'de' MMMM 'de' yyyy"));
   const [currentCity, setCurrentCity] = useState<string>(getCurrentLocation());
   

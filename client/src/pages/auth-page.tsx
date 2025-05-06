@@ -272,9 +272,9 @@ export default function AuthPage() {
                     <Button
                       type="submit"
                       className="w-full"
-                      disabled={loginMutation.isPending}
+                      disabled={loginForm.formState.isSubmitting}
                     >
-                      {loginMutation.isPending ? (
+                      {loginForm.formState.isSubmitting ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           Entrando...
@@ -396,9 +396,9 @@ export default function AuthPage() {
                     <Button
                       type="submit"
                       className="w-full"
-                      disabled={registerMutation.isPending}
+                      disabled={registerForm.formState.isSubmitting}
                     >
-                      {registerMutation.isPending ? (
+                      {registerForm.formState.isSubmitting ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           Cadastrando...

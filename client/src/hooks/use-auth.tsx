@@ -17,6 +17,7 @@ type AuthContextType = {
   loginMutation: UseMutationResult<User, Error, LoginData>;
   logoutMutation: UseMutationResult<void, Error, void>;
   registerMutation: UseMutationResult<User, Error, InsertUser>;
+  setUser: (user: User | null) => void;
 };
 
 type LoginData = {
@@ -47,6 +48,7 @@ const defaultAuthContext: AuthContextType = {
   loginMutation: defaultMutation as UseMutationResult<User, Error, LoginData>,
   logoutMutation: defaultMutation as UseMutationResult<void, Error, void>,
   registerMutation: defaultMutation as UseMutationResult<User, Error, InsertUser>,
+  setUser: () => {},
 };
 
 export const AuthContext = createContext<AuthContextType>(defaultAuthContext);
@@ -185,6 +187,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     */
   }, [user]);
 
+  // Função para atualizar o usuário diretamente
+  const setUser = (newUser: User | null) => {
+    console.log("Atualizando usuário via setUser:", newUser);
+    queryClient.setQueryData(["/api/user"], newUser);
+    // Também forçamos um refetch para garantir consistência
+    if (newUser) {
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -194,6 +206,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loginMutation,
         logoutMutation,
         registerMutation,
+        setUser,
       }}
     >
       {children}

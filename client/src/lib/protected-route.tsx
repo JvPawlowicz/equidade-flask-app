@@ -11,10 +11,11 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({ path, component: Component }: ProtectedRouteProps) {
   const [isVerifying, setIsVerifying] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userData, setUserData] = useState(null);
   const auth = useAuth();
   const [location] = useLocation();
 
-  // Efeito para verificar autenticação toda vez que a rota muda ou o usuário muda
+  // Efeito para verificar autenticação diretamente via API
   useEffect(() => {
     let isMounted = true;
 
@@ -22,8 +23,9 @@ export function ProtectedRoute({ path, component: Component }: ProtectedRoutePro
       setIsVerifying(true);
       
       try {
-        // Verificar se o usuário está autenticado
-        const response = await fetch('/api/user', { 
+        // Verificar se o usuário está autenticado com cache-busting
+        const timestamp = new Date().getTime();
+        const response = await fetch(`/api/user?_=${timestamp}`, { 
           credentials: 'include',
           headers: {
             'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -34,12 +36,19 @@ export function ProtectedRoute({ path, component: Component }: ProtectedRoutePro
         
         if (isMounted) {
           if (response.ok) {
-            const userData = await response.json();
-            console.log("Protected Route: User verified via API", userData.username);
+            const data = await response.json();
+            console.log("Protected Route: User verified via API", data.username);
+            setUserData(data);
             setIsAuthenticated(true);
+            
+            // Atualizar o contexto de auth também
+            if (auth && typeof auth.setUser === 'function') {
+              auth.setUser(data);
+            }
           } else {
             console.log("Protected Route: User not authenticated via API");
             setIsAuthenticated(false);
+            setUserData(null);
           }
           setIsVerifying(false);
         }
@@ -47,6 +56,7 @@ export function ProtectedRoute({ path, component: Component }: ProtectedRoutePro
         console.error("Error verifying authentication:", error);
         if (isMounted) {
           setIsAuthenticated(false);
+          setUserData(null);
           setIsVerifying(false);
         }
       }
@@ -57,7 +67,7 @@ export function ProtectedRoute({ path, component: Component }: ProtectedRoutePro
     return () => {
       isMounted = false;
     };
-  }, [location, auth.user]);
+  }, [location]);
 
   // Renderizar o Route com verificação direta à API
   return (
@@ -65,9 +75,9 @@ export function ProtectedRoute({ path, component: Component }: ProtectedRoutePro
       {(params) => {
         if (isVerifying) {
           return (
-            <div className="flex items-center justify-center min-h-screen">
+            <div className="flex flex-col items-center justify-center min-h-screen">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <span className="ml-2">Verificando autenticação...</span>
+              <span className="ml-2 mt-4">Verificando autenticação...</span>
             </div>
           );
         }
