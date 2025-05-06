@@ -68,12 +68,12 @@ export default function DocumentsPage() {
     },
   });
 
-  const { data: patients, isLoading: isLoadingPatients } = useQuery({
+  const { data: patients = [], isLoading: isLoadingPatients } = useQuery<any[]>({
     queryKey: ['/api/patients'],
     enabled: activeTab === "pacientes"
   });
 
-  const { data: facilities, isLoading: isLoadingFacilities } = useQuery({
+  const { data: facilities = [], isLoading: isLoadingFacilities } = useQuery<any[]>({
     queryKey: ['/api/facilities'],
     enabled: activeTab === "unidades"
   });
@@ -129,7 +129,6 @@ export default function DocumentsPage() {
                         <SelectValue placeholder="Selecione um paciente" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="select_patient">Selecione um paciente</SelectItem>
                         {isLoadingPatients ? (
                           <div className="flex items-center justify-center py-2">
                             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
@@ -182,7 +181,6 @@ export default function DocumentsPage() {
                         <SelectValue placeholder="Selecione uma unidade" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="select_facility">Selecione uma unidade</SelectItem>
                         {isLoadingFacilities ? (
                           <div className="flex items-center justify-center py-2">
                             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
