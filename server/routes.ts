@@ -69,6 +69,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
   setupAuth(app);
 
+  // Rota para página de login estática (HTML puro, sem React)
+  app.get('/static-login', (req, res) => {
+    res.sendFile(path.join(process.cwd(), 'client/public/login-static.html'));
+  });
+
   // API prefix
   const apiPrefix = "/api";
 

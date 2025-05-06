@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login Estático</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background-color: #f5f5f5;
+    }
+    .card {
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      padding: 24px;
+      width: 400px;
+      max-width: 90%;
+    }
+    .card-header {
+      margin-bottom: 24px;
+    }
+    .card-title {
+      font-size: 24px;
+      font-weight: bold;
+      margin: 0 0 8px 0;
+    }
+    .card-description {
+      color: #666;
+      margin: 0;
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: bold;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      box-sizing: border-box;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    button {
+      background-color: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 10px 16px;
+      cursor: pointer;
+      width: 100%;
+      font-size: 16px;
+      margin-top: 8px;
+    }
+    button:hover {
+      background-color: #2563eb;
+    }
+    .status {
+      margin-top: 16px;
+      padding: 12px;
+      background-color: #f3f4f6;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .status.success {
+      background-color: #d1fae5;
+      color: #065f46;
+    }
+    .status.error {
+      background-color: #fee2e2;
+      color: #b91c1c;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="card-header">
+      <h1 class="card-title">Login</h1>
+      <p class="card-description">Faça login para acessar o sistema</p>
+    </div>
+    
+    <form id="loginForm">
+      <div class="form-group">
+        <label for="username">Nome de usuário</label>
+        <input 
+          id="username" 
+          type="text" 
+          placeholder="admin" 
+          value="admin"
+          required
+        >
+      </div>
+      
+      <div class="form-group">
+        <label for="password">Senha</label>
+        <input 
+          id="password" 
+          type="password" 
+          placeholder="admin123" 
+          value="admin123"
+          required
+        >
+      </div>
+      
+      <button type="submit" id="loginButton">Entrar</button>
+    </form>
+    
+    <div id="status" class="status" style="display: none;"></div>
+    
+    <button id="checkAuthButton" style="margin-top: 16px; background-color: #4b5563;">
+      Verificar status de autenticação
+    </button>
+  </div>
+
+  <script>
+    // Elementos do DOM
+    const loginForm = document.getElementById('loginForm');
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    const loginButton = document.getElementById('loginButton');
+    const statusElement = document.getElementById('status');
+    const checkAuthButton = document.getElementById('checkAuthButton');
+    
+    // Exibir mensagem de status
+    function showStatus(message, type = 'info') {
+      statusElement.textContent = message;
+      statusElement.className = `status ${type}`;
+      statusElement.style.display = 'block';
+    }
+    
+    // Manipulador de envio do formulário
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      loginButton.textContent = 'Entrando...';
+      loginButton.disabled = true;
+      
+      try {
+        const response = await fetch('/api/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            username: usernameInput.value,
+            password: passwordInput.value
+          })
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          showStatus(`Login bem-sucedido! Bem-vindo(a), ${data.fullName}!`, 'success');
+          
+          // Verificar autenticação após login
+          checkAuthStatus();
+          
+          // Redirecionar para a página inicial após 2 segundos
+          setTimeout(() => {
+            window.location.href = '/';
+          }, 2000);
+        } else {
+          const errorData = await response.json().catch(() => ({}));
+          showStatus(`Erro: ${errorData.error || 'Falha na autenticação'}`, 'error');
+        }
+      } catch (error) {
+        showStatus(`Erro: ${error.message}`, 'error');
+      } finally {
+        loginButton.textContent = 'Entrar';
+        loginButton.disabled = false;
+      }
+    });
+    
+    // Verificar status de autenticação
+    async function checkAuthStatus() {
+      try {
+        const timestamp = new Date().getTime();
+        const response = await fetch(`/api/user?_=${timestamp}`, {
+          credentials: 'include',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          showStatus(`Autenticado como: ${data.username} (${data.role})`, 'success');
+        } else {
+          showStatus('Não autenticado', 'error');
+        }
+      } catch (error) {
+        showStatus(`Erro ao verificar autenticação: ${error.message}`, 'error');
+      }
+    }
+    
+    // Adicionar evento ao botão de verificação
+    checkAuthButton.addEventListener('click', checkAuthStatus);
+    
+    // Verificar autenticação ao carregar a página
+    checkAuthStatus();
+  </script>
+</body>
+</html>
