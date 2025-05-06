@@ -115,10 +115,10 @@ export default function AuthPage() {
         description: `Bem-vindo(a), ${userData.fullName}!`,
       });
       
-      // Redirecionar após um pequeno atraso
+      // Redirecionar para a interface React
       setTimeout(() => {
-        window.location.href = '/dashboard';
-      }, 1000);
+        navigate('/');
+      }, 500);
     } catch (error: any) {
       console.error('Erro no login:', error);
       toast({
@@ -160,10 +160,10 @@ export default function AuthPage() {
         description: `Bem-vindo(a), ${userData.fullName}!`,
       });
       
-      // Redirecionar após um pequeno atraso
+      // Redirecionar para a interface React
       setTimeout(() => {
-        window.location.href = '/dashboard';
-      }, 1000);
+        navigate('/');
+      }, 500);
     } catch (error: any) {
       console.error('Erro no registro:', error);
       toast({
