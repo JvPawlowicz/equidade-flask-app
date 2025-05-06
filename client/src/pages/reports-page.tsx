@@ -694,15 +694,66 @@ export default function ReportsPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Atendimentos por Período</CardTitle>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => exportToCSV(appointmentsByPeriodData || [], `atendimentos_por_${periodType}.csv`)}
-                disabled={!appointmentsByPeriodData || appointmentsByPeriodData.length === 0}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Exportar CSV
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => exportToCSV(appointmentsByPeriodData || [], `atendimentos_por_${periodType}.csv`)}
+                  disabled={!appointmentsByPeriodData || appointmentsByPeriodData.length === 0}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Exportar CSV
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => {
+                    if (appointmentsByPeriodData && appointmentsByPeriodData.length > 0) {
+                      const columns = [
+                        "period", 
+                        "totalAppointments", 
+                        "completedAppointments", 
+                        "cancelledAppointments", 
+                        "completionRate"
+                      ];
+                      const extraInfo = [
+                        { label: "Período", value: `${formatDate(new Date(startDate))} a ${formatDate(new Date(endDate))}` },
+                        { label: "Agrupamento", value: (() => {
+                          const periodMap: Record<string, string> = {
+                            day: "Diário",
+                            week: "Semanal",
+                            month: "Mensal",
+                            quarter: "Trimestral",
+                            year: "Anual"
+                          };
+                          return periodMap[periodType] || periodType;
+                        })() },
+                        { label: "Unidade", value: selectedFacilityId 
+                          ? facilities?.find(f => f.id.toString() === selectedFacilityId)?.name || "Desconhecida" 
+                          : "Todas" }
+                      ];
+                      
+                      // Formatar dados para o PDF
+                      const formattedData = appointmentsByPeriodData.map(item => ({
+                        ...item,
+                        completionRate: `${item.completionRate}%`
+                      }));
+                      
+                      exportToPDF(
+                        formattedData, 
+                        `atendimentos_por_${periodType}.pdf`,
+                        'Relatório de Atendimentos por Período',
+                        columns,
+                        extraInfo
+                      );
+                    }
+                  }}
+                  disabled={!appointmentsByPeriodData || appointmentsByPeriodData.length === 0}
+                >
+                  <FileUp className="h-4 w-4 mr-2" />
+                  Exportar PDF
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {isLoadingAppointmentsByPeriod ? (
@@ -853,15 +904,42 @@ export default function ReportsPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Pacientes por Unidade</CardTitle>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => exportToCSV(patientsByFacilityData || [], 'pacientes_por_unidade.csv')}
-                disabled={!patientsByFacilityData || patientsByFacilityData.length === 0}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Exportar CSV
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => exportToCSV(patientsByFacilityData || [], 'pacientes_por_unidade.csv')}
+                  disabled={!patientsByFacilityData || patientsByFacilityData.length === 0}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Exportar CSV
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => {
+                    if (patientsByFacilityData && patientsByFacilityData.length > 0) {
+                      // Formatar dados para o PDF
+                      const formattedData = patientsByFacilityData.map(item => ({
+                        unidade: item.facility?.name || "Desconhecida",
+                        quantidade: parseInt(item.count)
+                      }));
+                      
+                      exportToPDF(
+                        formattedData, 
+                        'pacientes_por_unidade.pdf',
+                        'Relatório de Pacientes por Unidade',
+                        ["unidade", "quantidade"],
+                        [{ label: "Data de geração", value: new Date().toLocaleDateString('pt-BR') }]
+                      );
+                    }
+                  }}
+                  disabled={!patientsByFacilityData || patientsByFacilityData.length === 0}
+                >
+                  <FileUp className="h-4 w-4 mr-2" />
+                  Exportar PDF
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {isLoadingPatientsByFacility ? (
@@ -951,14 +1029,53 @@ export default function ReportsPage() {
                 )}
               </div>
               {patientEvolutionData?.evolutions && patientEvolutionData.evolutions.length > 0 && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => exportToCSV(patientEvolutionData.evolutions, `evolucao_${selectedPatientId}.csv`)}
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Exportar CSV
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => exportToCSV(patientEvolutionData.evolutions, `evolucao_${selectedPatientId}.csv`)}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Exportar CSV
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      // Formatar dados para o PDF
+                      const formattedData = patientEvolutionData.evolutions.map(ev => ({
+                        data: formatDate(new Date(ev.date)),
+                        profissional: ev.professionalName,
+                        procedimento: ev.procedureType ? getProcedureText(ev.procedureType) : "Não especificado",
+                        progresso: ev.progressLevel !== null ? `${ev.progressLevel}/10` : "Não avaliado",
+                      }));
+                      
+                      const extraInfo = [
+                        { label: "Paciente", value: patientEvolutionData.patient?.name || "Não especificado" },
+                        { label: "Período", value: `${formatDate(new Date(startDate))} a ${formatDate(new Date(endDate))}` },
+                        { label: "Total de evoluções", value: patientEvolutionData.evolutions.length.toString() }
+                      ];
+                      
+                      if (selectedProfessionalId) {
+                        const profName = professionalsList?.find(p => p.id.toString() === selectedProfessionalId)?.user?.fullName;
+                        if (profName) {
+                          extraInfo.push({ label: "Profissional", value: profName });
+                        }
+                      }
+                      
+                      exportToPDF(
+                        formattedData, 
+                        `evolucao_paciente_${selectedPatientId}.pdf`,
+                        'Relatório de Evolução de Paciente',
+                        ["data", "profissional", "procedimento", "progresso"],
+                        extraInfo
+                      );
+                    }}
+                  >
+                    <FileUp className="h-4 w-4 mr-2" />
+                    Exportar PDF
+                  </Button>
+                </div>
               )}
             </CardHeader>
             <CardContent>
