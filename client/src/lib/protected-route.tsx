@@ -2,6 +2,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import { Redirect, Route, useLocation } from "wouter";
 import { useEffect, useState } from "react";
+import { queryClient } from "./queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface ProtectedRouteProps {
   path: string;
@@ -11,15 +13,17 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({ path, component: Component }: ProtectedRouteProps) {
   const [isVerifying, setIsVerifying] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userData, setUserData] = useState(null);
   const auth = useAuth();
   const [location] = useLocation();
+  const { toast } = useToast();
 
   // Efeito para verificar autenticação diretamente via API
   useEffect(() => {
     let isMounted = true;
 
     const verifyAuth = async () => {
+      if (!isMounted) return;
+      
       setIsVerifying(true);
       
       try {
@@ -27,7 +31,6 @@ export function ProtectedRoute({ path, component: Component }: ProtectedRoutePro
         if (auth.user) {
           console.log("Protected Route: User already in auth context", auth.user.username);
           setIsAuthenticated(true);
-          setUserData(auth.user);
           setIsVerifying(false);
           return;
         }
@@ -43,40 +46,54 @@ export function ProtectedRoute({ path, component: Component }: ProtectedRoutePro
           }
         });
         
-        if (isMounted) {
-          if (response.ok) {
-            const data = await response.json();
-            console.log("Protected Route: User verified via API", data.username);
-            setUserData(data);
-            setIsAuthenticated(true);
-            
-            // Atualizar o contexto de auth também
-            if (auth && typeof auth.setUser === 'function') {
-              auth.setUser(data);
-            }
-          } else {
-            console.log("Protected Route: User not authenticated via API", await response.text());
-            setIsAuthenticated(false);
-            setUserData(null);
-            
-            // Limpar o contexto de auth
-            if (auth && typeof auth.setUser === 'function') {
-              auth.setUser(null);
-            }
+        if (!isMounted) return;
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log("Protected Route: User verified via API", data.username);
+          setIsAuthenticated(true);
+          
+          // Atualizar o contexto de auth
+          if (auth && typeof auth.setUser === 'function') {
+            auth.setUser(data);
           }
-          setIsVerifying(false);
+          
+          // Atualizar o cache do queryClient
+          queryClient.setQueryData(['/api/user'], data);
+        } else {
+          console.log("Protected Route: User not authenticated via API");
+          setIsAuthenticated(false);
+          
+          // Limpar o contexto de auth
+          if (auth && typeof auth.setUser === 'function') {
+            auth.setUser(null);
+          }
+          
+          // Limpar o cache do queryClient
+          queryClient.setQueryData(['/api/user'], null);
+          
+          // Informar o usuário que ele precisa fazer login
+          toast({
+            title: "Sessão expirada",
+            description: "Por favor, faça login novamente para continuar.",
+            variant: "destructive",
+          });
         }
       } catch (error) {
         console.error("Error verifying authentication:", error);
         if (isMounted) {
           setIsAuthenticated(false);
-          setUserData(null);
           
           // Limpar o contexto de auth em caso de erro
           if (auth && typeof auth.setUser === 'function') {
             auth.setUser(null);
           }
           
+          // Limpar o cache do queryClient
+          queryClient.setQueryData(['/api/user'], null);
+        }
+      } finally {
+        if (isMounted) {
           setIsVerifying(false);
         }
       }
@@ -87,7 +104,7 @@ export function ProtectedRoute({ path, component: Component }: ProtectedRoutePro
     return () => {
       isMounted = false;
     };
-  }, [location, auth.user]);
+  }, [location, auth.user, auth, toast]);
 
   // Renderizar o Route com verificação direta à API
   return (
@@ -103,8 +120,8 @@ export function ProtectedRoute({ path, component: Component }: ProtectedRoutePro
         }
         
         if (!isAuthenticated) {
-          console.log("Protected Route: Redirecting to login page");
-          return <Redirect to="/login" />;
+          console.log("Protected Route: Redirecting to auth page");
+          return <Redirect to="/auth" />;
         }
         
         // Se o usuário está autenticado, renderize o componente com os parâmetros da rota

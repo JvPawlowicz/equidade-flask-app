@@ -1,12 +1,14 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
-import { Express } from "express";
+import { Express, Request, Response, NextFunction } from "express";
 import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
 import { insertUserSchema, loginUserSchema, User as SelectUser } from "@shared/schema";
 import { z } from "zod";
+import { db } from "@db";
+import { auditLogs } from "@shared/schema";
 
 declare global {
   namespace Express {
@@ -27,6 +29,35 @@ async function comparePasswords(supplied: string, stored: string) {
   const hashedBuf = Buffer.from(hashed, "hex");
   const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
   return timingSafeEqual(hashedBuf, suppliedBuf);
+}
+
+// Middleware de autenticação para proteção de rotas
+export const requireAuth = (req: Request, res: Response, next: NextFunction) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ error: "Não autenticado" });
+  }
+  
+  next();
+};
+
+// Middleware para registrar tentativas de login (bem-sucedidas ou falhas)
+async function logLoginAttempt(userId: number | null, username: string, success: boolean, ip: string) {
+  try {
+    await db.insert(auditLogs).values({
+      action: success ? 'login_success' : 'login_failed',
+      resource: 'auth',
+      resourceId: userId ? userId.toString() : null,
+      userId: userId,
+      details: {
+        username,
+        ip,
+        timestamp: new Date().toISOString(),
+      },
+      createdAt: new Date(),
+    });
+  } catch (error) {
+    console.error("Erro ao registrar tentativa de login:", error);
+  }
 }
 
 export function setupAuth(app: Express) {
@@ -120,16 +151,22 @@ export function setupAuth(app: Express) {
       console.log("SERVIDOR: Recebendo solicitação de login:", JSON.stringify(req.body));
       
       // Validate request body against the schema
-      loginUserSchema.parse(req.body);
+      const validData = loginUserSchema.parse(req.body);
       console.log("SERVIDOR: Validação do schema bem-sucedida");
+
+      // Get client IP for logging
+      const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
 
       passport.authenticate("local", (err, user, info) => {
         if (err) {
           console.error("SERVIDOR: Erro durante autenticação:", err);
           return next(err);
         }
+        
         if (!user) {
           console.log("SERVIDOR: Usuário não encontrado ou senha inválida");
+          // Log failed login attempt
+          logLoginAttempt(null, validData.username, false, clientIp);
           return res.status(401).json({ error: "Credenciais inválidas" });
         }
         
@@ -146,6 +183,9 @@ export function setupAuth(app: Express) {
           // Update last login
           storage.updateUser(user.id, { lastLogin: new Date() });
           
+          // Log successful login
+          logLoginAttempt(user.id, user.username, true, clientIp);
+          
           // Don't send the password back
           const { password, ...userWithoutPassword } = user;
           console.log("SERVIDOR: Enviando resposta de login bem-sucedido");
@@ -161,18 +201,37 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/logout", (req, res, next) => {
+  app.post("/api/logout", requireAuth, (req, res, next) => {
+    // Capture user info before logging out for audit
+    const userId = req.user.id;
+    const username = req.user.username;
+    const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
+    
     req.logout((err) => {
       if (err) return next(err);
+      
+      // Log the logout event
+      db.insert(auditLogs).values({
+        action: 'logout',
+        resource: 'auth',
+        resourceId: userId.toString(),
+        userId: userId,
+        details: {
+          username,
+          ip: clientIp,
+          timestamp: new Date().toISOString(),
+        },
+        createdAt: new Date(),
+      }).catch(error => {
+        console.error("Erro ao registrar logout:", error);
+      });
+      
       res.status(200).json({ message: "Logout bem-sucedido" });
     });
   });
 
-  app.get("/api/user", (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: "Não autenticado" });
-    }
-    
+  // Rota protegida usando o middleware requireAuth
+  app.get("/api/user", requireAuth, (req, res) => {
     // Don't send the password back
     const { password, ...userWithoutPassword } = req.user;
     res.json(userWithoutPassword);
