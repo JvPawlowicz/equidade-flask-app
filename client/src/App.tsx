@@ -13,6 +13,7 @@ import FacilitiesPage from "@/pages/facilities-page";
 import FacilityDetails from "@/pages/facility-details";
 import ReportsPage from "@/pages/reports-page";
 import ChatPage from "@/pages/chat-page";
+import DocumentsPage from "@/pages/documents-page";
 import AuthPage from "@/pages/auth-page";
 import { ProtectedRoute } from "@/lib/protected-route";
 
@@ -45,6 +46,7 @@ function App() {
       <ProtectedRoute path="/unidades/:id" component={FacilityDetails} />
       <ProtectedRoute path="/relatorios" component={ReportsPage} />
       <ProtectedRoute path="/chat" component={ChatPage} />
+      <ProtectedRoute path="/documentos" component={DocumentsPage} />
       
       {/* Redirecionar para autenticação quando não estiver logado */}
       <Route path="/:rest*">
