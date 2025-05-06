@@ -12,6 +12,7 @@ import FacilityDetails from "@/pages/facility-details";
 import ReportsPage from "@/pages/reports-page";
 import ChatPage from "@/pages/chat-page";
 import EvolutionsPage from "@/pages/evolutions-page";
+import LoginPage from "@/pages/login-page";
 import { ProtectedRoute } from "./lib/protected-route";
 import { Sidebar } from "@/components/layout/sidebar";
 import { useAuth } from "./hooks/use-auth";
@@ -42,7 +43,7 @@ function DebugAuth() {
         
         <div className="flex gap-4">
           <button 
-            onClick={() => window.location.href = '/auth'} 
+            onClick={() => window.location.href = '/login'} 
             className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
           >
             Ir para Login
@@ -66,6 +67,7 @@ function App() {
   return (
     <Switch>
       <Route path="/debug" component={DebugAuth} />
+      <Route path="/login" component={LoginPage} />
       <Route path="/auth" component={AuthPage} />
       
       {/* Rotas protegidas com layout do sistema */}

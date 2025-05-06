@@ -23,6 +23,15 @@ export function ProtectedRoute({ path, component: Component }: ProtectedRoutePro
       setIsVerifying(true);
       
       try {
+        // Primeiro, verifique se já temos um usuário no contexto de autenticação
+        if (auth.user) {
+          console.log("Protected Route: User already in auth context", auth.user.username);
+          setIsAuthenticated(true);
+          setUserData(auth.user);
+          setIsVerifying(false);
+          return;
+        }
+        
         // Verificar se o usuário está autenticado com cache-busting
         const timestamp = new Date().getTime();
         const response = await fetch(`/api/user?_=${timestamp}`, { 
@@ -46,9 +55,14 @@ export function ProtectedRoute({ path, component: Component }: ProtectedRoutePro
               auth.setUser(data);
             }
           } else {
-            console.log("Protected Route: User not authenticated via API");
+            console.log("Protected Route: User not authenticated via API", await response.text());
             setIsAuthenticated(false);
             setUserData(null);
+            
+            // Limpar o contexto de auth
+            if (auth && typeof auth.setUser === 'function') {
+              auth.setUser(null);
+            }
           }
           setIsVerifying(false);
         }
@@ -57,6 +71,12 @@ export function ProtectedRoute({ path, component: Component }: ProtectedRoutePro
         if (isMounted) {
           setIsAuthenticated(false);
           setUserData(null);
+          
+          // Limpar o contexto de auth em caso de erro
+          if (auth && typeof auth.setUser === 'function') {
+            auth.setUser(null);
+          }
+          
           setIsVerifying(false);
         }
       }
@@ -67,7 +87,7 @@ export function ProtectedRoute({ path, component: Component }: ProtectedRoutePro
     return () => {
       isMounted = false;
     };
-  }, [location]);
+  }, [location, auth.user]);
 
   // Renderizar o Route com verificação direta à API
   return (
@@ -83,8 +103,8 @@ export function ProtectedRoute({ path, component: Component }: ProtectedRoutePro
         }
         
         if (!isAuthenticated) {
-          console.log("Protected Route: Redirecting to auth page");
-          return <Redirect to="/auth" />;
+          console.log("Protected Route: Redirecting to login page");
+          return <Redirect to="/login" />;
         }
         
         // Se o usuário está autenticado, renderize o componente com os parâmetros da rota
