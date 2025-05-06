@@ -119,9 +119,9 @@ export default function AuthPage() {
         setTimeout(() => {
           console.log("Verificando usuário após login:", queryClient.getQueryData(['/api/user']));
           
-          // Forçar recarregamento da página para garantir redirecionamento correto
-          // Isso resolve problemas de estado no cliente
-          window.location.href = '/';
+          // Redirecionamento usando wouter (sem recarregar a página)
+          // O router vai verificar que o usuário está autenticado e redirecionar para /
+          window.location.href = '/dashboard';
         }, 500);
       })
       .catch(error => {
@@ -167,7 +167,7 @@ export default function AuthPage() {
         
         // Forçar recarregamento da página para garantir redirecionamento correto
         setTimeout(() => {
-          window.location.href = '/';
+          window.location.href = '/dashboard';
         }, 500);
       })
       .catch(error => {

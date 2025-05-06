@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, Redirect } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
@@ -21,6 +21,7 @@ function App() {
       <Switch>
         <Route path="/auth" component={AuthPage} />
         <ProtectedRoute path="/" component={DashboardPage} />
+        <ProtectedRoute path="/dashboard" component={DashboardPage} />
         <ProtectedRoute path="/agenda" component={AppointmentsPage} />
         <ProtectedRoute path="/pacientes" component={PatientsPage} />
         <ProtectedRoute path="/pacientes/:id" component={PatientDetails} />
