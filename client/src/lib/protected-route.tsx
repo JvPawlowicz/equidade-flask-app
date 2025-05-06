@@ -8,30 +8,28 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ path, component: Component }: ProtectedRouteProps) {
+  // Renderizar o Route sem verificação inicial
   return (
     <Route path={path}>
       {(params) => {
-        try {
-          const { user, isLoading } = useAuth();
-          
-          if (isLoading) {
-            return (
-              <div className="flex items-center justify-center min-h-screen">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            );
-          }
-          
-          if (!user) {
-            return <Redirect to="/auth" />;
-          }
-          
-          // Se o usuário está autenticado, renderize o componente com os parâmetros da rota
-          return <Component {...params} />;
-        } catch (error) {
-          console.error("Erro no ProtectedRoute:", error);
+        const auth = useAuth();
+        
+        // Se estiver carregando, mostrar o loader
+        if (auth.isLoading) {
+          return (
+            <div className="flex items-center justify-center min-h-screen">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          );
+        }
+        
+        // Se não tiver usuário, redirecionar para autenticação
+        if (!auth.user) {
           return <Redirect to="/auth" />;
         }
+        
+        // Se o usuário está autenticado, renderize o componente com os parâmetros da rota
+        return <Component {...params} />;
       }}
     </Route>
   );
