@@ -94,10 +94,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         variant: "default",
       });
       
-      // Redirecionar para o dashboard
+      // Redirecionar para o dashboard após um pequeno atraso para dar tempo ao servidor
+      // de estabelecer a sessão completamente
       setTimeout(() => {
         window.location.href = '/dashboard';
-      }, 500);
+      }, 1000);
     },
     onError: (error: Error) => {
       console.error("Erro no login:", error);
@@ -127,10 +128,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         variant: "default",
       });
       
-      // Redirecionar para o dashboard
+      // Redirecionar para o dashboard após um pequeno atraso para dar tempo ao servidor
+      // de estabelecer a sessão completamente
       setTimeout(() => {
         window.location.href = '/dashboard';
-      }, 500);
+      }, 1000);
     },
     onError: (error: Error) => {
       toast({
