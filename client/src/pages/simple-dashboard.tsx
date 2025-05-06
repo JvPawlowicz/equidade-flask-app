@@ -1,12 +1,12 @@
 // Dashboard simplificada
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'wouter';
+import { useLocation, Link } from 'wouter';
 
 export default function SimpleDashboard() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const navigate = useNavigate();
+  const [_, setLocation] = useLocation();
 
   // Verificar status de autenticação
   useEffect(() => {
@@ -21,7 +21,7 @@ export default function SimpleDashboard() {
           setUser(userData);
         } else {
           // Redirecionar para login se não estiver autenticado
-          navigate('/simple-login');
+          setLocation('/simple-login');
         }
       } catch (err) {
         setError('Erro ao verificar autenticação');
@@ -31,7 +31,7 @@ export default function SimpleDashboard() {
     }
     
     checkAuth();
-  }, [navigate]);
+  }, [setLocation]);
 
   // Função para fazer logout
   const handleLogout = async () => {
@@ -40,7 +40,7 @@ export default function SimpleDashboard() {
         method: 'POST',
         credentials: 'include'
       });
-      navigate('/simple-login');
+      setLocation('/simple-login');
     } catch (err) {
       setError('Erro ao fazer logout');
     }
@@ -60,7 +60,7 @@ export default function SimpleDashboard() {
         <div className="bg-white p-8 rounded shadow-lg">
           <div className="text-red-500 mb-4">{error}</div>
           <button 
-            onClick={() => navigate('/simple-login')}
+            onClick={() => setLocation('/simple-login')}
             className="bg-blue-500 text-white px-4 py-2 rounded"
           >
             Voltar para login
@@ -76,7 +76,7 @@ export default function SimpleDashboard() {
         <div className="bg-white p-8 rounded shadow-lg">
           <div className="mb-4">Você não está autenticado</div>
           <button 
-            onClick={() => navigate('/simple-login')}
+            onClick={() => setLocation('/simple-login')}
             className="bg-blue-500 text-white px-4 py-2 rounded"
           >
             Ir para login

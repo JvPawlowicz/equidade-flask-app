@@ -1,6 +1,6 @@
 // Página de login simplificada sem dependências complexas
 import { useState } from 'react';
-import { useNavigate } from 'wouter';
+import { useLocation } from 'wouter';
 
 export default function SimpleLogin() {
   const [username, setUsername] = useState('admin');
@@ -8,7 +8,7 @@ export default function SimpleLogin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-  const navigate = useNavigate();
+  const [_, setLocation] = useLocation();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +35,7 @@ export default function SimpleLogin() {
       
       // Redirecionar para o dashboard simples após login bem-sucedido
       setTimeout(() => {
-        navigate('/simple-dashboard');
+        setLocation('/simple-dashboard');
       }, 1000);
     } catch (err: any) {
       setError(err.message || 'Erro ao realizar login');

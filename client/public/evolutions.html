@@ -1387,7 +1387,7 @@
     // Carregar consultas do paciente
     async function loadPatientAppointments(patientId) {
       try {
-        const response = await fetch(`/api/patients/${patientId}/appointments`, {
+        const response = await fetch(`/api/patients/${patientId}/appointments?status=attended`, {
           credentials: 'include'
         });
         
@@ -1606,6 +1606,46 @@
       document.getElementById('status').value = 'pending';
       
       evolutionModal.classList.add('active');
+    }
+    
+    // Criar nova evolução a partir de um agendamento
+    async function createNewEvolutionFromAppointment(appointmentId) {
+      try {
+        // Buscar dados do agendamento
+        const response = await fetch(`/api/appointments/${appointmentId}`, {
+          credentials: 'include'
+        });
+        
+        if (!response.ok) {
+          throw new Error('Erro ao carregar dados do agendamento');
+        }
+        
+        const appointment = await response.json();
+        
+        // Abrir modal de nova evolução
+        openAddEvolutionModal();
+        
+        // Selecionar o paciente
+        patientIdSelect.value = appointment.patientId;
+        
+        // Carregar consultas do paciente e selecionar o agendamento
+        await loadPatientAppointments(appointment.patientId);
+        appointmentIdSelect.value = appointmentId;
+        
+        // Preencher tipo de evolução baseado no tipo de procedimento
+        document.getElementById('type').value = appointment.procedureType;
+        
+        // Preencher título padrão
+        document.getElementById('title').value = `Evolução - ${new Date(appointment.startTime).toLocaleDateString('pt-BR')}`;
+        
+        // Definir o foco no campo de conteúdo
+        setTimeout(() => {
+          document.getElementById('content').focus();
+        }, 300);
+      } catch (error) {
+        console.error('Erro ao criar evolução a partir do agendamento:', error);
+        alert('Erro ao carregar dados do agendamento. Tente novamente.');
+      }
     }
     
     // Fechar modal
