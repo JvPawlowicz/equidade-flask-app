@@ -1352,8 +1352,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         description, 
         category, 
         status,
-        needsSignature,
-        parentDocumentId
+        needsSignature
+        // parentDocumentId foi removido pois não existe no banco
       } = req.body;
 
       // Validate at least one association is provided
@@ -1363,20 +1363,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // If this is a new version of an existing document, check if the parent exists
+      // Versão simplificada sem suporte a parentDocumentId
       let version = 1;
-      if (parentDocumentId) {
-        const parentDoc = await db.query.documents.findFirst({
-          where: eq(documents.id, parseInt(parentDocumentId))
-        });
-        
-        if (!parentDoc) {
-          return res.status(404).json({ error: "Documento original não encontrado" });
-        }
-        
-        // Increment version number
-        version = (parentDoc.version || 0) + 1;
-      }
+      // Não temos mais o conceito de versões baseado em parentDocumentId
 
       // Removidos os campos não existentes no banco: needsSignature e parentDocumentId
       const documentData = {
