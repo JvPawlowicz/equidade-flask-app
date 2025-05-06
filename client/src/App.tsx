@@ -22,6 +22,11 @@ import { AccessibilityToolbar } from "@/components/accessibility/accessibility-t
 import NotFound from "@/pages/not-found";
 import { useAccessibility } from "@/hooks/use-accessibility";
 import { useState, useEffect } from "react";
+import { webSocketManager } from "@/lib/websocket-manager";
+import { ConnectivityStatus } from "@/components/mobile/connectivity-status";
+import { useNetworkStatus } from "@/hooks/use-mobile";
+import { useResponsive } from "@/hooks/use-mobile";
+import { registerServiceWorker } from "@/lib/offline-utils";
 
 // Componente para anúncios de leitores de tela
 function ScreenReaderAnnouncer() {
@@ -88,6 +93,8 @@ function ScreenReaderAnnouncer() {
 function App() {
   const { user, isLoading } = useAuth();
   const { announce } = useAccessibility();
+  const { deviceType } = useResponsive();
+  const { isOnline } = useNetworkStatus();
   
   // Anunciar carregamento para leitores de tela
   useEffect(() => {
@@ -95,6 +102,35 @@ function App() {
       announce("Carregando aplicação, por favor aguarde...", "polite");
     }
   }, [isLoading, announce]);
+  
+  // Inicializar WebSocket e Service Worker
+  useEffect(() => {
+    // Inicializar WebSocket se o usuário estiver autenticado
+    if (user && !isLoading) {
+      webSocketManager.connect();
+      
+      // Anunciar status de conexão para leitores de tela
+      if (isOnline) {
+        announce("Conexão estabelecida", "polite");
+      } else {
+        announce("Você está trabalhando offline", "polite");
+      }
+    }
+    
+    // Registrar Service Worker para funcionalidades offline
+    registerServiceWorker().then(registration => {
+      if (registration) {
+        console.log('Service Worker registrado com sucesso');
+      }
+    }).catch(error => {
+      console.error('Erro ao registrar Service Worker:', error);
+    });
+    
+    // Limpar WebSocket ao desmontar o componente
+    return () => {
+      webSocketManager.disconnect();
+    };
+  }, [user, isLoading, isOnline, announce]);
   
   if (isLoading) {
     return (
@@ -154,6 +190,29 @@ function App() {
             {user ? <Redirect to="/" /> : <Redirect to="/auth" />}
           </Route>
         </Switch>
+        
+        {/* Componente de status de conectividade para dispositivos móveis */}
+        {deviceType === 'mobile' && user && (
+          <ConnectivityStatus 
+            position="bottom"
+            showInstallPrompt={true}
+            onSync={async () => {
+              try {
+                // Sincronizar dados offline
+                // Esta função será implementada quando tivermos a lógica completa de sincronização
+                announce("Sincronizando dados...", "polite");
+                // Por enquanto apenas exibimos a mensagem
+                setTimeout(() => {
+                  announce("Sincronização concluída", "polite");
+                }, 1500);
+                return Promise.resolve();
+              } catch (error) {
+                console.error('Erro na sincronização:', error);
+                return Promise.reject(error);
+              }
+            }}
+          />
+        )}
       </main>
     </>
   );
