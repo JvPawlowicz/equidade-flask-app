@@ -1490,7 +1490,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let query = db.select({
         procedureType: appointments.procedureType,
-        count: db.sql`COUNT(*)`,
+        count: sql`COUNT(*)`,
       })
       .from(appointments)
       .where(
@@ -1521,7 +1521,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const query = db.select({
         facilityId: patientFacilities.facilityId,
-        count: db.sql`COUNT(*)`,
+        count: sql`COUNT(*)`,
       })
       .from(patientFacilities)
       .groupBy(patientFacilities.facilityId);
