@@ -47,10 +47,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
-      const res = await apiRequest("POST", "/api/login", credentials);
-      return await res.json();
+      console.log("Tentando fazer login com:", credentials);
+      try {
+        const res = await apiRequest("POST", "/api/login", credentials);
+        const userData = await res.json();
+        console.log("Resposta do login:", userData);
+        return userData;
+      } catch (error) {
+        console.error("Erro ao chamar API de login:", error);
+        throw error;
+      }
     },
     onSuccess: (user: User) => {
+      console.log("Login bem-sucedido, usuário:", user);
       queryClient.setQueryData(["/api/user"], user);
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       toast({
@@ -60,6 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     },
     onError: (error: Error) => {
+      console.error("Erro no login:", error);
       toast({
         title: "Falha no login",
         description: error.message || "Credenciais inválidas. Tente novamente.",
