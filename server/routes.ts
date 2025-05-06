@@ -1548,8 +1548,259 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Erro ao gerar relatório de pacientes por unidade" });
     }
   });
+  
+  // Relatório de atendimentos por período
+  app.get(`${apiPrefix}/reports/appointments-by-period`, async (req, res) => {
+    try {
+      // Assegurar autenticação e permissão
+      if (!req.isAuthenticated() || !["admin", "coordinator"].includes(req.user.role)) {
+        return res.status(403).json({ error: "Acesso não autorizado" });
+      }
+      
+      const { startDate, endDate, facilityId, period = 'month' } = req.query;
+      
+      // Validar parâmetros
+      if (!startDate || !endDate) {
+        return res.status(400).json({ error: "Datas de início e fim são obrigatórias" });
+      }
+      
+      let periodFormat: string;
+      let periodName: string;
+      
+      switch(String(period).toLowerCase()) {
+        case 'day':
+          periodFormat = 'YYYY-MM-DD';
+          periodName = 'dia';
+          break;
+        case 'week':
+          periodFormat = 'YYYY-"W"WW';
+          periodName = 'semana';
+          break;
+        case 'month':
+          periodFormat = 'YYYY-MM';
+          periodName = 'mês';
+          break;
+        case 'quarter':
+          periodFormat = 'YYYY-"Q"Q';
+          periodName = 'trimestre';
+          break;
+        case 'year':
+          periodFormat = 'YYYY';
+          periodName = 'ano';
+          break;
+        default:
+          periodFormat = 'YYYY-MM';
+          periodName = 'mês';
+      }
+      
+      // Consulta base usando SQL bruto devido à complexidade
+      let query = sql`
+        SELECT 
+          TO_CHAR(start_time, ${periodFormat}) as period,
+          COUNT(*) as total_appointments,
+          COUNT(CASE WHEN status = 'completed' OR status = 'attended' THEN 1 END) as completed_appointments,
+          COUNT(CASE WHEN status = 'cancelled' OR status = 'no_show' THEN 1 END) as cancelled_appointments,
+          ROUND(AVG(EXTRACT(EPOCH FROM (end_time - start_time)) / 3600), 1) as avg_duration_hours
+        FROM 
+          appointments
+        WHERE 
+          start_time >= ${String(startDate)}
+          AND end_time <= ${String(endDate)}
+      `;
+      
+      // Adicionar filtro de unidade se fornecido
+      if (facilityId) {
+        query = sql`
+          ${query}
+          AND facility_id = ${Number(facilityId)}
+        `;
+      }
+      
+      // Agrupar e ordenar
+      query = sql`
+        ${query}
+        GROUP BY period
+        ORDER BY period
+      `;
+      
+      const result = await db.execute(query);
+      
+      // Formatar para o frontend
+      const formattedResult = result.map((row: any) => ({
+        period: row.period,
+        periodName: String(periodName),
+        totalAppointments: parseInt(row.total_appointments),
+        completedAppointments: parseInt(row.completed_appointments),
+        cancelledAppointments: parseInt(row.cancelled_appointments),
+        avgDurationHours: parseFloat(row.avg_duration_hours || '0'),
+        completionRate: Math.round((parseInt(row.completed_appointments) / parseInt(row.total_appointments)) * 100)
+      }));
+      
+      res.json(formattedResult);
+    } catch (error) {
+      console.error("Error fetching appointments by period report:", error);
+      res.status(500).json({ error: "Erro ao gerar relatório de atendimentos por período" });
+    }
+  });
+  
+  // Relatório de evolução de pacientes ao longo do tempo
+  app.get(`${apiPrefix}/reports/patient-evolution-over-time`, async (req, res) => {
+    try {
+      // Assegurar autenticação e permissão
+      if (!req.isAuthenticated() || !["admin", "coordinator", "professional"].includes(req.user.role)) {
+        return res.status(403).json({ error: "Acesso não autorizado" });
+      }
+      
+      const { patientId, startDate, endDate, professionalId } = req.query;
+      
+      // Validar parâmetros
+      if (!patientId) {
+        return res.status(400).json({ error: "ID do paciente é obrigatório" });
+      }
+      
+      // Consulta base - obtendo evoluções ordenadas por data
+      let query = sql`
+        SELECT 
+          e.id,
+          e.appointment_id,
+          e.patient_id,
+          e.professional_id,
+          e.date,
+          e.content,
+          e.created_at,
+          e.updated_at,
+          e.status,
+          COALESCE(e.progress_level, 0) as progress_level,
+          p.full_name as professional_name,
+          pt.full_name as patient_name,
+          a.procedure_type
+        FROM 
+          evolutions e
+        JOIN
+          professionals pr ON e.professional_id = pr.id
+        JOIN
+          users p ON pr.user_id = p.id
+        JOIN
+          patients pt ON e.patient_id = pt.id
+        LEFT JOIN
+          appointments a ON e.appointment_id = a.id
+        WHERE 
+          e.patient_id = ${Number(patientId)}
+      `;
+      
+      // Adicionar filtros opcionais
+      if (startDate) {
+        query = sql`${query} AND e.date >= ${String(startDate)}`;
+      }
+      
+      if (endDate) {
+        query = sql`${query} AND e.date <= ${String(endDate)}`;
+      }
+      
+      if (professionalId) {
+        query = sql`${query} AND e.professional_id = ${Number(professionalId)}`;
+      }
+      
+      // Ordenar por data
+      query = sql`
+        ${query}
+        ORDER BY e.date ASC
+      `;
+      
+      const evolutions = await db.execute(query);
+      
+      // Agrupar evoluções por mês para análise de tendências
+      const monthlyStats = {};
+      
+      evolutions.forEach((evolution: any) => {
+        const monthYear = new Date(evolution.date).toISOString().substring(0, 7); // formato: YYYY-MM
+        
+        if (!monthlyStats[monthYear]) {
+          monthlyStats[monthYear] = {
+            month: monthYear,
+            count: 0,
+            averageProgress: 0,
+            totalProgress: 0,
+            byProcedureType: {}
+          };
+        }
+        
+        const stats = monthlyStats[monthYear];
+        stats.count++;
+        
+        // Acumular progresso se disponível
+        if (evolution.progress_level !== null && evolution.progress_level !== undefined) {
+          stats.totalProgress += parseInt(evolution.progress_level);
+        }
+        
+        // Agrupar por tipo de procedimento
+        if (evolution.procedure_type) {
+          if (!stats.byProcedureType[evolution.procedure_type]) {
+            stats.byProcedureType[evolution.procedure_type] = {
+              count: 0,
+              name: getProcedureTypeText(evolution.procedure_type)
+            };
+          }
+          stats.byProcedureType[evolution.procedure_type].count++;
+        }
+      });
+      
+      // Calcular médias e formatar resultado final
+      const monthlyData = Object.values(monthlyStats).map((month: any) => {
+        if (month.count > 0) {
+          month.averageProgress = Math.round(month.totalProgress / month.count);
+        }
+        
+        // Converter byProcedureType para array
+        month.procedureTypes = Object.values(month.byProcedureType);
+        delete month.byProcedureType;
+        delete month.totalProgress;
+        
+        return month;
+      });
+      
+      // Obter informações do paciente
+      const patientInfo = evolutions.length > 0 ? {
+        id: Number(patientId),
+        name: evolutions[0].patient_name
+      } : null;
+      
+      res.json({
+        patient: patientInfo,
+        evolutions: evolutions.map((e: any) => ({
+          id: e.id,
+          date: e.date,
+          content: e.content,
+          professionalName: e.professional_name,
+          procedureType: e.procedure_type,
+          progressLevel: e.progress_level !== null ? parseInt(e.progress_level) : null,
+          status: e.status
+        })),
+        monthlyStats: monthlyData
+      });
+    } catch (error) {
+      console.error("Error fetching patient evolution report:", error);
+      res.status(500).json({ error: "Erro ao gerar relatório de evolução do paciente" });
+    }
+  });
 
   // Helper functions
+  function getProcedureTypeText(procedureType: string): string {
+    const procedureMap: Record<string, string> = {
+      individual_consultation: "Consulta Individual",
+      group_consultation: "Consulta em Grupo",
+      evaluation: "Avaliação",
+      reassessment: "Reavaliação",
+      home_visit: "Visita Domiciliar",
+      school_visit: "Visita Escolar",
+      supervision: "Supervisão",
+      team_meeting: "Reunião de Equipe",
+      other: "Outro"
+    };
+    
+    return procedureMap[procedureType] || procedureType;
+  }
+  
   async function getProfessionalUserId(professionalId: number): Promise<number> {
     const professional = await db.query.professionals.findFirst({
       where: eq(professionals.id, professionalId),
