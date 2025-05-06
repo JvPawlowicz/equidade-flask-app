@@ -43,7 +43,7 @@ const uploadSchema = z.object({
   description: z.string().optional(),
   category: z.string().min(1, "Selecione uma categoria"),
   status: z.string().min(1, "Selecione um status"),
-  needsSignature: z.boolean().optional(),
+  // needsSignature removido pois não existe no banco
   file: z.instanceof(File, { message: "Arquivo é obrigatório" }),
 });
 
@@ -81,7 +81,7 @@ export function DocumentUpload({
       description: "",
       category: "other",
       status: "active",
-      needsSignature: false,
+      // needsSignature removido
       file: undefined,
     },
   });
@@ -95,7 +95,7 @@ export function DocumentUpload({
       if (values.description) formData.append("description", values.description);
       formData.append("category", values.category);
       formData.append("status", values.status);
-      formData.append("needsSignature", String(values.needsSignature));
+      // needsSignature removido pois não existe no banco
       formData.append("file", values.file);
       
       if (patientId) formData.append("patientId", patientId.toString());
@@ -208,28 +208,24 @@ export function DocumentUpload({
                         </Button>
                       </div>
                     ) : (
-                      <div className="flex flex-col items-center justify-center rounded-md border border-dashed p-4 relative">
-                        <label htmlFor="file-upload" className="flex flex-col items-center gap-2 text-center w-full h-full cursor-pointer">
-                          <FileUpIcon className="h-8 w-8 text-muted-foreground" />
-                          <div className="flex flex-col gap-1">
-                            <p className="text-sm font-medium">
-                              Clique para selecionar ou arraste e solte
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              Formatos suportados: PDF, DOC, DOCX, JPG, PNG
-                            </p>
-                          </div>
-                          <Button type="button" variant="secondary" size="sm" className="mt-2">
-                            Escolher arquivo
+                      <div className="flex flex-col items-center justify-center rounded-md border p-4">
+                        <FileUpIcon className="h-8 w-8 text-muted-foreground mb-2" />
+                        <p className="text-sm text-center mb-3">
+                          Formatos suportados: PDF, DOC, DOCX, JPG, PNG
+                        </p>
+                        
+                        <label htmlFor="file-upload" className="w-full">
+                          <Button type="button" variant="secondary" className="w-full">
+                            Selecionar arquivo
                           </Button>
+                          <Input
+                            id="file-upload"
+                            type="file"
+                            className="hidden"
+                            onChange={handleFileChange}
+                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                          />
                         </label>
-                        <Input
-                          id="file-upload"
-                          type="file"
-                          className="sr-only" // Oculto mais ainda acessível
-                          onChange={handleFileChange}
-                          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                        />
                       </div>
                     )}
                   </div>
@@ -331,23 +327,7 @@ export function DocumentUpload({
             />
           </div>
           
-          {/* Campo needsSignature não existe no banco mas é usado para criar notificações */}
-          <div className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3">
-            <Checkbox
-              id="needsSignature"
-              checked={form.watch('needsSignature')}
-              onCheckedChange={(checked) => {
-                // Convertendo o tipo CheckedState para boolean de forma explícita
-                form.setValue('needsSignature', checked ? true : false);
-              }}
-            />
-            <div className="space-y-1 leading-none">
-              <Label htmlFor="needsSignature">Requer assinatura</Label>
-              <p className="text-sm text-muted-foreground">
-                Marque se este documento precisa ser assinado por um supervisor ou coordenador
-              </p>
-            </div>
-          </div>
+          {/* Campo needsSignature removido pois não existe mais no banco */}
           
           <DialogFooter>
             <Button
