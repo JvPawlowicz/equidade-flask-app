@@ -1,7 +1,7 @@
 import express, { type Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth } from "./auth";
+import { setupAuth, requireAuth } from "./auth";
 import { checkPermission, requireApproval, isOwnerOrSupervisor, getResourceText, getActionText, resourceTranslations, actionTranslations } from "./permissions";
 import WebSocket, { WebSocketServer } from "ws";
 import { db } from "@db";
@@ -24,6 +24,19 @@ import {
   reports,
   rooms,
   users,
+  // Esquemas de validação para endpoints
+  insertFacilitySchema, 
+  insertRoomSchema,
+  insertProfessionalSchema,
+  insertPatientSchema,
+  insertInsurancePlanSchema,
+  insertAppointmentSchema,
+  insertEvolutionSchema,
+  insertDocumentSchema,
+  insertChatGroupSchema,
+  insertChatMessageSchema,
+  selectFacilitySchema,
+  selectRoomSchema
 } from "@shared/schema";
 import { and, asc, desc, eq, gte, ilike, inArray, isNull, lte, not, notExists, or, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -31,6 +44,56 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { format } from "date-fns";
+
+// Utilitário para gerenciar erros de validação Zod
+function handleZodError(error: unknown, res: Response): boolean {
+  if (error instanceof z.ZodError) {
+    res.status(400).json({
+      error: "Dados de entrada inválidos",
+      details: error.errors.map(err => ({
+        path: err.path.join('.'),
+        message: err.message
+      }))
+    });
+    return true;
+  }
+  return false;
+}
+
+// Função para registrar ação no audit log
+async function logAuditAction(req: Request, action: string, resource: string, resourceId: string | null = null, details: object = {}) {
+  try {
+    if (!req.user) return;
+    
+    await db.insert(auditLogs).values({
+      userId: req.user.id,
+      action,
+      resource,
+      resourceId,
+      details: {
+        ...details,
+        ip: req.ip || req.socket.remoteAddress || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown',
+        timestamp: new Date().toISOString()
+      },
+      createdAt: new Date()
+    });
+  } catch (error) {
+    console.error(`Erro ao registrar auditoria (${action} ${resource}):`, error);
+  }
+}
+
+// Middleware para validar entrada com schemas Zod
+function validateInput(schema: z.ZodTypeAny) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    try {
+      req.body = schema.parse(req.body);
+      next();
+    } catch (error) {
+      handleZodError(error, res);
+    }
+  };
+}
 
 // Ensure uploads directory exists
 const uploadDir = path.join(process.cwd(), "uploads");
@@ -223,21 +286,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API routes
 
   // Facilities endpoints
-  app.get(`${apiPrefix}/facilities`, checkPermission('facilities', 'read'), async (req, res) => {
+  app.get(`${apiPrefix}/facilities`, requireAuth, checkPermission('facilities', 'read'), async (req, res) => {
     try {
-      const allFacilities = await db.query.facilities.findMany();
+      // Permitir filtros por nome ou localização
+      const { name, city, state, active } = req.query;
+      
+      let query = db.query.facilities;
+      let conditions = [];
+      
+      if (name) {
+        conditions.push(ilike(facilities.name, `%${name}%`));
+      }
+      
+      if (city) {
+        conditions.push(ilike(facilities.city, `%${city}%`));
+      }
+      
+      if (state) {
+        conditions.push(eq(facilities.state, state.toString()));
+      }
+      
+      if (active !== undefined) {
+        conditions.push(eq(facilities.isActive, active === 'true'));
+      }
+      
+      const allFacilities = conditions.length > 0
+        ? await query.findMany({ where: and(...conditions) })
+        : await query.findMany();
+      
+      // Log da auditoria
+      logAuditAction(req, 'read', 'facilities', null, { 
+        filters: { name, city, state, active },
+        count: allFacilities.length 
+      });
+      
       res.json(allFacilities);
     } catch (error) {
-      console.error("Error fetching facilities:", error);
+      console.error("Erro ao buscar unidades:", error);
       res.status(500).json({ error: "Erro ao buscar unidades" });
     }
   });
 
-  app.get(`${apiPrefix}/facilities/:id`, checkPermission('facilities', 'read'), async (req, res) => {
+  app.get(`${apiPrefix}/facilities/:id`, requireAuth, checkPermission('facilities', 'read'), async (req, res) => {
     try {
       const { id } = req.params;
+      
+      // Validar ID
+      if (!id || isNaN(parseInt(id))) {
+        return res.status(400).json({ error: "ID da unidade inválido" });
+      }
+      
+      const facilityId = parseInt(id);
+      
       const facility = await db.query.facilities.findFirst({
-        where: eq(facilities.id, parseInt(id)),
+        where: eq(facilities.id, facilityId),
         with: {
           rooms: true,
         },
@@ -247,269 +349,796 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Unidade não encontrada" });
       }
 
+      // Log da auditoria
+      logAuditAction(req, 'read', 'facilities', id, { 
+        facilityName: facility.name 
+      });
+      
       res.json(facility);
     } catch (error) {
-      console.error("Error fetching facility:", error);
+      console.error("Erro ao buscar unidade:", error);
       res.status(500).json({ error: "Erro ao buscar unidade" });
     }
   });
 
-  app.post(`${apiPrefix}/facilities`, checkPermission('facilities', 'create'), async (req: Request, res: Response) => {
-    try {
-      const [newFacility] = await db.insert(facilities).values(req.body).returning();
-      res.status(201).json(newFacility);
-    } catch (error) {
-      console.error("Error creating facility:", error);
-      res.status(500).json({ error: "Erro ao criar unidade" });
-    }
-  });
-
-  app.put(`${apiPrefix}/facilities/:id`, checkPermission('facilities', 'update'), async (req: Request, res: Response) => {
-    try {
-      const { id } = req.params;
-      const [updatedFacility] = await db
-        .update(facilities)
-        .set(req.body)
-        .where(eq(facilities.id, parseInt(id)))
-        .returning();
-
-      if (!updatedFacility) {
-        return res.status(404).json({ error: "Unidade não encontrada" });
+  app.post(`${apiPrefix}/facilities`, 
+    requireAuth, 
+    checkPermission('facilities', 'create'),
+    validateInput(insertFacilitySchema),
+    async (req: Request, res: Response) => {
+      try {
+        // Os dados já foram validados pelo middleware validateInput
+        const [newFacility] = await db.insert(facilities).values(req.body).returning();
+        
+        // Log da auditoria
+        logAuditAction(req, 'create', 'facilities', newFacility.id.toString(), {
+          facilityName: newFacility.name,
+          location: `${newFacility.city}, ${newFacility.state}`
+        });
+        
+        res.status(201).json(newFacility);
+      } catch (error) {
+        console.error("Erro ao criar unidade:", error);
+        res.status(500).json({ error: "Erro ao criar unidade" });
       }
-
-      res.json(updatedFacility);
-    } catch (error) {
-      console.error("Error updating facility:", error);
-      res.status(500).json({ error: "Erro ao atualizar unidade" });
     }
-  });
+  );
+
+  app.put(`${apiPrefix}/facilities/:id`, 
+    requireAuth,
+    checkPermission('facilities', 'update'),
+    async (req: Request, res: Response) => {
+      try {
+        const { id } = req.params;
+        
+        // Validar ID
+        if (!id || isNaN(parseInt(id))) {
+          return res.status(400).json({ error: "ID da unidade inválido" });
+        }
+        
+        const facilityId = parseInt(id);
+        
+        // Verificar se a unidade existe antes de atualizar
+        const existingFacility = await db.query.facilities.findFirst({
+          where: eq(facilities.id, facilityId)
+        });
+        
+        if (!existingFacility) {
+          return res.status(404).json({ error: "Unidade não encontrada" });
+        }
+        
+        // Validar dados de entrada
+        try {
+          req.body = insertFacilitySchema.parse(req.body);
+        } catch (error) {
+          if (handleZodError(error, res)) return;
+          throw error;
+        }
+        
+        // Aplicar a atualização
+        const [updatedFacility] = await db
+          .update(facilities)
+          .set(req.body)
+          .where(eq(facilities.id, facilityId))
+          .returning();
+          
+        // Log da auditoria
+        logAuditAction(req, 'update', 'facilities', id, {
+          before: {
+            name: existingFacility.name,
+            city: existingFacility.city,
+            state: existingFacility.state,
+            isActive: existingFacility.isActive
+          },
+          after: {
+            name: updatedFacility.name,
+            city: updatedFacility.city,
+            state: updatedFacility.state,
+            isActive: updatedFacility.isActive
+          }
+        });
+
+        res.json(updatedFacility);
+      } catch (error) {
+        console.error("Erro ao atualizar unidade:", error);
+        res.status(500).json({ error: "Erro ao atualizar unidade" });
+      }
+    }
+  );
 
   // Rooms endpoints
-  app.get(`${apiPrefix}/facilities/:facilityId/rooms`, async (req, res) => {
-    try {
-      const { facilityId } = req.params;
-      const facilityRooms = await db.query.rooms.findMany({
-        where: eq(rooms.facilityId, parseInt(facilityId)),
-      });
-      res.json(facilityRooms);
-    } catch (error) {
-      console.error("Error fetching rooms:", error);
-      res.status(500).json({ error: "Erro ao buscar salas" });
-    }
-  });
-
-  app.post(`${apiPrefix}/rooms`, async (req: Request, res: Response) => {
-    try {
-      if (!req.isAuthenticated() || !["admin", "coordinator"].includes(req.user.role)) {
-        return res.status(403).json({ error: "Acesso não autorizado" });
+  app.get(`${apiPrefix}/facilities/:facilityId/rooms`, 
+    requireAuth, 
+    checkPermission('facilities', 'read'),
+    async (req, res) => {
+      try {
+        const { facilityId } = req.params;
+        
+        // Validar ID
+        if (!facilityId || isNaN(parseInt(facilityId))) {
+          return res.status(400).json({ error: "ID da unidade inválido" });
+        }
+        
+        const facilityIdParsed = parseInt(facilityId);
+        
+        // Verificar se a facility existe
+        const facility = await db.query.facilities.findFirst({
+          where: eq(facilities.id, facilityIdParsed)
+        });
+        
+        if (!facility) {
+          return res.status(404).json({ error: "Unidade não encontrada" });
+        }
+        
+        // Filtrar por status ativo/inativo
+        const { active } = req.query;
+        
+        let where = eq(rooms.facilityId, facilityIdParsed);
+        if (active !== undefined) {
+          where = and(
+            where,
+            eq(rooms.isActive, active === 'true')
+          );
+        }
+        
+        const facilityRooms = await db.query.rooms.findMany({
+          where,
+          orderBy: asc(rooms.name)
+        });
+        
+        // Log da auditoria
+        logAuditAction(req, 'read', 'rooms', null, { 
+          facilityId: facilityIdParsed,
+          facilityName: facility.name,
+          count: facilityRooms.length,
+          filter: active
+        });
+        
+        res.json(facilityRooms);
+      } catch (error) {
+        console.error("Erro ao buscar salas:", error);
+        res.status(500).json({ error: "Erro ao buscar salas" });
       }
-
-      const [newRoom] = await db.insert(rooms).values(req.body).returning();
-      res.status(201).json(newRoom);
-    } catch (error) {
-      console.error("Error creating room:", error);
-      res.status(500).json({ error: "Erro ao criar sala" });
     }
-  });
+  );
+
+  app.post(`${apiPrefix}/rooms`, 
+    requireAuth, 
+    checkPermission('facilities', 'create'),
+    validateInput(insertRoomSchema),
+    async (req: Request, res: Response) => {
+      try {
+        // Verificar se a facility existe
+        const facilityId = req.body.facilityId;
+        
+        const facility = await db.query.facilities.findFirst({
+          where: eq(facilities.id, facilityId)
+        });
+        
+        if (!facility) {
+          return res.status(404).json({ error: "Unidade não encontrada" });
+        }
+        
+        // Criar a sala
+        const [newRoom] = await db.insert(rooms).values(req.body).returning();
+        
+        // Log da auditoria
+        logAuditAction(req, 'create', 'rooms', newRoom.id.toString(), {
+          facilityId: newRoom.facilityId,
+          facilityName: facility.name,
+          name: newRoom.name,
+          capacity: newRoom.capacity
+        });
+        
+        res.status(201).json(newRoom);
+      } catch (error) {
+        console.error("Erro ao criar sala:", error);
+        res.status(500).json({ error: "Erro ao criar sala" });
+      }
+    }
+  );
+
+  app.put(`${apiPrefix}/rooms/:id`, 
+    requireAuth, 
+    checkPermission('facilities', 'update'),
+    async (req: Request, res: Response) => {
+      try {
+        const { id } = req.params;
+        
+        // Validar ID
+        if (!id || isNaN(parseInt(id))) {
+          return res.status(400).json({ error: "ID da sala inválido" });
+        }
+        
+        const roomId = parseInt(id);
+        
+        // Verificar se a sala existe
+        const existingRoom = await db.query.rooms.findFirst({
+          where: eq(rooms.id, roomId),
+          with: {
+            facility: true
+          }
+        });
+        
+        if (!existingRoom) {
+          return res.status(404).json({ error: "Sala não encontrada" });
+        }
+        
+        // Validar dados de entrada
+        try {
+          req.body = insertRoomSchema.parse(req.body);
+        } catch (error) {
+          if (handleZodError(error, res)) return;
+          throw error;
+        }
+        
+        // Verificar se a facility existe
+        if (req.body.facilityId) {
+          const facility = await db.query.facilities.findFirst({
+            where: eq(facilities.id, req.body.facilityId)
+          });
+          
+          if (!facility) {
+            return res.status(404).json({ error: "Unidade não encontrada" });
+          }
+        }
+        
+        // Atualizar sala
+        const [updatedRoom] = await db
+          .update(rooms)
+          .set(req.body)
+          .where(eq(rooms.id, roomId))
+          .returning();
+        
+        // Log da auditoria
+        logAuditAction(req, 'update', 'rooms', id, {
+          before: {
+            name: existingRoom.name,
+            capacity: existingRoom.capacity,
+            facilityId: existingRoom.facilityId,
+            isActive: existingRoom.isActive
+          },
+          after: {
+            name: updatedRoom.name,
+            capacity: updatedRoom.capacity,
+            facilityId: updatedRoom.facilityId,
+            isActive: updatedRoom.isActive
+          },
+          facilityName: existingRoom.facility?.name
+        });
+        
+        res.json(updatedRoom);
+      } catch (error) {
+        console.error("Erro ao atualizar sala:", error);
+        res.status(500).json({ error: "Erro ao atualizar sala" });
+      }
+    }
+  );
 
   // Professionals endpoints
-  app.get(`${apiPrefix}/professionals`, async (req, res) => {
-    try {
-      const allProfessionals = await db.query.professionals.findMany({
-        with: {
-          user: true,
-        },
-      });
-      res.json(allProfessionals);
-    } catch (error) {
-      console.error("Error fetching professionals:", error);
-      res.status(500).json({ error: "Erro ao buscar profissionais" });
+  app.get(`${apiPrefix}/professionals`, 
+    requireAuth, 
+    checkPermission('professionals', 'read'),
+    async (req, res) => {
+      try {
+        // Permitir filtros por tipo, especialização e status ativo
+        const { type, specialization, active, facilityId } = req.query;
+        
+        let conditions = [];
+        
+        if (type) {
+          conditions.push(eq(professionals.professionalType, type.toString()));
+        }
+        
+        if (specialization) {
+          conditions.push(ilike(professionals.specialization, `%${specialization}%`));
+        }
+        
+        if (active !== undefined) {
+          conditions.push(eq(professionals.isActive, active === 'true'));
+        }
+        
+        if (facilityId) {
+          const facilityIdParsed = parseInt(facilityId.toString());
+          if (!isNaN(facilityIdParsed)) {
+            conditions.push(eq(professionals.facilityId, facilityIdParsed));
+          }
+        }
+        
+        const allProfessionals = await db.query.professionals.findMany({
+          where: conditions.length > 0 ? and(...conditions) : undefined,
+          with: {
+            user: {
+              // Certifique-se de não enviar a senha
+              columns: {
+                password: false
+              }
+            },
+            facility: true
+          },
+          orderBy: asc(professionals.id)
+        });
+        
+        // Log da auditoria
+        logAuditAction(req, 'read', 'professionals', null, { 
+          filters: { type, specialization, active, facilityId },
+          count: allProfessionals.length 
+        });
+        
+        res.json(allProfessionals);
+      } catch (error) {
+        console.error("Erro ao buscar profissionais:", error);
+        res.status(500).json({ error: "Erro ao buscar profissionais" });
+      }
     }
-  });
+  );
 
-  app.get(`${apiPrefix}/professionals/:id`, async (req, res) => {
-    try {
-      const { id } = req.params;
-      const professional = await db.query.professionals.findFirst({
-        where: eq(professionals.id, parseInt(id)),
-        with: {
-          user: true,
-          interns: {
-            with: {
-              user: true,
+  app.get(`${apiPrefix}/professionals/:id`, 
+    requireAuth, 
+    checkPermission('professionals', 'read'),
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        
+        // Validar ID
+        if (!id || isNaN(parseInt(id))) {
+          return res.status(400).json({ error: "ID do profissional inválido" });
+        }
+        
+        const professionalId = parseInt(id);
+        
+        const professional = await db.query.professionals.findFirst({
+          where: eq(professionals.id, professionalId),
+          with: {
+            user: {
+              // Certifique-se de não enviar a senha
+              columns: {
+                password: false
+              }
+            },
+            facility: true,
+            supervisor: {
+              with: {
+                user: {
+                  columns: {
+                    password: false
+                  }
+                }
+              }
+            },
+            interns: {
+              with: {
+                user: {
+                  columns: {
+                    password: false
+                  }
+                }
+              },
             },
           },
-        },
-      });
+        });
 
-      if (!professional) {
-        return res.status(404).json({ error: "Profissional não encontrado" });
+        if (!professional) {
+          return res.status(404).json({ error: "Profissional não encontrado" });
+        }
+        
+        // Log da auditoria
+        logAuditAction(req, 'read', 'professionals', id, {
+          name: professional.user?.fullName,
+          type: professional.professionalType
+        });
+
+        res.json(professional);
+      } catch (error) {
+        console.error("Erro ao buscar profissional:", error);
+        res.status(500).json({ error: "Erro ao buscar profissional" });
       }
-
-      res.json(professional);
-    } catch (error) {
-      console.error("Error fetching professional:", error);
-      res.status(500).json({ error: "Erro ao buscar profissional" });
     }
-  });
+  );
   
   // Professional statistics
-  app.get(`${apiPrefix}/professionals/:id/stats`, async (req, res) => {
-    try {
-      const { id } = req.params;
-      const professionalId = parseInt(id);
-      
-      // Get current month start and end dates
-      const now = new Date();
-      const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-      
-      // Count appointments for this month
-      const appointmentsQuery = await db.query.appointments.findMany({
-        where: and(
-          eq(appointments.professionalId, professionalId),
-          gte(appointments.startTime, firstDayOfMonth),
-          lte(appointments.endTime, lastDayOfMonth)
-        )
-      });
-      
-      const totalAppointments = appointmentsQuery.length;
-      
-      // Calculate total hours
-      let totalHours = 0;
-      appointmentsQuery.forEach(appointment => {
-        const startTime = new Date(appointment.startTime);
-        const endTime = new Date(appointment.endTime);
-        const durationHours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
-        totalHours += durationHours;
-      });
-      
-      // Count unique patients
-      const uniquePatientIds = new Set(appointmentsQuery.map(a => a.patientId));
-      const patientCount = uniquePatientIds.size;
-      
-      // Count evolutions
-      const evolutionsQuery = await db.query.evolutions.findMany({
-        where: eq(evolutions.professionalId, professionalId)
-      });
-      
-      const evolutionCount = evolutionsQuery.length;
-      
-      res.json({
-        totalAppointments,
-        totalHours: parseFloat(totalHours.toFixed(1)),
-        patientCount,
-        evolutionCount
-      });
-    } catch (error) {
-      console.error("Error fetching professional stats:", error);
-      res.status(500).json({ error: "Erro ao buscar estatísticas do profissional" });
-    }
-  });
-
-  app.post(`${apiPrefix}/professionals`, async (req: Request, res: Response) => {
-    try {
-      if (!req.isAuthenticated() || req.user.role !== "admin") {
-        return res.status(403).json({ error: "Acesso não autorizado" });
+  app.get(`${apiPrefix}/professionals/:id/stats`, 
+    requireAuth, 
+    checkPermission('professionals', 'read'),
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        
+        // Validar ID
+        if (!id || isNaN(parseInt(id))) {
+          return res.status(400).json({ error: "ID do profissional inválido" });
+        }
+        
+        const professionalId = parseInt(id);
+        
+        // Verificar se o profissional existe
+        const professional = await db.query.professionals.findFirst({
+          where: eq(professionals.id, professionalId),
+          with: {
+            user: {
+              columns: {
+                password: false
+              }
+            }
+          }
+        });
+        
+        if (!professional) {
+          return res.status(404).json({ error: "Profissional não encontrado" });
+        }
+        
+        // Obter parâmetros de consulta para filtrar por período
+        const { period } = req.query;
+        
+        // Definir datas com base no período
+        const now = new Date();
+        let startDate: Date;
+        let endDate: Date = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+        
+        // Definir período padrão como mês atual
+        if (!period || period === 'month') {
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        } else if (period === 'week') {
+          // Calcular início da semana (domingo)
+          const day = now.getDay();
+          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - day);
+        } else if (period === 'year') {
+          startDate = new Date(now.getFullYear(), 0, 1);
+          endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+        } else {
+          // Período inválido, usar mês atual como padrão
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        }
+        
+        // Count appointments for this period
+        const appointmentsQuery = await db.query.appointments.findMany({
+          where: and(
+            eq(appointments.professionalId, professionalId),
+            gte(appointments.startTime, startDate),
+            lte(appointments.endTime, endDate)
+          )
+        });
+        
+        const totalAppointments = appointmentsQuery.length;
+        
+        // Calculate total hours
+        let totalHours = 0;
+        appointmentsQuery.forEach(appointment => {
+          const startTime = new Date(appointment.startTime);
+          const endTime = new Date(appointment.endTime);
+          const durationHours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+          totalHours += durationHours;
+        });
+        
+        // Count unique patients
+        const uniquePatientIds = new Set(appointmentsQuery.map(a => a.patientId));
+        const patientCount = uniquePatientIds.size;
+        
+        // Count appointments by status
+        const statusCounts = {};
+        appointmentsQuery.forEach(appointment => {
+          const status = appointment.status || 'unknown';
+          statusCounts[status] = (statusCounts[status] || 0) + 1;
+        });
+        
+        // Count evolutions for this period
+        const evolutionsQuery = await db.query.evolutions.findMany({
+          where: and(
+            eq(evolutions.professionalId, professionalId),
+            gte(evolutions.createdAt, startDate),
+            lte(evolutions.createdAt, endDate)
+          )
+        });
+        
+        const evolutionCount = evolutionsQuery.length;
+        
+        // Count evolutions by status
+        const evolutionStatusCounts = {};
+        evolutionsQuery.forEach(evolution => {
+          const status = evolution.status || 'unknown';
+          evolutionStatusCounts[status] = (evolutionStatusCounts[status] || 0) + 1;
+        });
+        
+        // Log da auditoria
+        logAuditAction(req, 'read', 'professionals', id, {
+          action: 'statistics',
+          name: professional.user?.fullName,
+          period: period || 'month',
+          stats: {
+            appointments: totalAppointments,
+            hours: parseFloat(totalHours.toFixed(1)),
+            patients: patientCount,
+            evolutions: evolutionCount
+          }
+        });
+        
+        res.json({
+          period: period || 'month',
+          dateRange: {
+            start: startDate.toISOString(),
+            end: endDate.toISOString()
+          },
+          professional: {
+            id: professional.id,
+            name: professional.user?.fullName,
+            type: professional.professionalType
+          },
+          appointments: {
+            total: totalAppointments,
+            byStatus: statusCounts
+          },
+          totalHours: parseFloat(totalHours.toFixed(1)),
+          patientCount,
+          evolutions: {
+            total: evolutionCount,
+            byStatus: evolutionStatusCounts
+          }
+        });
+      } catch (error) {
+        console.error("Erro ao buscar estatísticas do profissional:", error);
+        res.status(500).json({ error: "Erro ao buscar estatísticas do profissional" });
       }
-
-      // First create user
-      const userData = {
-        username: req.body.username,
-        password: req.body.password,
-        email: req.body.email,
-        fullName: req.body.fullName,
-        role: req.body.role,
-        facilityId: req.body.facilityId,
-        phone: req.body.phone,
-        profileImageUrl: req.body.profileImageUrl,
-      };
-
-      const [newUser] = await db.insert(users).values(userData).returning();
-
-      // Then create professional
-      const professionalData = {
-        userId: newUser.id,
-        professionalType: req.body.professionalType,
-        licenseNumber: req.body.licenseNumber,
-        licenseType: req.body.licenseType,
-        specialization: req.body.specialization,
-        employmentType: req.body.employmentType,
-        hourlyRate: req.body.hourlyRate,
-        supervisorId: req.body.supervisorId,
-        bio: req.body.bio,
-      };
-
-      const [newProfessional] = await db.insert(professionals).values(professionalData).returning();
-
-      res.status(201).json({
-        ...newProfessional,
-        user: newUser,
-      });
-    } catch (error) {
-      console.error("Error creating professional:", error);
-      res.status(500).json({ error: "Erro ao criar profissional" });
     }
-  });
+  );
 
-  app.put(`${apiPrefix}/professionals/:id`, async (req: Request, res: Response) => {
-    try {
-      if (!req.isAuthenticated() || req.user.role !== "admin") {
-        return res.status(403).json({ error: "Acesso não autorizado" });
+  app.post(`${apiPrefix}/professionals`, 
+    requireAuth, 
+    checkPermission('professionals', 'create'),
+    async (req: Request, res: Response) => {
+      try {
+        // Validar dados de usuário
+        const userData = {
+          username: req.body.username,
+          password: req.body.password,
+          email: req.body.email,
+          fullName: req.body.fullName,
+          role: req.body.role,
+          facilityId: req.body.facilityId,
+          phone: req.body.phone,
+          profileImageUrl: req.body.profileImageUrl,
+          isActive: req.body.isActive !== undefined ? req.body.isActive : true
+        };
+        
+        // Verificar se a facility existe
+        if (userData.facilityId) {
+          const facility = await db.query.facilities.findFirst({
+            where: eq(facilities.id, userData.facilityId)
+          });
+          
+          if (!facility) {
+            return res.status(404).json({ error: "Unidade não encontrada" });
+          }
+        }
+        
+        // Verificar se o nome de usuário já existe
+        const existingUser = await db.query.users.findFirst({
+          where: eq(users.username, userData.username)
+        });
+        
+        if (existingUser) {
+          return res.status(400).json({ error: "Nome de usuário já existe" });
+        }
+        
+        // Criptografar a senha antes de armazenar
+        try {
+          const salt = randomBytes(16).toString("hex");
+          const buf = await scrypt(userData.password, salt, 64) as Buffer;
+          userData.password = `${buf.toString("hex")}.${salt}`;
+        } catch (error) {
+          console.error("Erro ao criptografar senha:", error);
+          return res.status(500).json({ error: "Erro ao processar a senha" });
+        }
+        
+        // Criar usuário
+        const [newUser] = await db.insert(users).values(userData).returning();
+        
+        // Validar dados profissionais
+        const professionalData = {
+          userId: newUser.id,
+          professionalType: req.body.professionalType,
+          licenseNumber: req.body.licenseNumber,
+          licenseType: req.body.licenseType,
+          specialization: req.body.specialization,
+          employmentType: req.body.employmentType,
+          hourlyRate: req.body.hourlyRate ? parseFloat(req.body.hourlyRate) : null,
+          supervisorId: req.body.supervisorId || null,
+          bio: req.body.bio,
+          isActive: req.body.isActive !== undefined ? req.body.isActive : true,
+          facilityId: userData.facilityId
+        };
+        
+        // Verificar supervisor
+        if (professionalData.supervisorId) {
+          const supervisor = await db.query.professionals.findFirst({
+            where: eq(professionals.id, professionalData.supervisorId)
+          });
+          
+          if (!supervisor) {
+            return res.status(404).json({ error: "Supervisor não encontrado" });
+          }
+        }
+        
+        // Criar profissional
+        const [newProfessional] = await db.insert(professionals)
+          .values(professionalData)
+          .returning();
+          
+        // Log da auditoria
+        logAuditAction(req, 'create', 'professionals', newProfessional.id.toString(), {
+          name: newUser.fullName,
+          type: newProfessional.professionalType,
+          facility: userData.facilityId
+        });
+        
+        // Remover a senha da resposta
+        const { password, ...userWithoutPassword } = newUser;
+        
+        res.status(201).json({
+          ...newProfessional,
+          user: userWithoutPassword,
+        });
+      } catch (error) {
+        console.error("Erro ao criar profissional:", error);
+        
+        // Verificar erros específicos
+        if (error instanceof Error && error.message.includes('unique constraint')) {
+          return res.status(400).json({ error: "Dados únicos duplicados, verifique username ou licença" });
+        }
+        
+        res.status(500).json({ error: "Erro ao criar profissional" });
       }
-
-      const { id } = req.params;
-      const professional = await db.query.professionals.findFirst({
-        where: eq(professionals.id, parseInt(id)),
-      });
-
-      if (!professional) {
-        return res.status(404).json({ error: "Profissional não encontrado" });
-      }
-
-      // Update user data
-      const userData = {
-        email: req.body.email,
-        fullName: req.body.fullName,
-        role: req.body.role,
-        facilityId: req.body.facilityId,
-        phone: req.body.phone,
-        profileImageUrl: req.body.profileImageUrl,
-      };
-
-      await db.update(users).set(userData).where(eq(users.id, professional.userId));
-
-      // Update professional data
-      const professionalData = {
-        professionalType: req.body.professionalType,
-        licenseNumber: req.body.licenseNumber,
-        licenseType: req.body.licenseType,
-        specialization: req.body.specialization,
-        employmentType: req.body.employmentType,
-        hourlyRate: req.body.hourlyRate,
-        supervisorId: req.body.supervisorId,
-        bio: req.body.bio,
-      };
-
-      const [updatedProfessional] = await db
-        .update(professionals)
-        .set(professionalData)
-        .where(eq(professionals.id, parseInt(id)))
-        .returning();
-
-      const updatedUser = await db.query.users.findFirst({
-        where: eq(users.id, professional.userId),
-      });
-
-      res.json({
-        ...updatedProfessional,
-        user: updatedUser,
-      });
-    } catch (error) {
-      console.error("Error updating professional:", error);
-      res.status(500).json({ error: "Erro ao atualizar profissional" });
     }
-  });
+  );
+
+  app.put(`${apiPrefix}/professionals/:id`, 
+    requireAuth, 
+    checkPermission('professionals', 'update'),
+    async (req: Request, res: Response) => {
+      try {
+        const { id } = req.params;
+        
+        // Validar ID
+        if (!id || isNaN(parseInt(id))) {
+          return res.status(400).json({ error: "ID do profissional inválido" });
+        }
+        
+        const professionalId = parseInt(id);
+        
+        // Buscar o profissional atual para verificar permissões
+        const existingProfessional = await db.query.professionals.findFirst({
+          where: eq(professionals.id, professionalId),
+          with: {
+            user: true
+          }
+        });
+        
+        if (!existingProfessional) {
+          return res.status(404).json({ error: "Profissional não encontrado" });
+        }
+        
+        // Se não for admin, verificar permissões adicionais - só pode editar o próprio perfil
+        if (req.user.role !== "admin") {
+          // Verificar se o usuário é o próprio profissional ou seu supervisor
+          const isOwner = existingProfessional.userId === req.user.id;
+          const isSupervisor = existingProfessional.supervisorId === req.user.id;
+          
+          if (!isOwner && !isSupervisor) {
+            return res.status(403).json({ 
+              error: "Acesso não autorizado. Você só pode editar seu próprio perfil ou de seus supervisionados."
+            });
+          }
+          
+          // Se for o próprio, não pode mudar role ou isActive
+          if (isOwner && !isSupervisor) {
+            if (req.body.role && req.body.role !== existingProfessional.user.role) {
+              return res.status(403).json({ error: "Você não pode alterar seu próprio cargo (role)" });
+            }
+            
+            if (req.body.isActive !== undefined && req.body.isActive !== existingProfessional.isActive) {
+              return res.status(403).json({ error: "Você não pode alterar seu próprio status de atividade" });
+            }
+          }
+        }
+        
+        // Preparar dados do usuário para atualização
+        const userData = {
+          email: req.body.email,
+          fullName: req.body.fullName,
+          role: req.body.role,
+          facilityId: req.body.facilityId,
+          phone: req.body.phone,
+          profileImageUrl: req.body.profileImageUrl,
+        };
+        
+        // Verificar se facility existe, caso esteja sendo atualizada
+        if (userData.facilityId) {
+          const facility = await db.query.facilities.findFirst({
+            where: eq(facilities.id, userData.facilityId)
+          });
+          
+          if (!facility) {
+            return res.status(404).json({ error: "Unidade não encontrada" });
+          }
+        }
+        
+        // Atualizar usuário
+        await db.update(users)
+          .set(userData)
+          .where(eq(users.id, existingProfessional.userId));
+        
+        // Preparar dados do profissional para atualização
+        const professionalData = {
+          professionalType: req.body.professionalType,
+          licenseNumber: req.body.licenseNumber,
+          licenseType: req.body.licenseType,
+          specialization: req.body.specialization,
+          employmentType: req.body.employmentType,
+          hourlyRate: req.body.hourlyRate ? parseFloat(req.body.hourlyRate) : null,
+          supervisorId: req.body.supervisorId,
+          bio: req.body.bio,
+          isActive: req.body.isActive,
+          facilityId: userData.facilityId
+        };
+        
+        // Verificar novo supervisor, se informado
+        if (professionalData.supervisorId && professionalData.supervisorId !== existingProfessional.supervisorId) {
+          const supervisor = await db.query.professionals.findFirst({
+            where: eq(professionals.id, professionalData.supervisorId)
+          });
+          
+          if (!supervisor) {
+            return res.status(404).json({ error: "Supervisor não encontrado" });
+          }
+        }
+        
+        // Atualizar profissional
+        const [updatedProfessional] = await db
+          .update(professionals)
+          .set(professionalData)
+          .where(eq(professionals.id, professionalId))
+          .returning();
+        
+        // Buscar usuário atualizado
+        const updatedUser = await db.query.users.findFirst({
+          where: eq(users.id, existingProfessional.userId),
+          columns: {
+            password: false // Excluir senha do resultado
+          }
+        });
+        
+        // Log da auditoria
+        logAuditAction(req, 'update', 'professionals', id, {
+          name: updatedUser?.fullName,
+          before: {
+            type: existingProfessional.professionalType,
+            facilityId: existingProfessional.facilityId,
+            isActive: existingProfessional.isActive,
+            supervisorId: existingProfessional.supervisorId
+          },
+          after: {
+            type: updatedProfessional.professionalType,
+            facilityId: updatedProfessional.facilityId,
+            isActive: updatedProfessional.isActive,
+            supervisorId: updatedProfessional.supervisorId
+          }
+        });
+        
+        res.json({
+          ...updatedProfessional,
+          user: updatedUser,
+        });
+      } catch (error) {
+        console.error("Erro ao atualizar profissional:", error);
+        
+        // Verificar erros específicos
+        if (error instanceof Error && error.message.includes('unique constraint')) {
+          return res.status(400).json({ error: "Dados únicos duplicados, verifique licença profissional" });
+        }
+        
+        res.status(500).json({ error: "Erro ao atualizar profissional" });
+      }
+    }
+  );
 
   // Patients endpoints
   app.get(`${apiPrefix}/patients`, async (req, res) => {
