@@ -1,0 +1,2179 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Unidades - Clínica Equidade</title>
+  <style>
+    :root {
+      --primary: #4b6cb7;
+      --primary-dark: #3a5a9c;
+      --secondary: #182848;
+      --text-main: #333;
+      --text-light: #666;
+      --bg-light: #f5f7fa;
+      --bg-white: #ffffff;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --border: #e5e7eb;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-light);
+      color: var(--text-main);
+      line-height: 1.5;
+    }
+    
+    .layout {
+      display: flex;
+      min-height: 100vh;
+    }
+    
+    /* Sidebar */
+    .sidebar {
+      width: 260px;
+      background-color: var(--secondary);
+      color: white;
+      padding: 20px 0;
+      position: fixed;
+      height: 100vh;
+      overflow-y: auto;
+      z-index: 10;
+    }
+    
+    .logo {
+      padding: 0 20px 20px;
+      font-size: 24px;
+      font-weight: 600;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      margin-bottom: 20px;
+    }
+    
+    .nav-list {
+      list-style: none;
+    }
+    
+    .nav-item {
+      margin-bottom: 5px;
+    }
+    
+    .nav-link {
+      display: flex;
+      align-items: center;
+      padding: 12px 20px;
+      color: rgba(255, 255, 255, 0.7);
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    
+    .nav-link:hover, .nav-link.active {
+      background-color: rgba(255, 255, 255, 0.1);
+      color: white;
+    }
+    
+    .nav-icon {
+      margin-right: 10px;
+      width: 20px;
+      text-align: center;
+    }
+    
+    /* Main content */
+    .main-content {
+      flex: 1;
+      margin-left: 260px;
+      padding: 20px;
+    }
+    
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      background-color: var(--bg-white);
+      padding: 15px 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    
+    .page-title {
+      font-size: 24px;
+      font-weight: 600;
+    }
+    
+    .user-menu {
+      display: flex;
+      align-items: center;
+    }
+    
+    .user-info {
+      margin-right: 15px;
+      text-align: right;
+    }
+    
+    .user-name {
+      font-weight: 500;
+    }
+    
+    .user-role {
+      font-size: 12px;
+      color: var(--text-light);
+    }
+    
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background-color: var(--primary);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+    }
+    
+    .logout-button {
+      background-color: var(--danger);
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 14px;
+      cursor: pointer;
+      margin-left: 15px;
+    }
+    
+    .logout-button:hover {
+      background-color: #dc2626;
+    }
+    
+    /* Facilities Grid */
+    .facilities-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    
+    @media (max-width: 1200px) {
+      .facilities-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .facilities-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .facility-card {
+      background-color: var(--bg-white);
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      padding: 20px;
+      transition: all 0.2s;
+    }
+    
+    .facility-card:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      transform: translateY(-3px);
+    }
+    
+    .facility-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 15px;
+    }
+    
+    .facility-name {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+    
+    .facility-address {
+      color: var(--text-light);
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+    
+    .facility-phone {
+      display: flex;
+      align-items: center;
+      color: var(--text-light);
+      font-size: 14px;
+      margin-bottom: 5px;
+    }
+    
+    .facility-email {
+      display: flex;
+      align-items: center;
+      color: var(--text-light);
+      font-size: 14px;
+      margin-bottom: 15px;
+    }
+    
+    .facility-icon {
+      margin-right: 5px;
+    }
+    
+    .facility-stats {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 15px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .facility-stat {
+      text-align: center;
+    }
+    
+    .stat-number {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--primary);
+    }
+    
+    .stat-label {
+      font-size: 12px;
+      color: var(--text-light);
+    }
+    
+    .facility-footer {
+      display: flex;
+      justify-content: space-between;
+    }
+    
+    .facility-actions {
+      display: flex;
+      gap: 10px;
+    }
+    
+    /* Add Facility Card */
+    .add-facility-card {
+      background-color: rgba(75, 108, 183, 0.05);
+      border: 2px dashed var(--primary);
+      border-radius: 8px;
+      padding: 20px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .add-facility-card:hover {
+      background-color: rgba(75, 108, 183, 0.1);
+    }
+    
+    .add-facility-icon {
+      font-size: 36px;
+      color: var(--primary);
+      margin-bottom: 15px;
+    }
+    
+    .add-facility-text {
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--primary);
+    }
+    
+    /* Room list */
+    .rooms-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+    
+    .rooms-list {
+      margin-bottom: 15px;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+    
+    .room-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .room-item:last-child {
+      border-bottom: none;
+    }
+    
+    .room-name {
+      font-weight: 500;
+    }
+    
+    .room-capacity {
+      font-size: 13px;
+      color: var(--text-light);
+    }
+    
+    .room-actions {
+      display: flex;
+      gap: 5px;
+    }
+    
+    .room-action {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--primary);
+    }
+    
+    .room-action.delete {
+      color: var(--danger);
+    }
+    
+    .add-room-button {
+      width: 100%;
+      padding: 8px;
+      border: 1px dashed var(--border);
+      background: none;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      color: var(--text-light);
+      transition: all 0.2s;
+    }
+    
+    .add-room-button:hover {
+      background-color: rgba(75, 108, 183, 0.05);
+      color: var(--primary);
+      border-color: var(--primary);
+    }
+    
+    /* Table */
+    .table-container {
+      background-color: var(--bg-white);
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      overflow-x: auto;
+      margin-bottom: 30px;
+    }
+    
+    .table-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    
+    .card-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 0;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    
+    th {
+      text-align: left;
+      padding: 12px 15px;
+      border-bottom: 1px solid var(--border);
+      font-weight: 500;
+      color: var(--text-light);
+    }
+    
+    td {
+      padding: 12px 15px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    tr:last-child td {
+      border-bottom: none;
+    }
+    
+    .status {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    
+    .status-active {
+      background-color: rgba(16, 185, 129, 0.1);
+      color: var(--success);
+    }
+    
+    .status-inactive {
+      background-color: rgba(239, 68, 68, 0.1);
+      color: var(--danger);
+    }
+    
+    .action-button {
+      background: none;
+      border: none;
+      color: var(--primary);
+      cursor: pointer;
+      text-decoration: underline;
+      padding: 0;
+      font-size: 14px;
+      margin-right: 10px;
+    }
+    
+    .action-button.delete {
+      color: var(--danger);
+    }
+    
+    /* Button */
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 16px;
+      font-size: 14px;
+      font-weight: 500;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+    }
+    
+    .button-primary {
+      background-color: var(--primary);
+      color: white;
+    }
+    
+    .button-primary:hover {
+      background-color: var(--primary-dark);
+    }
+    
+    .button-outline {
+      background-color: transparent;
+      border: 1px solid var(--primary);
+      color: var(--primary);
+    }
+    
+    .button-outline:hover {
+      background-color: rgba(75, 108, 183, 0.1);
+    }
+    
+    .button-danger {
+      background-color: var(--danger);
+      color: white;
+    }
+    
+    .button-danger:hover {
+      background-color: #dc2626;
+    }
+    
+    /* Search input */
+    .search-container {
+      position: relative;
+      width: 300px;
+    }
+    
+    .search-input {
+      width: 100%;
+      padding: 8px 12px 8px 36px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 14px;
+      transition: border-color 0.2s;
+    }
+    
+    .search-input:focus {
+      border-color: var(--primary);
+      outline: none;
+    }
+    
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-light);
+    }
+    
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.2s, visibility 0.2s;
+    }
+    
+    .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+    
+    .modal {
+      background-color: var(--bg-white);
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      width: 100%;
+      max-width: 600px;
+      max-height: 90vh;
+      overflow-y: auto;
+      transform: scale(0.9);
+      transition: transform 0.2s;
+    }
+    
+    .modal-overlay.active .modal {
+      transform: scale(1);
+    }
+    
+    .modal-header {
+      padding: 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .modal-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 0;
+    }
+    
+    .close-button {
+      background: none;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      color: var(--text-light);
+    }
+    
+    .modal-body {
+      padding: 20px;
+    }
+    
+    .modal-footer {
+      padding: 15px 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+    
+    /* Form */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    .form-group.span-2 {
+      grid-column: span 2;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    
+    .form-control {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 14px;
+      transition: border-color 0.2s;
+    }
+    
+    .form-control:focus {
+      border-color: var(--primary);
+      outline: none;
+    }
+    
+    select.form-control {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 36px;
+    }
+    
+    textarea.form-control {
+      min-height: 100px;
+      resize: vertical;
+    }
+    
+    .form-text {
+      font-size: 12px;
+      color: var(--text-light);
+      margin-top: 4px;
+    }
+    
+    .error-message {
+      color: var(--danger);
+      font-size: 12px;
+      margin-top: 4px;
+    }
+    
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+    }
+    
+    .checkbox-group input {
+      margin-right: 8px;
+    }
+    
+    /* Facility view modal */
+    .facility-view-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    
+    .facility-view-icon {
+      width: 60px;
+      height: 60px;
+      border-radius: 8px;
+      background-color: var(--primary);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      margin-right: 15px;
+    }
+    
+    .facility-view-info {
+      flex: 1;
+    }
+    
+    .facility-view-title {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+    
+    .facility-view-subtitle {
+      color: var(--text-light);
+      font-size: 14px;
+    }
+    
+    .facility-view-section {
+      margin-bottom: 20px;
+    }
+    
+    .facility-view-section-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 10px;
+      padding-bottom: 5px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .facility-view-detail {
+      display: flex;
+      margin-bottom: 10px;
+    }
+    
+    .facility-view-label {
+      min-width: 120px;
+      font-weight: 500;
+    }
+    
+    .facility-view-value {
+      flex: 1;
+    }
+    
+    .facility-view-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+    
+    .facility-view-tab {
+      padding: 10px 15px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      font-weight: 500;
+    }
+    
+    .facility-view-tab.active {
+      border-bottom: 2px solid var(--primary);
+      color: var(--primary);
+    }
+    
+    .facility-view-tab-content {
+      display: none;
+    }
+    
+    .facility-view-tab-content.active {
+      display: block;
+    }
+    
+    /* Room Modal */
+    .room-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+      margin-top: 15px;
+    }
+    
+    .room-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 15px;
+      transition: all 0.2s;
+    }
+    
+    .room-card:hover {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .room-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    
+    .room-card-title {
+      font-weight: 500;
+    }
+    
+    .room-card-capacity {
+      font-size: 12px;
+      background-color: var(--bg-light);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    
+    .room-card-detail {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      margin-bottom: 5px;
+    }
+    
+    .room-card-label {
+      color: var(--text-light);
+    }
+    
+    .room-card-footer {
+      margin-top: 10px;
+      display: flex;
+      justify-content: space-between;
+    }
+    
+    /* Empty state */
+    .empty-state {
+      padding: 40px;
+      text-align: center;
+    }
+    
+    .empty-icon {
+      font-size: 48px;
+      color: var(--text-light);
+      margin-bottom: 16px;
+    }
+    
+    .empty-text {
+      font-size: 16px;
+      color: var(--text-light);
+      margin-bottom: 24px;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+      .layout {
+        flex-direction: column;
+      }
+      
+      .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+      }
+      
+      .main-content {
+        margin-left: 0;
+      }
+      
+      .header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      
+      .user-menu {
+        margin-top: 15px;
+        width: 100%;
+        justify-content: space-between;
+      }
+      
+      .table-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      
+      .search-container {
+        width: 100%;
+        margin-top: 15px;
+      }
+      
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .form-group.span-2 {
+        grid-column: span 1;
+      }
+      
+      .room-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="logo">Clínica Equidade</div>
+      <nav>
+        <ul class="nav-list">
+          <li class="nav-item">
+            <a href="/dashboard.html" class="nav-link">
+              <span class="nav-icon">📊</span>
+              Dashboard
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="/patients.html" class="nav-link">
+              <span class="nav-icon">👥</span>
+              Pacientes
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link">
+              <span class="nav-icon">👨‍⚕️</span>
+              Profissionais
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="/appointments.html" class="nav-link">
+              <span class="nav-icon">📅</span>
+              Agendamentos
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="/evolutions.html" class="nav-link">
+              <span class="nav-icon">📝</span>
+              Evoluções
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="/facilities.html" class="nav-link active">
+              <span class="nav-icon">🏥</span>
+              Unidades
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link">
+              <span class="nav-icon">📊</span>
+              Relatórios
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link">
+              <span class="nav-icon">⚙️</span>
+              Configurações
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </aside>
+    
+    <main class="main-content">
+      <header class="header">
+        <h1 class="page-title">Unidades</h1>
+        <div class="user-menu">
+          <div class="user-info">
+            <div class="user-name" id="userName">Carregando...</div>
+            <div class="user-role" id="userRole"></div>
+          </div>
+          <div class="avatar" id="userAvatar">U</div>
+          <button class="logout-button" id="logoutButton">Sair</button>
+        </div>
+      </header>
+      
+      <div class="facilities-grid" id="facilitiesGrid">
+        <!-- Facilities cards will be added here by JavaScript -->
+        
+        <!-- Add Facility Card - only visible to admins -->
+        <div class="add-facility-card" id="addFacilityCard">
+          <div class="add-facility-icon">+</div>
+          <div class="add-facility-text">Adicionar Nova Unidade</div>
+        </div>
+      </div>
+      
+      <div class="table-container">
+        <div class="table-header">
+          <h2 class="card-title">Todas as Unidades</h2>
+          <div class="search-container">
+            <span class="search-icon">🔍</span>
+            <input type="text" class="search-input" id="searchFacility" placeholder="Pesquisar por nome...">
+          </div>
+        </div>
+        
+        <table>
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Endereço</th>
+              <th>Telefone</th>
+              <th>Salas</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="facilitiesTableBody">
+            <tr>
+              <td colspan="6" class="text-center">Carregando unidades...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+  
+  <!-- Modal Add/Edit Facility -->
+  <div class="modal-overlay" id="facilityModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modalTitle">Adicionar Unidade</h3>
+        <button class="close-button" id="closeModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="facilityForm">
+          <input type="hidden" id="facilityId">
+          
+          <div class="form-grid">
+            <div class="form-group span-2">
+              <label for="name">Nome da Unidade *</label>
+              <input type="text" id="name" class="form-control" required>
+            </div>
+            
+            <div class="form-group span-2">
+              <label for="address">Endereço Completo *</label>
+              <input type="text" id="address" class="form-control" required>
+            </div>
+            
+            <div class="form-group">
+              <label for="city">Cidade *</label>
+              <input type="text" id="city" class="form-control" required>
+            </div>
+            
+            <div class="form-group">
+              <label for="state">Estado *</label>
+              <input type="text" id="state" class="form-control" required>
+            </div>
+            
+            <div class="form-group">
+              <label for="zipCode">CEP *</label>
+              <input type="text" id="zipCode" class="form-control" required>
+            </div>
+            
+            <div class="form-group">
+              <label for="phone">Telefone *</label>
+              <input type="tel" id="phone" class="form-control" required>
+            </div>
+            
+            <div class="form-group span-2">
+              <label for="email">E-mail</label>
+              <input type="email" id="email" class="form-control">
+            </div>
+            
+            <div class="form-group span-2">
+              <label for="description">Descrição</label>
+              <textarea id="description" class="form-control" rows="3"></textarea>
+            </div>
+            
+            <div class="form-group">
+              <label for="openingHours">Horário de Funcionamento</label>
+              <input type="text" id="openingHours" class="form-control" placeholder="Ex: Seg-Sex: 8h-18h, Sáb: 8h-12h">
+            </div>
+            
+            <div class="form-group">
+              <div class="checkbox-group">
+                <input type="checkbox" id="isActive" checked>
+                <label for="isActive">Unidade ativa</label>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="button button-outline" id="cancelButton">Cancelar</button>
+        <button class="button button-primary" id="saveButton">Salvar</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Modal View Facility Details -->
+  <div class="modal-overlay" id="viewFacilityModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Detalhes da Unidade</h3>
+        <button class="close-button" id="closeViewModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="facility-view-header">
+          <div class="facility-view-icon">🏥</div>
+          <div class="facility-view-info">
+            <div class="facility-view-title" id="viewFacilityName">Carregando...</div>
+            <div class="facility-view-subtitle" id="viewFacilityAddress"></div>
+          </div>
+        </div>
+        
+        <div class="facility-view-tabs">
+          <div class="facility-view-tab active" id="detailsTab">Detalhes</div>
+          <div class="facility-view-tab" id="roomsTab">Salas</div>
+          <div class="facility-view-tab" id="statsTab">Estatísticas</div>
+        </div>
+        
+        <div class="facility-view-tab-content active" id="detailsTabContent">
+          <div class="facility-view-section">
+            <h4 class="facility-view-section-title">Informações Gerais</h4>
+            
+            <div class="facility-view-detail">
+              <div class="facility-view-label">Telefone</div>
+              <div class="facility-view-value" id="viewFacilityPhone"></div>
+            </div>
+            
+            <div class="facility-view-detail">
+              <div class="facility-view-label">E-mail</div>
+              <div class="facility-view-value" id="viewFacilityEmail"></div>
+            </div>
+            
+            <div class="facility-view-detail">
+              <div class="facility-view-label">Horário</div>
+              <div class="facility-view-value" id="viewFacilityHours"></div>
+            </div>
+            
+            <div class="facility-view-detail">
+              <div class="facility-view-label">Status</div>
+              <div class="facility-view-value" id="viewFacilityStatus"></div>
+            </div>
+          </div>
+          
+          <div class="facility-view-section">
+            <h4 class="facility-view-section-title">Descrição</h4>
+            <div id="viewFacilityDescription"></div>
+          </div>
+        </div>
+        
+        <div class="facility-view-tab-content" id="roomsTabContent">
+          <div class="facility-view-section">
+            <div class="table-header">
+              <h4 class="facility-view-section-title">Salas</h4>
+              <button class="button button-outline" id="addRoomButton">Adicionar Sala</button>
+            </div>
+            
+            <div id="roomsList">
+              <!-- Rooms will be added here by JavaScript -->
+              <div class="empty-state">
+                <div class="empty-icon">🔍</div>
+                <div class="empty-text">Nenhuma sala encontrada</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="facility-view-tab-content" id="statsTabContent">
+          <div class="facility-view-section">
+            <h4 class="facility-view-section-title">Estatísticas</h4>
+            
+            <div class="facility-view-detail">
+              <div class="facility-view-label">Total de Salas</div>
+              <div class="facility-view-value" id="viewFacilityRoomCount">0</div>
+            </div>
+            
+            <div class="facility-view-detail">
+              <div class="facility-view-label">Profissionais</div>
+              <div class="facility-view-value" id="viewFacilityProfessionalCount">0</div>
+            </div>
+            
+            <div class="facility-view-detail">
+              <div class="facility-view-label">Pacientes</div>
+              <div class="facility-view-value" id="viewFacilityPatientCount">0</div>
+            </div>
+            
+            <div class="facility-view-detail">
+              <div class="facility-view-label">Agendamentos</div>
+              <div class="facility-view-value" id="viewFacilityAppointmentCount">0</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="button button-outline" id="editFacilityButton">Editar</button>
+        <button class="button button-primary" id="closeDetailButton">Fechar</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Modal Add/Edit Room -->
+  <div class="modal-overlay" id="roomModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="roomModalTitle">Adicionar Sala</h3>
+        <button class="close-button" id="closeRoomModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="roomForm">
+          <input type="hidden" id="roomId">
+          <input type="hidden" id="roomFacilityId">
+          
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="roomName">Nome da Sala *</label>
+              <input type="text" id="roomName" class="form-control" required>
+            </div>
+            
+            <div class="form-group">
+              <label for="roomCapacity">Capacidade</label>
+              <input type="number" id="roomCapacity" class="form-control" min="1" value="1">
+            </div>
+            
+            <div class="form-group">
+              <label for="roomType">Tipo de Sala</label>
+              <select id="roomType" class="form-control">
+                <option value="therapy">Terapia</option>
+                <option value="evaluation">Avaliação</option>
+                <option value="group">Grupo</option>
+                <option value="sensory">Sensorial</option>
+                <option value="meeting">Reunião</option>
+                <option value="administration">Administração</option>
+                <option value="other">Outro</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label for="roomFloor">Andar</label>
+              <input type="text" id="roomFloor" class="form-control">
+            </div>
+            
+            <div class="form-group span-2">
+              <label for="roomDescription">Descrição</label>
+              <textarea id="roomDescription" class="form-control" rows="3"></textarea>
+            </div>
+            
+            <div class="form-group span-2">
+              <label for="roomEquipment">Equipamentos</label>
+              <textarea id="roomEquipment" class="form-control" rows="2" placeholder="Liste os equipamentos disponíveis nesta sala"></textarea>
+            </div>
+            
+            <div class="form-group">
+              <div class="checkbox-group">
+                <input type="checkbox" id="roomIsActive" checked>
+                <label for="roomIsActive">Sala ativa</label>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="button button-outline" id="cancelRoomButton">Cancelar</button>
+        <button class="button button-primary" id="saveRoomButton">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Verificar autenticação e carregar dados do usuário
+    document.addEventListener('DOMContentLoaded', () => {
+      checkAuth();
+      setupEventListeners();
+      loadFacilities();
+    });
+    
+    // Elementos DOM
+    const userNameElement = document.getElementById('userName');
+    const userRoleElement = document.getElementById('userRole');
+    const userAvatarElement = document.getElementById('userAvatar');
+    const logoutButton = document.getElementById('logoutButton');
+    const facilitiesGrid = document.getElementById('facilitiesGrid');
+    const facilitiesTableBody = document.getElementById('facilitiesTableBody');
+    const searchFacility = document.getElementById('searchFacility');
+    const addFacilityCard = document.getElementById('addFacilityCard');
+    
+    // Modal Facility
+    const facilityModal = document.getElementById('facilityModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const facilityForm = document.getElementById('facilityForm');
+    const facilityIdInput = document.getElementById('facilityId');
+    const closeModal = document.getElementById('closeModal');
+    const cancelButton = document.getElementById('cancelButton');
+    const saveButton = document.getElementById('saveButton');
+    
+    // Modal View Facility
+    const viewFacilityModal = document.getElementById('viewFacilityModal');
+    const closeViewModal = document.getElementById('closeViewModal');
+    const closeDetailButton = document.getElementById('closeDetailButton');
+    const editFacilityButton = document.getElementById('editFacilityButton');
+    const detailsTab = document.getElementById('detailsTab');
+    const roomsTab = document.getElementById('roomsTab');
+    const statsTab = document.getElementById('statsTab');
+    const detailsTabContent = document.getElementById('detailsTabContent');
+    const roomsTabContent = document.getElementById('roomsTabContent');
+    const statsTabContent = document.getElementById('statsTabContent');
+    const addRoomButton = document.getElementById('addRoomButton');
+    
+    // Modal Room
+    const roomModal = document.getElementById('roomModal');
+    const roomModalTitle = document.getElementById('roomModalTitle');
+    const roomForm = document.getElementById('roomForm');
+    const roomIdInput = document.getElementById('roomId');
+    const roomFacilityIdInput = document.getElementById('roomFacilityId');
+    const closeRoomModal = document.getElementById('closeRoomModal');
+    const cancelRoomButton = document.getElementById('cancelRoomButton');
+    const saveRoomButton = document.getElementById('saveRoomButton');
+    
+    // Variáveis globais
+    let currentUser = null;
+    let facilities = [];
+    let currentFacility = null;
+    
+    // Verificar autenticação
+    async function checkAuth() {
+      try {
+        const response = await fetch('/api/user', {
+          credentials: 'include'
+        });
+        
+        if (!response.ok) {
+          // Não autenticado, redirecionar para login
+          window.location.href = '/login.html';
+          return;
+        }
+        
+        currentUser = await response.json();
+        displayUserData(currentUser);
+        
+        // Configurar permissões baseadas no papel do usuário
+        if (currentUser.role !== 'admin') {
+          addFacilityCard.style.display = 'none';
+        }
+      } catch (error) {
+        console.error('Erro ao verificar autenticação:', error);
+        window.location.href = '/login.html';
+      }
+    }
+    
+    // Exibir dados do usuário
+    function displayUserData(user) {
+      userNameElement.textContent = user.fullName;
+      userRoleElement.textContent = translateRole(user.role);
+      
+      // Iniciais do usuário para o avatar
+      const initials = user.fullName
+        .split(' ')
+        .map(name => name.charAt(0))
+        .join('')
+        .substring(0, 2)
+        .toUpperCase();
+      userAvatarElement.textContent = initials;
+    }
+    
+    // Traduzir função do inglês para português
+    function translateRole(role) {
+      const translations = {
+        'admin': 'Administrador',
+        'coordinator': 'Coordenador',
+        'professional': 'Profissional',
+        'intern': 'Estagiário',
+        'secretary': 'Secretário(a)'
+      };
+      
+      return translations[role] || role;
+    }
+    
+    // Configurar event listeners
+    function setupEventListeners() {
+      // Logout
+      logoutButton.addEventListener('click', logout);
+      
+      // Pesquisar
+      searchFacility.addEventListener('input', filterFacilities);
+      
+      // Adicionar unidade
+      addFacilityCard.addEventListener('click', openAddFacilityModal);
+      
+      // Formulário de unidade
+      closeModal.addEventListener('click', closeFacilityModal);
+      cancelButton.addEventListener('click', closeFacilityModal);
+      saveButton.addEventListener('click', saveFacility);
+      
+      // Modal de background
+      facilityModal.addEventListener('click', function(e) {
+        if (e.target === facilityModal) {
+          closeFacilityModal();
+        }
+      });
+      
+      // Modal de visualização
+      closeViewModal.addEventListener('click', closeViewFacilityModal);
+      closeDetailButton.addEventListener('click', closeViewFacilityModal);
+      editFacilityButton.addEventListener('click', editFacilityFromView);
+      
+      viewFacilityModal.addEventListener('click', function(e) {
+        if (e.target === viewFacilityModal) {
+          closeViewFacilityModal();
+        }
+      });
+      
+      // Tabs
+      detailsTab.addEventListener('click', () => switchTab('details'));
+      roomsTab.addEventListener('click', () => switchTab('rooms'));
+      statsTab.addEventListener('click', () => switchTab('stats'));
+      
+      // Adicionar sala
+      addRoomButton.addEventListener('click', openAddRoomModal);
+      
+      // Formulário de sala
+      closeRoomModal.addEventListener('click', closeRoomModal);
+      cancelRoomButton.addEventListener('click', closeRoomModal);
+      saveRoomButton.addEventListener('click', saveRoom);
+      
+      roomModal.addEventListener('click', function(e) {
+        if (e.target === roomModal) {
+          closeRoomModal();
+        }
+      });
+    }
+    
+    // Alternar entre as abas
+    function switchTab(tab) {
+      // Remover classe ativa de todas as abas
+      detailsTab.classList.remove('active');
+      roomsTab.classList.remove('active');
+      statsTab.classList.remove('active');
+      
+      detailsTabContent.classList.remove('active');
+      roomsTabContent.classList.remove('active');
+      statsTabContent.classList.remove('active');
+      
+      // Adicionar classe ativa à aba clicada
+      if (tab === 'details') {
+        detailsTab.classList.add('active');
+        detailsTabContent.classList.add('active');
+      } else if (tab === 'rooms') {
+        roomsTab.classList.add('active');
+        roomsTabContent.classList.add('active');
+      } else if (tab === 'stats') {
+        statsTab.classList.add('active');
+        statsTabContent.classList.add('active');
+      }
+    }
+    
+    // Carregar unidades
+    async function loadFacilities() {
+      try {
+        const response = await fetch('/api/facilities', {
+          credentials: 'include'
+        });
+        
+        if (!response.ok) {
+          throw new Error('Erro ao carregar unidades');
+        }
+        
+        facilities = await response.json();
+        renderFacilitiesGrid();
+        renderFacilitiesTable();
+      } catch (error) {
+        console.error('Erro ao carregar unidades:', error);
+        facilitiesTableBody.innerHTML = `
+          <tr>
+            <td colspan="6">Erro ao carregar unidades. Tente novamente mais tarde.</td>
+          </tr>
+        `;
+      }
+    }
+    
+    // Renderizar grid de unidades
+    function renderFacilitiesGrid() {
+      // Limpar grid, mantendo o card de adicionar
+      const addCard = document.getElementById('addFacilityCard');
+      facilitiesGrid.innerHTML = '';
+      facilitiesGrid.appendChild(addCard);
+      
+      // Se não há unidades
+      if (facilities.length === 0) {
+        const emptyCard = document.createElement('div');
+        emptyCard.className = 'empty-state';
+        emptyCard.innerHTML = `
+          <div class="empty-icon">🏥</div>
+          <div class="empty-text">Nenhuma unidade encontrada</div>
+        `;
+        facilitiesGrid.insertBefore(emptyCard, addCard);
+        return;
+      }
+      
+      // Mostrar no máximo 3 unidades no grid
+      const displayFacilities = facilities.slice(0, 3);
+      
+      // Adicionar cards de unidades
+      displayFacilities.forEach(facility => {
+        const facilityCard = document.createElement('div');
+        facilityCard.className = 'facility-card';
+        facilityCard.innerHTML = `
+          <div class="facility-header">
+            <div>
+              <h3 class="facility-name">${facility.name}</h3>
+              <p class="facility-address">${facility.address}, ${facility.city} - ${facility.state}</p>
+            </div>
+          </div>
+          
+          <div class="facility-phone">
+            <span class="facility-icon">📞</span> ${facility.phone}
+          </div>
+          
+          <div class="facility-email">
+            <span class="facility-icon">✉️</span> ${facility.email || 'Não informado'}
+          </div>
+          
+          <div class="facility-stats">
+            <div class="facility-stat">
+              <div class="stat-number" id="roomCount-${facility.id}">...</div>
+              <div class="stat-label">Salas</div>
+            </div>
+            
+            <div class="facility-stat">
+              <div class="stat-number" id="profCount-${facility.id}">...</div>
+              <div class="stat-label">Profissionais</div>
+            </div>
+            
+            <div class="facility-stat">
+              <div class="stat-number" id="patientCount-${facility.id}">...</div>
+              <div class="stat-label">Pacientes</div>
+            </div>
+          </div>
+          
+          <div class="facility-footer">
+            <div class="facility-status">
+              <span class="status ${facility.isActive ? 'status-active' : 'status-inactive'}">
+                ${facility.isActive ? 'Ativa' : 'Inativa'}
+              </span>
+            </div>
+            
+            <div class="facility-actions">
+              <button class="button button-outline view-facility" data-id="${facility.id}">Ver detalhes</button>
+            </div>
+          </div>
+        `;
+        
+        facilitiesGrid.insertBefore(facilityCard, addCard);
+        
+        // Carregar contagens
+        loadFacilityStats(facility.id);
+      });
+      
+      // Adicionar event listeners
+      document.querySelectorAll('.view-facility').forEach(button => {
+        button.addEventListener('click', () => viewFacility(parseInt(button.dataset.id)));
+      });
+    }
+    
+    // Renderizar tabela de unidades
+    function renderFacilitiesTable() {
+      // Se não há unidades
+      if (facilities.length === 0) {
+        facilitiesTableBody.innerHTML = `
+          <tr>
+            <td colspan="6" class="text-center">Nenhuma unidade encontrada</td>
+          </tr>
+        `;
+        return;
+      }
+      
+      // Limpar tabela
+      facilitiesTableBody.innerHTML = '';
+      
+      // Adicionar linhas
+      facilities.forEach(facility => {
+        const row = document.createElement('tr');
+        
+        row.innerHTML = `
+          <td>${facility.name}</td>
+          <td>${facility.address}, ${facility.city}</td>
+          <td>${facility.phone}</td>
+          <td id="table-roomCount-${facility.id}">Carregando...</td>
+          <td><span class="status ${facility.isActive ? 'status-active' : 'status-inactive'}">${facility.isActive ? 'Ativa' : 'Inativa'}</span></td>
+          <td>
+            <button class="action-button view-facility" data-id="${facility.id}">Visualizar</button>
+            <button class="action-button edit-facility" data-id="${facility.id}">Editar</button>
+          </td>
+        `;
+        
+        facilitiesTableBody.appendChild(row);
+        
+        // Carregar contagem de salas
+        loadRoomCount(facility.id);
+      });
+      
+      // Adicionar event listeners
+      document.querySelectorAll('.view-facility').forEach(button => {
+        button.addEventListener('click', () => viewFacility(parseInt(button.dataset.id)));
+      });
+      
+      document.querySelectorAll('.edit-facility').forEach(button => {
+        button.addEventListener('click', () => editFacility(parseInt(button.dataset.id)));
+      });
+    }
+    
+    // Carregar estatísticas de uma unidade
+    async function loadFacilityStats(facilityId) {
+      try {
+        // Carregar contagem de salas
+        const roomsResponse = await fetch(`/api/facilities/${facilityId}/rooms`, {
+          credentials: 'include'
+        });
+        
+        if (roomsResponse.ok) {
+          const rooms = await roomsResponse.json();
+          document.getElementById(`roomCount-${facilityId}`).textContent = rooms.length;
+          document.getElementById(`table-roomCount-${facilityId}`).textContent = rooms.length;
+        }
+        
+        // Carregar contagem de profissionais
+        const profsResponse = await fetch(`/api/professionals?facilityId=${facilityId}`, {
+          credentials: 'include'
+        });
+        
+        if (profsResponse.ok) {
+          const professionals = await profsResponse.json();
+          document.getElementById(`profCount-${facilityId}`).textContent = professionals.length;
+        }
+        
+        // Carregar contagem de pacientes
+        const patientsResponse = await fetch(`/api/patients?facilityId=${facilityId}`, {
+          credentials: 'include'
+        });
+        
+        if (patientsResponse.ok) {
+          const patients = await patientsResponse.json();
+          document.getElementById(`patientCount-${facilityId}`).textContent = patients.length;
+        }
+      } catch (error) {
+        console.error(`Erro ao carregar estatísticas da unidade ${facilityId}:`, error);
+      }
+    }
+    
+    // Carregar contagem de salas
+    async function loadRoomCount(facilityId) {
+      try {
+        const response = await fetch(`/api/facilities/${facilityId}/rooms`, {
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          const rooms = await response.json();
+          document.getElementById(`table-roomCount-${facilityId}`).textContent = rooms.length;
+        }
+      } catch (error) {
+        console.error(`Erro ao carregar contagem de salas da unidade ${facilityId}:`, error);
+        document.getElementById(`table-roomCount-${facilityId}`).textContent = 'Erro';
+      }
+    }
+    
+    // Filtrar unidades
+    function filterFacilities() {
+      const searchTerm = searchFacility.value.toLowerCase();
+      
+      if (!searchTerm) {
+        renderFacilitiesTable();
+        return;
+      }
+      
+      const filteredFacilities = facilities.filter(facility =>
+        facility.name.toLowerCase().includes(searchTerm) ||
+        facility.address.toLowerCase().includes(searchTerm) ||
+        facility.city.toLowerCase().includes(searchTerm) ||
+        facility.state.toLowerCase().includes(searchTerm)
+      );
+      
+      if (filteredFacilities.length === 0) {
+        facilitiesTableBody.innerHTML = `
+          <tr>
+            <td colspan="6" class="text-center">Nenhuma unidade encontrada com o termo "${searchTerm}"</td>
+          </tr>
+        `;
+        return;
+      }
+      
+      facilitiesTableBody.innerHTML = '';
+      
+      filteredFacilities.forEach(facility => {
+        const row = document.createElement('tr');
+        
+        row.innerHTML = `
+          <td>${facility.name}</td>
+          <td>${facility.address}, ${facility.city}</td>
+          <td>${facility.phone}</td>
+          <td id="table-roomCount-${facility.id}">Carregando...</td>
+          <td><span class="status ${facility.isActive ? 'status-active' : 'status-inactive'}">${facility.isActive ? 'Ativa' : 'Inativa'}</span></td>
+          <td>
+            <button class="action-button view-facility" data-id="${facility.id}">Visualizar</button>
+            <button class="action-button edit-facility" data-id="${facility.id}">Editar</button>
+          </td>
+        `;
+        
+        facilitiesTableBody.appendChild(row);
+        
+        // Carregar contagem de salas
+        loadRoomCount(facility.id);
+      });
+      
+      // Adicionar event listeners
+      document.querySelectorAll('.view-facility').forEach(button => {
+        button.addEventListener('click', () => viewFacility(parseInt(button.dataset.id)));
+      });
+      
+      document.querySelectorAll('.edit-facility').forEach(button => {
+        button.addEventListener('click', () => editFacility(parseInt(button.dataset.id)));
+      });
+    }
+    
+    // Abrir modal para adicionar unidade
+    function openAddFacilityModal() {
+      modalTitle.textContent = 'Adicionar Unidade';
+      facilityForm.reset();
+      facilityIdInput.value = '';
+      document.getElementById('isActive').checked = true;
+      
+      facilityModal.classList.add('active');
+    }
+    
+    // Abrir modal para editar unidade
+    function editFacility(facilityId) {
+      const facility = facilities.find(f => f.id === facilityId);
+      
+      if (!facility) {
+        alert('Unidade não encontrada');
+        return;
+      }
+      
+      modalTitle.textContent = 'Editar Unidade';
+      
+      // Preencher formulário
+      facilityIdInput.value = facility.id;
+      document.getElementById('name').value = facility.name;
+      document.getElementById('address').value = facility.address;
+      document.getElementById('city').value = facility.city;
+      document.getElementById('state').value = facility.state;
+      document.getElementById('zipCode').value = facility.zipCode;
+      document.getElementById('phone').value = facility.phone;
+      document.getElementById('email').value = facility.email || '';
+      document.getElementById('description').value = facility.description || '';
+      document.getElementById('openingHours').value = facility.openingHours || '';
+      document.getElementById('isActive').checked = facility.isActive;
+      
+      facilityModal.classList.add('active');
+    }
+    
+    // Editar a partir da visualização
+    function editFacilityFromView() {
+      if (currentFacility) {
+        closeViewFacilityModal();
+        editFacility(currentFacility.id);
+      }
+    }
+    
+    // Fechar modal de unidade
+    function closeFacilityModal() {
+      facilityModal.classList.remove('active');
+    }
+    
+    // Salvar unidade
+    async function saveFacility() {
+      try {
+        // Validação
+        const nameInput = document.getElementById('name');
+        const addressInput = document.getElementById('address');
+        const cityInput = document.getElementById('city');
+        const stateInput = document.getElementById('state');
+        const zipCodeInput = document.getElementById('zipCode');
+        const phoneInput = document.getElementById('phone');
+        
+        if (!nameInput.value) {
+          alert('Por favor, insira o nome da unidade');
+          nameInput.focus();
+          return;
+        }
+        
+        if (!addressInput.value) {
+          alert('Por favor, insira o endereço da unidade');
+          addressInput.focus();
+          return;
+        }
+        
+        if (!cityInput.value) {
+          alert('Por favor, insira a cidade da unidade');
+          cityInput.focus();
+          return;
+        }
+        
+        if (!stateInput.value) {
+          alert('Por favor, insira o estado da unidade');
+          stateInput.focus();
+          return;
+        }
+        
+        if (!zipCodeInput.value) {
+          alert('Por favor, insira o CEP da unidade');
+          zipCodeInput.focus();
+          return;
+        }
+        
+        if (!phoneInput.value) {
+          alert('Por favor, insira o telefone da unidade');
+          phoneInput.focus();
+          return;
+        }
+        
+        // Preparar dados da unidade
+        const facilityData = {
+          name: nameInput.value,
+          address: addressInput.value,
+          city: cityInput.value,
+          state: stateInput.value,
+          zipCode: zipCodeInput.value,
+          phone: phoneInput.value,
+          email: document.getElementById('email').value,
+          description: document.getElementById('description').value,
+          openingHours: document.getElementById('openingHours').value,
+          isActive: document.getElementById('isActive').checked
+        };
+        
+        const facilityId = facilityIdInput.value;
+        let response;
+        
+        if (facilityId) {
+          // Editar unidade existente
+          response = await fetch(`/api/facilities/${facilityId}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify(facilityData)
+          });
+        } else {
+          // Adicionar nova unidade
+          response = await fetch('/api/facilities', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify(facilityData)
+          });
+        }
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText || 'Erro ao salvar unidade');
+        }
+        
+        // Fechar modal e recarregar unidades
+        closeFacilityModal();
+        loadFacilities();
+        
+        alert(facilityId ? 'Unidade atualizada com sucesso!' : 'Unidade adicionada com sucesso!');
+      } catch (error) {
+        console.error('Erro ao salvar unidade:', error);
+        alert(`Erro ao salvar unidade: ${error.message}`);
+      }
+    }
+    
+    // Visualizar unidade
+    async function viewFacility(facilityId) {
+      try {
+        const response = await fetch(`/api/facilities/${facilityId}`, {
+          credentials: 'include'
+        });
+        
+        if (!response.ok) {
+          throw new Error('Erro ao carregar detalhes da unidade');
+        }
+        
+        currentFacility = await response.json();
+        
+        document.getElementById('viewFacilityName').textContent = currentFacility.name;
+        document.getElementById('viewFacilityAddress').textContent = `${currentFacility.address}, ${currentFacility.city} - ${currentFacility.state}, ${currentFacility.zipCode}`;
+        document.getElementById('viewFacilityPhone').textContent = currentFacility.phone;
+        document.getElementById('viewFacilityEmail').textContent = currentFacility.email || 'Não informado';
+        document.getElementById('viewFacilityHours').textContent = currentFacility.openingHours || 'Não informado';
+        document.getElementById('viewFacilityStatus').innerHTML = `<span class="status ${currentFacility.isActive ? 'status-active' : 'status-inactive'}">${currentFacility.isActive ? 'Ativa' : 'Inativa'}</span>`;
+        document.getElementById('viewFacilityDescription').textContent = currentFacility.description || 'Sem descrição';
+        
+        // Carregar salas
+        loadRooms(currentFacility.id);
+        
+        // Carregar estatísticas
+        loadDetailedStats(currentFacility.id);
+        
+        // Mostrar primeira aba
+        switchTab('details');
+        
+        // Exibir modal
+        viewFacilityModal.classList.add('active');
+      } catch (error) {
+        console.error('Erro ao visualizar unidade:', error);
+        alert('Erro ao carregar detalhes da unidade. Tente novamente.');
+      }
+    }
+    
+    // Carregar salas de uma unidade
+    async function loadRooms(facilityId) {
+      try {
+        const response = await fetch(`/api/facilities/${facilityId}/rooms`, {
+          credentials: 'include'
+        });
+        
+        if (!response.ok) {
+          throw new Error('Erro ao carregar salas');
+        }
+        
+        const rooms = await response.json();
+        const roomsList = document.getElementById('roomsList');
+        
+        if (rooms.length === 0) {
+          roomsList.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-icon">🔍</div>
+              <div class="empty-text">Nenhuma sala encontrada</div>
+            </div>
+          `;
+          return;
+        }
+        
+        roomsList.innerHTML = '';
+        
+        // Criar grid de salas
+        const roomGrid = document.createElement('div');
+        roomGrid.className = 'room-grid';
+        
+        rooms.forEach(room => {
+          const roomCard = document.createElement('div');
+          roomCard.className = 'room-card';
+          roomCard.innerHTML = `
+            <div class="room-card-header">
+              <div class="room-card-title">${room.name}</div>
+              <div class="room-card-capacity">Capacidade: ${room.capacity || 1}</div>
+            </div>
+            
+            <div class="room-card-detail">
+              <div class="room-card-label">Tipo:</div>
+              <div>${translateRoomType(room.type)}</div>
+            </div>
+            
+            <div class="room-card-detail">
+              <div class="room-card-label">Andar:</div>
+              <div>${room.floor || 'Não informado'}</div>
+            </div>
+            
+            <div class="room-card-detail">
+              <div class="room-card-label">Status:</div>
+              <div>${room.isActive ? 'Ativa' : 'Inativa'}</div>
+            </div>
+            
+            <div class="room-card-footer">
+              <button class="action-button edit-room" data-id="${room.id}">Editar</button>
+              <button class="action-button delete delete-room" data-id="${room.id}">Excluir</button>
+            </div>
+          `;
+          
+          roomGrid.appendChild(roomCard);
+        });
+        
+        roomsList.appendChild(roomGrid);
+        
+        // Adicionar event listeners
+        document.querySelectorAll('.edit-room').forEach(button => {
+          button.addEventListener('click', () => editRoom(parseInt(button.dataset.id)));
+        });
+        
+        document.querySelectorAll('.delete-room').forEach(button => {
+          button.addEventListener('click', () => deleteRoom(parseInt(button.dataset.id)));
+        });
+      } catch (error) {
+        console.error('Erro ao carregar salas:', error);
+        document.getElementById('roomsList').innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">❌</div>
+            <div class="empty-text">Erro ao carregar salas</div>
+          </div>
+        `;
+      }
+    }
+    
+    // Traduzir tipo de sala
+    function translateRoomType(type) {
+      const translations = {
+        'therapy': 'Terapia',
+        'evaluation': 'Avaliação',
+        'group': 'Grupo',
+        'sensory': 'Sensorial',
+        'meeting': 'Reunião',
+        'administration': 'Administração',
+        'other': 'Outro'
+      };
+      
+      return translations[type] || type;
+    }
+    
+    // Carregar estatísticas detalhadas
+    async function loadDetailedStats(facilityId) {
+      try {
+        // Carregar contagem de salas
+        const roomsResponse = await fetch(`/api/facilities/${facilityId}/rooms`, {
+          credentials: 'include'
+        });
+        
+        if (roomsResponse.ok) {
+          const rooms = await roomsResponse.json();
+          document.getElementById('viewFacilityRoomCount').textContent = rooms.length;
+        }
+        
+        // Carregar contagem de profissionais
+        const profsResponse = await fetch(`/api/professionals?facilityId=${facilityId}`, {
+          credentials: 'include'
+        });
+        
+        if (profsResponse.ok) {
+          const professionals = await profsResponse.json();
+          document.getElementById('viewFacilityProfessionalCount').textContent = professionals.length;
+        }
+        
+        // Carregar contagem de pacientes
+        const patientsResponse = await fetch(`/api/patients?facilityId=${facilityId}`, {
+          credentials: 'include'
+        });
+        
+        if (patientsResponse.ok) {
+          const patients = await patientsResponse.json();
+          document.getElementById('viewFacilityPatientCount').textContent = patients.length;
+        }
+        
+        // Carregar contagem de agendamentos
+        const appointmentsResponse = await fetch(`/api/appointments?facilityId=${facilityId}`, {
+          credentials: 'include'
+        });
+        
+        if (appointmentsResponse.ok) {
+          const appointments = await appointmentsResponse.json();
+          document.getElementById('viewFacilityAppointmentCount').textContent = appointments.length;
+        }
+      } catch (error) {
+        console.error(`Erro ao carregar estatísticas detalhadas da unidade ${facilityId}:`, error);
+      }
+    }
+    
+    // Fechar modal de visualização
+    function closeViewFacilityModal() {
+      viewFacilityModal.classList.remove('active');
+    }
+    
+    // Abrir modal para adicionar sala
+    function openAddRoomModal() {
+      if (!currentFacility) {
+        alert('Erro: Nenhuma unidade selecionada');
+        return;
+      }
+      
+      roomModalTitle.textContent = 'Adicionar Sala';
+      roomForm.reset();
+      roomIdInput.value = '';
+      roomFacilityIdInput.value = currentFacility.id;
+      document.getElementById('roomIsActive').checked = true;
+      
+      roomModal.classList.add('active');
+    }
+    
+    // Abrir modal para editar sala
+    async function editRoom(roomId) {
+      try {
+        const response = await fetch(`/api/rooms/${roomId}`, {
+          credentials: 'include'
+        });
+        
+        if (!response.ok) {
+          throw new Error('Erro ao carregar detalhes da sala');
+        }
+        
+        const room = await response.json();
+        
+        roomModalTitle.textContent = 'Editar Sala';
+        
+        // Preencher formulário
+        roomIdInput.value = room.id;
+        roomFacilityIdInput.value = room.facilityId;
+        document.getElementById('roomName').value = room.name;
+        document.getElementById('roomCapacity').value = room.capacity || 1;
+        document.getElementById('roomType').value = room.type || 'therapy';
+        document.getElementById('roomFloor').value = room.floor || '';
+        document.getElementById('roomDescription').value = room.description || '';
+        document.getElementById('roomEquipment').value = room.equipment || '';
+        document.getElementById('roomIsActive').checked = room.isActive;
+        
+        roomModal.classList.add('active');
+      } catch (error) {
+        console.error('Erro ao editar sala:', error);
+        alert('Erro ao carregar detalhes da sala. Tente novamente.');
+      }
+    }
+    
+    // Fechar modal de sala
+    function closeRoomModal() {
+      roomModal.classList.remove('active');
+    }
+    
+    // Salvar sala
+    async function saveRoom() {
+      try {
+        // Validação
+        const nameInput = document.getElementById('roomName');
+        
+        if (!nameInput.value) {
+          alert('Por favor, insira o nome da sala');
+          nameInput.focus();
+          return;
+        }
+        
+        // Preparar dados da sala
+        const roomData = {
+          facilityId: parseInt(roomFacilityIdInput.value),
+          name: nameInput.value,
+          capacity: parseInt(document.getElementById('roomCapacity').value) || 1,
+          type: document.getElementById('roomType').value,
+          floor: document.getElementById('roomFloor').value,
+          description: document.getElementById('roomDescription').value,
+          equipment: document.getElementById('roomEquipment').value,
+          isActive: document.getElementById('roomIsActive').checked
+        };
+        
+        const roomId = roomIdInput.value;
+        let response;
+        
+        if (roomId) {
+          // Editar sala existente
+          response = await fetch(`/api/rooms/${roomId}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify(roomData)
+          });
+        } else {
+          // Adicionar nova sala
+          response = await fetch('/api/rooms', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify(roomData)
+          });
+        }
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText || 'Erro ao salvar sala');
+        }
+        
+        // Fechar modal e recarregar salas
+        closeRoomModal();
+        loadRooms(currentFacility.id);
+        
+        alert(roomId ? 'Sala atualizada com sucesso!' : 'Sala adicionada com sucesso!');
+      } catch (error) {
+        console.error('Erro ao salvar sala:', error);
+        alert(`Erro ao salvar sala: ${error.message}`);
+      }
+    }
+    
+    // Excluir sala
+    async function deleteRoom(roomId) {
+      if (!confirm('Tem certeza que deseja excluir esta sala?')) {
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/api/rooms/${roomId}`, {
+          method: 'DELETE',
+          credentials: 'include'
+        });
+        
+        if (!response.ok) {
+          throw new Error('Erro ao excluir sala');
+        }
+        
+        // Recarregar salas
+        loadRooms(currentFacility.id);
+        
+        alert('Sala excluída com sucesso!');
+      } catch (error) {
+        console.error('Erro ao excluir sala:', error);
+        alert(`Erro ao excluir sala: ${error.message}`);
+      }
+    }
+    
+    // Logout
+    async function logout() {
+      try {
+        await fetch('/api/logout', {
+          method: 'POST',
+          credentials: 'include'
+        });
+        
+        window.location.href = '/login.html';
+      } catch (error) {
+        console.error('Erro ao fazer logout:', error);
+        alert('Erro ao fazer logout. Tente novamente.');
+      }
+    }
+  </script>
+</body>
+</html>
