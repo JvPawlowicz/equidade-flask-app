@@ -1199,10 +1199,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (search) {
         const searchTerm = `%${search}%`;
         query = query.where(
-          or(
-            ilike(documents.name, searchTerm),
-            ilike(documents.description || '', searchTerm)
-          )
+          ilike(documents.name, searchTerm)
         );
       }
       
