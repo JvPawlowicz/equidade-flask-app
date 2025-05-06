@@ -265,6 +265,19 @@ export const reports = pgTable('reports', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+// Audit Logs Table
+export const auditLogs = pgTable('audit_logs', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id).notNull(),
+  action: text('action').notNull(),
+  resource: text('resource').notNull(),
+  resourceId: integer('resource_id'),
+  ipAddress: text('ip_address'),
+  userAgent: text('user_agent'),
+  details: text('details'),
+  timestamp: timestamp('timestamp').defaultNow().notNull(),
+});
+
 // Relations
 
 export const roomsRelations = relations(rooms, ({ one }) => ({
@@ -448,6 +461,13 @@ export const reportRelations = relations(reports, ({ one }) => ({
   }),
 }));
 
+export const auditLogRelations = relations(auditLogs, ({ one }) => ({
+  user: one(users, {
+    fields: [auditLogs.userId],
+    references: [users.id],
+  }),
+}));
+
 // Schemas
 export const insertUserSchema = createInsertSchema(users);
 export const selectUserSchema = createSelectSchema(users);
@@ -492,10 +512,16 @@ export const selectNotificationSchema = createSelectSchema(notifications);
 export const insertReportSchema = createInsertSchema(reports);
 export const selectReportSchema = createSelectSchema(reports);
 
+export const insertAuditLogSchema = createInsertSchema(auditLogs);
+export const selectAuditLogSchema = createSelectSchema(auditLogs);
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type LoginUser = z.infer<typeof loginUserSchema>;
+
+export type AuditLog = typeof auditLogs.$inferSelect;
+export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
 
 export type Professional = typeof professionals.$inferSelect;
 export type InsertProfessional = z.infer<typeof insertProfessionalSchema>;

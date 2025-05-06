@@ -1,12 +1,14 @@
-import express, { type Express, Request, Response } from "express";
+import express, { type Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
+import { checkPermission, requireApproval, isOwnerOrSupervisor } from "./permissions";
 import WebSocket, { WebSocketServer } from "ws";
 import { db } from "@db";
 import {
   appointments,
   appointmentStatusEnum,
+  auditLogs,
   chatGroupMembers,
   chatGroups,
   chatMessages,
@@ -73,11 +75,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const apiPrefix = "/api";
 
   // Rota para listar todos os usuários
-  app.get(`${apiPrefix}/users`, async (req: Request, res: Response) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: "Não autenticado" });
-    }
-    
+  app.get(`${apiPrefix}/users`, checkPermission('users', 'read'), async (req: Request, res: Response) => {
     try {
       const allUsers = await db.query.users.findMany();
       res.json(allUsers);
@@ -220,7 +218,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API routes
 
   // Facilities endpoints
-  app.get(`${apiPrefix}/facilities`, async (req, res) => {
+  app.get(`${apiPrefix}/facilities`, checkPermission('facilities', 'read'), async (req, res) => {
     try {
       const allFacilities = await db.query.facilities.findMany();
       res.json(allFacilities);
@@ -230,7 +228,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get(`${apiPrefix}/facilities/:id`, async (req, res) => {
+  app.get(`${apiPrefix}/facilities/:id`, checkPermission('facilities', 'read'), async (req, res) => {
     try {
       const { id } = req.params;
       const facility = await db.query.facilities.findFirst({
@@ -251,12 +249,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post(`${apiPrefix}/facilities`, async (req: Request, res: Response) => {
+  app.post(`${apiPrefix}/facilities`, checkPermission('facilities', 'create'), async (req: Request, res: Response) => {
     try {
-      if (!req.isAuthenticated() || req.user.role !== "admin") {
-        return res.status(403).json({ error: "Acesso não autorizado" });
-      }
-
       const [newFacility] = await db.insert(facilities).values(req.body).returning();
       res.status(201).json(newFacility);
     } catch (error) {
@@ -265,12 +259,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put(`${apiPrefix}/facilities/:id`, async (req: Request, res: Response) => {
+  app.put(`${apiPrefix}/facilities/:id`, checkPermission('facilities', 'update'), async (req: Request, res: Response) => {
     try {
-      if (!req.isAuthenticated() || req.user.role !== "admin") {
-        return res.status(403).json({ error: "Acesso não autorizado" });
-      }
-
       const { id } = req.params;
       const [updatedFacility] = await db
         .update(facilities)
@@ -1767,11 +1757,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Reports endpoints
-  app.get(`${apiPrefix}/reports/professionals-hours`, async (req, res) => {
+  // Audit Logs - Acessível apenas por admin
+  app.get(`${apiPrefix}/audit-logs`, checkPermission('users', 'read'), async (req, res) => {
     try {
-      if (!req.isAuthenticated() || !["admin", "coordinator"].includes(req.user.role)) {
-        return res.status(403).json({ error: "Acesso não autorizado" });
+      // Verificar se é admin (dupla camada de segurança)
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ error: "Acesso negado. Apenas administradores podem ver logs de auditoria." });
       }
+      
+      // Parâmetros opcionais de filtro
+      const { userId, resource, action, startDate, endDate } = req.query;
+      
+      let query = db.select({
+        id: auditLogs.id,
+        userId: auditLogs.userId,
+        action: auditLogs.action,
+        resource: auditLogs.resource,
+        resourceId: auditLogs.resourceId,
+        ipAddress: auditLogs.ipAddress,
+        timestamp: auditLogs.timestamp,
+        userAgent: auditLogs.userAgent,
+        details: auditLogs.details,
+        user: {
+          id: users.id,
+          username: users.username,
+          fullName: users.fullName,
+          role: users.role
+        }
+      })
+      .from(auditLogs)
+      .leftJoin(users, eq(auditLogs.userId, users.id))
+      .orderBy(desc(auditLogs.timestamp))
+      .limit(100); // Limitar a 100 resultados para prevenir sobrecarga
+      
+      // Adicionar filtros condicionais
+      if (userId) {
+        query = query.where(eq(auditLogs.userId, parseInt(userId as string)));
+      }
+      
+      if (resource) {
+        query = query.where(eq(auditLogs.resource, resource as string));
+      }
+      
+      if (action) {
+        query = query.where(eq(auditLogs.action, action as string));
+      }
+      
+      if (startDate) {
+        const start = new Date(startDate as string);
+        query = query.where(gte(auditLogs.timestamp, start));
+      }
+      
+      if (endDate) {
+        const end = new Date(endDate as string);
+        query = query.where(lte(auditLogs.timestamp, end));
+      }
+      
+      const logs = await query;
+      res.json(logs);
+    } catch (error) {
+      console.error("Erro ao buscar logs de auditoria:", error);
+      res.status(500).json({ error: "Erro ao buscar logs de auditoria" });
+    }
+  });
+
+  app.get(`${apiPrefix}/reports/professionals-hours`, checkPermission('reports', 'read'), async (req, res) => {
+    try {
 
       const startDate = req.query.startDate as string;
       const endDate = req.query.endDate as string;
