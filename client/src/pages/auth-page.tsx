@@ -84,18 +84,94 @@ export default function AuthPage() {
     },
   });
 
-  const onLoginSubmit = (data: LoginFormValues) => {
+  const onLoginSubmit = async (data: LoginFormValues) => {
     console.log("Tentando fazer login com:", data);
     
-    // Usar a mutação de login do contexto de autenticação
-    loginMutation.mutate(data);
+    try {
+      // Fazer login diretamente sem usar a mutação
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Credenciais inválidas');
+      }
+      
+      const userData = await response.json();
+      console.log('Login bem-sucedido:', userData);
+      
+      // Atualizar manualmente o cache do query client
+      queryClient.setQueryData(['/api/user'], userData);
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      
+      // Mostrar toast de sucesso
+      toast({
+        title: 'Login realizado com sucesso',
+        description: `Bem-vindo(a), ${userData.fullName}!`,
+      });
+      
+      // Redirecionar após um pequeno atraso
+      setTimeout(() => {
+        window.location.href = '/dashboard';
+      }, 1000);
+    } catch (error: any) {
+      console.error('Erro no login:', error);
+      toast({
+        title: 'Falha no login',
+        description: error.message || 'Credenciais inválidas. Tente novamente.',
+        variant: 'destructive',
+      });
+    }
   };
 
-  const onRegisterSubmit = (data: RegisterFormValues) => {
+  const onRegisterSubmit = async (data: RegisterFormValues) => {
     console.log("Tentando registrar:", data);
     
-    // Usar a mutação de registro do contexto de autenticação
-    registerMutation.mutate(data);
+    try {
+      // Fazer registro diretamente sem usar a mutação
+      const response = await fetch('/api/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Falha no registro');
+      }
+      
+      const userData = await response.json();
+      console.log('Registro bem-sucedido:', userData);
+      
+      // Atualizar manualmente o cache do query client
+      queryClient.setQueryData(['/api/user'], userData);
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      
+      // Mostrar toast de sucesso
+      toast({
+        title: 'Registro realizado com sucesso',
+        description: `Bem-vindo(a), ${userData.fullName}!`,
+      });
+      
+      // Redirecionar após um pequeno atraso
+      setTimeout(() => {
+        window.location.href = '/dashboard';
+      }, 1000);
+    } catch (error: any) {
+      console.error('Erro no registro:', error);
+      toast({
+        title: 'Falha no registro',
+        description: error.message || 'Não foi possível completar o registro. Tente novamente.',
+        variant: 'destructive',
+      });
+    }
   };
 
   if (user) {
