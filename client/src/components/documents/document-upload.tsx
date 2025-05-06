@@ -102,7 +102,6 @@ export function DocumentUpload({
       if (facilityId) formData.append("facilityId", facilityId.toString());
       if (evolutionId) formData.append("evolutionId", evolutionId.toString());
       if (appointmentId) formData.append("appointmentId", appointmentId.toString());
-      // parentDocumentId removido pois não existe no banco
       
       const response = await fetch('/api/documents/upload', {
         method: 'POST',
@@ -329,7 +328,10 @@ export function DocumentUpload({
             <Checkbox
               id="needsSignature"
               checked={form.watch('needsSignature')}
-              onCheckedChange={(checked) => form.setValue('needsSignature', checked === true)}
+              onCheckedChange={(checked) => {
+                // Convertendo o tipo CheckedState para boolean de forma explícita
+                form.setValue('needsSignature', checked ? true : false);
+              }}
             />
             <div className="space-y-1 leading-none">
               <Label htmlFor="needsSignature">Requer assinatura</Label>

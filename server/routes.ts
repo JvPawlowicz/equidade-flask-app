@@ -1207,10 +1207,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         query = query.where(eq(documents.status, String(status)));
       }
       
-      // Se solicitado, apenas mostrar as versões mais recentes
-      if (onlyLatestVersions === 'true') {
-        query = query.where(isNull(documents.parentDocumentId));
-      }
+      // Opção onlyLatestVersions ignorada pois parentDocumentId não existe mais
+      // Se o campo parentDocumentId for implementado no futuro, a lógica pode ser restaurada
+      // if (onlyLatestVersions === 'true') {
+      //   query = query.where(isNull(documents.parentDocumentId));
+      // }
       
       // Se houver uma pesquisa, aplicar à descrição e nome
       if (search) {
