@@ -1068,10 +1068,21 @@
       checkAuth();
       setupEventListeners();
       
+      // Verificar se existe appointmentId na URL (redirecionamento do calendário)
+      const urlParams = new URLSearchParams(window.location.search);
+      const appointmentId = urlParams.get('appointmentId');
+      
       // Inicializar
       loadPatients();
       loadProfessionals();
       loadEvolutions();
+      
+      // Se tiver appointmentId, abrir formulário para nova evolução
+      if (appointmentId) {
+        setTimeout(() => {
+          createNewEvolutionFromAppointment(appointmentId);
+        }, 1000); // Pequeno atraso para garantir que os dados foram carregados
+      }
     });
     
     // Elementos DOM

@@ -906,6 +906,7 @@
               <option value="scheduled">Agendado</option>
               <option value="confirmed">Confirmado</option>
               <option value="completed">Concluído</option>
+              <option value="attended">Atendido</option>
               <option value="cancelled">Cancelado</option>
               <option value="no_show">Não compareceu</option>
               <option value="pending">Pendente</option>
@@ -1061,6 +1062,7 @@
                 <option value="scheduled">Agendado</option>
                 <option value="confirmed">Confirmado</option>
                 <option value="completed">Concluído</option>
+                <option value="attended">Atendido</option>
                 <option value="cancelled">Cancelado</option>
                 <option value="no_show">Não compareceu</option>
                 <option value="pending">Pendente</option>
@@ -1126,6 +1128,7 @@
       </div>
       <div class="modal-footer">
         <button class="button button-outline" id="editAppointmentButton">Editar</button>
+        <button class="button button-secondary" id="addEvolutionButton" style="display: none;">Registrar Evolução</button>
         <button class="button button-primary" id="closeViewButton">Fechar</button>
       </div>
     </div>
@@ -1180,6 +1183,7 @@
     const saveButton = document.getElementById('saveButton');
     const closeViewButton = document.getElementById('closeViewButton');
     const editAppointmentButton = document.getElementById('editAppointmentButton');
+    const addEvolutionButton = document.getElementById('addEvolutionButton');
     const professionalFilter = document.getElementById('professionalFilter');
     const facilityFilter = document.getElementById('facilityFilter');
     const statusFilter = document.getElementById('statusFilter');
@@ -1249,6 +1253,7 @@
         'scheduled': 'Agendado',
         'confirmed': 'Confirmado',
         'completed': 'Concluído',
+        'attended': 'Atendido',
         'cancelled': 'Cancelado',
         'no_show': 'Não compareceu',
         'pending': 'Pendente'
@@ -1353,6 +1358,12 @@
       editAppointmentButton.addEventListener('click', function() {
         closeViewAppointmentModal();
         editAppointment(this.dataset.appointmentId);
+      });
+      
+      // Botão para registrar evolução
+      addEvolutionButton.addEventListener('click', function() {
+        const appointmentId = this.dataset.appointmentId;
+        window.location.href = `/evolutions.html?appointmentId=${appointmentId}`;
       });
     }
     
@@ -1910,6 +1921,15 @@
       statusElement.className = `status status-${appointment.status}`;
       
       document.getElementById('viewNotes').textContent = appointment.notes || 'Nenhuma observação';
+      
+      // Configurar o botão de evolução (visível apenas quando status é "atendido")
+      const evolutionButton = document.getElementById('addEvolutionButton');
+      if (appointment.status === 'attended') {
+        evolutionButton.style.display = 'block';
+        evolutionButton.dataset.appointmentId = appointment.id;
+      } else {
+        evolutionButton.style.display = 'none';
+      }
     }
     
     // Salvar agendamento

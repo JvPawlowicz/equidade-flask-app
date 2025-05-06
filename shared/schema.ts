@@ -13,7 +13,7 @@ export const professionalTypeEnum = pgEnum('professional_type', ['psychologist',
 export const employmentTypeEnum = pgEnum('employment_type', ['employee', 'contractor', 'freelancer']);
 
 // Appointment Status Enum
-export const appointmentStatusEnum = pgEnum('appointment_status', ['scheduled', 'confirmed', 'completed', 'cancelled', 'no_show', 'pending']);
+export const appointmentStatusEnum = pgEnum('appointment_status', ['scheduled', 'confirmed', 'completed', 'cancelled', 'no_show', 'pending', 'attended']);
 
 // Procedure Types Enum
 export const procedureTypeEnum = pgEnum('procedure_type', [
