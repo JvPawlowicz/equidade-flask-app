@@ -1162,8 +1162,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         search
       } = req.query;
 
-      // Construir a consulta base
-      let query = db.select().from(documents);
+      // Construir a consulta base selecionando campos específicos para evitar problemas com o campo description
+      let query = db.select({
+        id: documents.id,
+        name: documents.name,
+        fileUrl: documents.fileUrl,
+        fileType: documents.fileType,
+        fileSize: documents.fileSize,
+        category: documents.category,
+        status: documents.status,
+        patientId: documents.patientId,
+        facilityId: documents.facilityId,
+        evolutionId: documents.evolutionId,
+        appointmentId: documents.appointmentId,
+        uploadedBy: documents.uploadedBy,
+        createdAt: documents.createdAt,
+        updatedAt: documents.updatedAt,
+        version: documents.version,
+        parentDocumentId: documents.parentDocumentId,
+        needsSignature: documents.needsSignature
+      }).from(documents);
       
       // Aplicar filtros conforme necessário
       if (patientId) {
@@ -1453,8 +1471,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const onlyLatestVersions = req.query.onlyLatestVersions === 'true';
       const includeUploaderInfo = req.query.includeUploaderInfo === 'true';
 
-      // Start with a query builder
-      let query = db.select().from(documents);
+      // Start with a query builder selecionando campos específicos para evitar problemas com o campo description
+      let query = db.select({
+        id: documents.id,
+        name: documents.name,
+        fileUrl: documents.fileUrl,
+        fileType: documents.fileType,
+        fileSize: documents.fileSize,
+        category: documents.category,
+        status: documents.status,
+        patientId: documents.patientId,
+        facilityId: documents.facilityId,
+        evolutionId: documents.evolutionId,
+        appointmentId: documents.appointmentId,
+        uploadedBy: documents.uploadedBy,
+        createdAt: documents.createdAt,
+        updatedAt: documents.updatedAt,
+        version: documents.version,
+        parentDocumentId: documents.parentDocumentId,
+        needsSignature: documents.needsSignature
+      }).from(documents);
 
       // Apply filters
       const conditions = [];
