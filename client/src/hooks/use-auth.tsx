@@ -22,7 +22,17 @@ type LoginData = {
   password: string;
 };
 
-export const AuthContext = createContext<AuthContextType | null>(null);
+// Definindo um contexto padrão para evitar nulos
+const defaultAuthContext: AuthContextType = {
+  user: null,
+  isLoading: false,
+  error: null,
+  loginMutation: {} as UseMutationResult<User, Error, LoginData>,
+  logoutMutation: {} as UseMutationResult<void, Error, void>,
+  registerMutation: {} as UseMutationResult<User, Error, InsertUser>,
+};
+
+export const AuthContext = createContext<AuthContextType>(defaultAuthContext);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
@@ -118,8 +128,5 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
   return context;
 }

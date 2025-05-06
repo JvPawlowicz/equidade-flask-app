@@ -4,7 +4,7 @@ import { CardHeader, CardTitle, Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, User, FileText } from "lucide-react";
 import { Link } from "wouter";
-import { formatDate } from "@/lib/utils";
+import { formatDate, getProcedureText } from "@/lib/utils";
 
 interface PendingEvolutionCardProps {
   evolution: any;
@@ -59,21 +59,7 @@ export function PendingEvolutions() {
     enabled: user?.role === "admin" || user?.role === "coordinator" || user?.professional?.interns?.length > 0,
   });
 
-  function getProcedureText(type: string): string {
-    const procedureMap: Record<string, string> = {
-      "psychology_aba": "Psicologia - ABA",
-      "psychology_cbt": "Psicologia - TCC",
-      "physiotherapy_psychomotor": "Fisioterapia - Psicomotricidade",
-      "physiotherapy_conventional": "Fisioterapia - Convencional",
-      "speech_therapy": "Fonoaudiologia",
-      "occupational_therapy": "Terapia Ocupacional",
-      "planning": "Planejamento",
-      "free_time": "Horário Livre",
-      "other": "Outro"
-    };
-    
-    return procedureMap[type] || "Não especificado";
-  }
+
 
   return (
     <div>

@@ -111,7 +111,14 @@ export function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean; setIsOpen: (va
               </Avatar>
               <div className="ml-3">
                 <p className="text-sm font-semibold">{user.fullName}</p>
-                <p className="text-xs text-muted-foreground capitalize">{user.role}</p>
+                <p className="text-xs text-muted-foreground">
+                  {user.role === "admin" ? "Administrador" : 
+                   user.role === "coordinator" ? "Coordenador" : 
+                   user.role === "professional" ? "Profissional" : 
+                   user.role === "intern" ? "Estagiário" : 
+                   user.role === "secretary" ? "Secretário(a)" : 
+                   user.role}
+                </p>
               </div>
             </div>
           )}
