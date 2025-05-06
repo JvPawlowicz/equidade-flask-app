@@ -74,7 +74,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // WebSocket Server setup
   const httpServer = createServer(app);
-  const wss = new WebSocketServer({ server: httpServer, path: "/ws" });
+  const wss = new WebSocketServer({ 
+    server: httpServer, 
+    path: "/ws",
+    perMessageDeflate: false // Desativar compressão para evitar problemas
+  });
+  
+  console.log("WebSocket server configurado na rota /ws");
 
   // Server-side WebSocket event handling
   const clients = new Map<string, WebSocket>();

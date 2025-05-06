@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useContext } from "react";
+import { createContext, ReactNode, useContext, useEffect } from "react";
 import {
   useQuery,
   useMutation,
@@ -7,6 +7,7 @@ import {
 import { User, loginUserSchema, insertUserSchema, InsertUser } from "@shared/schema";
 import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import webSocketManager from "../lib/websocket";
 
 type AuthContextType = {
   user: User | null;
@@ -122,6 +123,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     },
   });
+
+  // Gerenciar a conexão WebSocket com base no estado de autenticação
+  useEffect(() => {
+    if (user) {
+      console.log("Usuário autenticado, iniciando WebSocket");
+      webSocketManager.connect(user);
+    } else {
+      console.log("Usuário não autenticado, desconectando WebSocket");
+      webSocketManager.disconnect();
+    }
+
+    return () => {
+      // Desconectar durante o cleanup do componente
+      webSocketManager.disconnect();
+    };
+  }, [user]);
 
   return (
     <AuthContext.Provider
