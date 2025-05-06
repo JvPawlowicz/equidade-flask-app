@@ -210,8 +210,7 @@ export const documents = pgTable('documents', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   version: integer('version').default(1).notNull(),
-  parentDocumentId: integer('parent_document_id').references(() => documents.id),
-  needsSignature: boolean('needs_signature').default(false).notNull(),
+  // parentDocumentId e needsSignature foram removidos do banco
 });
 
 // Chat Messages Table
@@ -395,12 +394,7 @@ export const documentRelations = relations(documents, ({ one, many }) => ({
     fields: [documents.appointmentId],
     references: [appointments.id],
   }),
-  parentDocument: one(documents, {
-    fields: [documents.parentDocumentId],
-    references: [documents.id],
-    relationName: 'parent',
-  }),
-  versions: many(documents, { relationName: 'parent' }),
+  // Relações parentDocument e versions foram removidas pois dependem de campos que não existem
 }));
 
 export const chatMessageRelations = relations(chatMessages, ({ one }) => ({

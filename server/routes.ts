@@ -1267,6 +1267,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const documentId = Number(req.params.id);
+      // Removida a relação 'versions' pois depende do campo parentDocumentId que não existe
       const document = await db.query.documents.findFirst({
         where: eq(documents.id, documentId),
         with: {
@@ -1281,10 +1282,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           patient: true,
           facility: true,
           evolution: true,
-          appointment: true,
-          versions: {
-            orderBy: desc(documents.version)
-          }
+          appointment: true
         }
       });
       
@@ -1517,11 +1515,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Removendo filtros parentDocumentId e needsSignature pois esses campos não existem no banco
       
-      // Para versão mais recente, ordenamos apenas por versão decrescente
-      if (onlyLatestVersions) {
-        // Como não temos parentDocumentId, apenas ordenamos por versão e pegamos os mais recentes
-        // Esta é uma simplificação - numa app real precisaríamos de uma consulta mais complexa
-      }
+      // Nota: Não temos mais o conceito de versões no sistema, então a opção onlyLatestVersions
+      // não faz mais sentido. Mantemos apenas para compatibilidade com o frontend existente.
 
       // Apply all conditions if any exist
       if (conditions.length > 0) {

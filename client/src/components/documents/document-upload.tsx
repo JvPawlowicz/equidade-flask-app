@@ -201,8 +201,8 @@ export function DocumentUpload({
                         </Button>
                       </div>
                     ) : (
-                      <div className="flex flex-col items-center justify-center rounded-md border border-dashed p-4">
-                        <div className="flex flex-col items-center gap-2 text-center">
+                      <div className="flex flex-col items-center justify-center rounded-md border border-dashed p-4 relative">
+                        <label htmlFor="file-upload" className="flex flex-col items-center gap-2 text-center w-full h-full cursor-pointer">
                           <FileUpIcon className="h-8 w-8 text-muted-foreground" />
                           <div className="flex flex-col gap-1">
                             <p className="text-sm font-medium">
@@ -212,13 +212,17 @@ export function DocumentUpload({
                               Formatos suportados: PDF, DOC, DOCX, JPG, PNG
                             </p>
                           </div>
-                          <Input
-                            type="file"
-                            className="absolute inset-0 cursor-pointer opacity-0"
-                            onChange={handleFileChange}
-                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                          />
-                        </div>
+                          <Button type="button" variant="secondary" size="sm" className="mt-2">
+                            Escolher arquivo
+                          </Button>
+                        </label>
+                        <Input
+                          id="file-upload"
+                          type="file"
+                          className="sr-only" // Oculto mais ainda acessível
+                          onChange={handleFileChange}
+                          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                        />
                       </div>
                     )}
                   </div>
