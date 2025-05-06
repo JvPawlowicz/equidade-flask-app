@@ -29,6 +29,13 @@ class WebSocketManager {
       // Usar o hostname atual garantindo compatibilidade com o ambiente Replit
       const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsHostname = window.location.host;
+      
+      // Garantir que temos um hostname válido
+      if (!wsHostname) {
+        console.error('WebSocket: Hostname inválido', wsHostname);
+        return;
+      }
+      
       const wsUrl = `${wsProtocol}//${wsHostname}/ws?userId=${user.id}`;
       
       console.log('WebSocket: Tentando conectar em', wsUrl);

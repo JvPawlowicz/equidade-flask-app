@@ -82,11 +82,21 @@ export default function AuthPage() {
   });
 
   const onLoginSubmit = (data: LoginFormValues) => {
-    loginMutation.mutate(data);
+    console.log("Tentando fazer login com:", data);
+    if (loginMutation && typeof loginMutation.mutate === 'function') {
+      loginMutation.mutate(data);
+    } else {
+      console.error("loginMutation.mutate não é uma função", loginMutation);
+    }
   };
 
   const onRegisterSubmit = (data: RegisterFormValues) => {
-    registerMutation.mutate(data);
+    console.log("Tentando registrar:", data);
+    if (registerMutation && typeof registerMutation.mutate === 'function') {
+      registerMutation.mutate(data);
+    } else {
+      console.error("registerMutation.mutate não é uma função", registerMutation);
+    }
   };
 
   if (user) {

@@ -24,13 +24,28 @@ type LoginData = {
 };
 
 // Definindo um contexto padrão para evitar nulos
+const defaultMutation = {
+  mutate: () => {},
+  isPending: false,
+  isSuccess: false,
+  isError: false,
+  error: null,
+  data: null,
+  status: 'idle',
+  reset: () => {},
+  variables: null,
+  failureCount: 0,
+  failureReason: null,
+  // Outros métodos e propriedades
+} as any;
+
 const defaultAuthContext: AuthContextType = {
   user: null,
   isLoading: false,
   error: null,
-  loginMutation: {} as UseMutationResult<User, Error, LoginData>,
-  logoutMutation: {} as UseMutationResult<void, Error, void>,
-  registerMutation: {} as UseMutationResult<User, Error, InsertUser>,
+  loginMutation: defaultMutation as UseMutationResult<User, Error, LoginData>,
+  logoutMutation: defaultMutation as UseMutationResult<void, Error, void>,
+  registerMutation: defaultMutation as UseMutationResult<User, Error, InsertUser>,
 };
 
 export const AuthContext = createContext<AuthContextType>(defaultAuthContext);
