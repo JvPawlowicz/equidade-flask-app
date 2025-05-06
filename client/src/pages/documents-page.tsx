@@ -40,6 +40,7 @@ import { DocumentList } from "@/components/documents/document-list";
 import { DocumentUpload } from "@/components/documents/document-upload";
 import { Document, documentCategoryEnum, documentStatusEnum } from "@shared/schema";
 import { Loader2 } from "lucide-react";
+import { AppLayout } from "@/components/layout/app-layout";
 
 const searchSchema = z.object({
   search: z.string().optional(),
@@ -236,8 +237,9 @@ export default function DocumentsPage() {
     }
   };
 
-  return (
-    <div className="container py-6 space-y-6">
+  // Conteúdo principal da página
+  const content = (
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Documentos</h1>
@@ -352,5 +354,12 @@ export default function DocumentsPage() {
         </TabsContent>
       </Tabs>
     </div>
+  );
+
+  // Envolver em AppLayout para ter acesso à barra lateral
+  return (
+    <AppLayout>
+      {content}
+    </AppLayout>
   );
 }

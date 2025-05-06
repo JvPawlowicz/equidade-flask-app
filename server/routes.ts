@@ -1230,7 +1230,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Se solicitado, incluir informações do uploader
       if (includeUploaderInfo === 'true') {
         const userIds = [...new Set(documentsList.map(doc => doc.uploadedBy))];
-        const users = await db.query.users.findMany({
+        // Renomeando para uploaders para evitar conflito de escopo
+        const uploaders = await db.query.users.findMany({
           where: inArray(users.id, userIds),
           columns: {
             id: true,
@@ -1240,10 +1241,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         });
         
-        const usersMap = users.reduce((acc, user) => {
+        const usersMap = uploaders.reduce((acc, user) => {
           acc[user.id] = user;
           return acc;
-        }, {} as Record<number, typeof users[number]>);
+        }, {} as Record<number, typeof uploaders[number]>);
         
         // Combinar informações de documentos e usuários
         const documentsWithUploader = documentsList.map(doc => ({
@@ -1524,7 +1525,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const uploaderIds = [...new Set(documentsList.map(doc => doc.uploadedBy))];
         
         const uploaders = await db.query.users.findMany({
-          where: inArray(users.id, uploaderIds),
+          where: inArray(users.id, uploaderIds as number[]),
           columns: {
             id: true,
             name: true,
