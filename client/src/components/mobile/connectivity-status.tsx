@@ -1,348 +1,254 @@
-import React, { useState, useEffect } from 'react';
-import { cn } from '@/lib/utils';
+import { useState, useEffect } from 'react';
+import { Wifi, WifiOff, RefreshCw, Download } from 'lucide-react';
 import { useNetworkStatus } from '@/hooks/use-mobile';
-import { getPendingOperations } from '@/lib/offline-storage';
-import { Wifi, WifiOff, AlertCircle, Download, Info } from 'lucide-react';
-import { setupNetworkListeners } from '@/lib/offline-utils';
-import { useToast } from '@/hooks/use-toast';
+import { getSyncStatus } from '@/lib/offline-storage';
+import { canInstallPWA, showInstallPrompt } from '@/lib/offline-utils';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 
+/**
+ * Props do componente de status de conectividade
+ */
 interface ConnectivityStatusProps {
   position?: 'top' | 'bottom';
-  className?: string;
   showInstallPrompt?: boolean;
   onSync?: () => Promise<void>;
 }
 
 /**
- * Componente que mostra o status de conectividade atual
- * e oferece ações como sincronização e instalação do app
+ * Componente que exibe o status de conectividade e informações offline
+ * para dispositivos móveis
  */
 export function ConnectivityStatus({
   position = 'bottom',
-  className,
-  showInstallPrompt = true,
+  showInstallPrompt = false,
   onSync
 }: ConnectivityStatusProps) {
   const { isOnline } = useNetworkStatus();
-  const [showInstall, setShowInstall] = useState(false);
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [pendingOperationsCount, setPendingOperationsCount] = useState(0);
+  const [pendingChanges, setPendingChanges] = useState(0);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'error'>('idle');
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [canInstall, setCanInstall] = useState(false);
   const { toast } = useToast();
-  
-  // Verificar operações pendentes quando o status da rede mudar
+
+  // Verificar se há mudanças pendentes
   useEffect(() => {
-    const checkPendingOperations = async () => {
+    const checkPendingChanges = async () => {
       try {
-        const pendingOps = await getPendingOperations();
-        setPendingOperationsCount(pendingOps.length);
+        const status = await getSyncStatus();
+        setPendingChanges(status.pendingChanges);
+        setSyncStatus(status.syncStatus);
       } catch (error) {
-        console.error('Erro ao verificar operações pendentes:', error);
+        console.error('Erro ao verificar mudanças pendentes:', error);
       }
     };
-    
-    checkPendingOperations();
-    
-    // Configurar listener para mudanças de rede
-    const removeListeners = setupNetworkListeners(
-      // Online callback
-      () => {
-        toast({
-          title: "Conexão restabelecida",
-          description: "Você está online novamente.",
-        });
-        checkPendingOperations();
-      },
-      // Offline callback
-      () => {
-        toast({
-          title: "Modo offline",
-          description: "Você está trabalhando offline. Algumas funcionalidades podem estar limitadas.",
-          variant: "destructive",
-        });
-      }
-    );
-    
-    return () => {
-      removeListeners();
-    };
-  }, [isOnline, toast]);
-  
-  // Verificar suporte a instalação PWA
+
+    checkPendingChanges();
+
+    // Verificar a cada 30 segundos
+    const interval = setInterval(checkPendingChanges, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Verificar se pode instalar o PWA
   useEffect(() => {
-    const handleBeforeInstallPrompt = (e: any) => {
-      // Prevent Chrome 67 and earlier from automatically showing the prompt
-      e.preventDefault();
-      // Stash the event so it can be triggered later.
-      setDeferredPrompt(e);
-      setShowInstall(true);
+    setCanInstall(canInstallPWA());
+
+    const handleBeforeInstallPrompt = () => {
+      setCanInstall(true);
     };
-    
+
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    
+
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
   }, []);
-  
-  // Instalar o app como PWA
-  const handleInstallClick = async () => {
-    if (!deferredPrompt) {
-      console.log('O prompt de instalação não está disponível');
-      return;
+
+  // Manipulador para prompt de instalação do PWA
+  const handleInstall = async () => {
+    try {
+      const installed = await showInstallPrompt();
+      if (installed) {
+        setCanInstall(false);
+        toast({
+          title: 'Instalação iniciada',
+          description: 'O aplicativo está sendo instalado no seu dispositivo.'
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao exibir prompt de instalação:', error);
+      toast({
+        title: 'Erro na instalação',
+        description: 'Não foi possível instalar o aplicativo. Tente novamente mais tarde.',
+        variant: 'destructive'
+      });
     }
-    
-    // Show the install prompt
-    deferredPrompt.prompt();
-    
-    // Wait for the user to respond to the prompt
-    const { outcome } = await deferredPrompt.userChoice;
-    console.log(`O usuário ${outcome === 'accepted' ? 'aceitou' : 'recusou'} a instalação`);
-    
-    // We've used the prompt, and can't use it again, discard it
-    setDeferredPrompt(null);
-    setShowInstall(false);
   };
-  
-  // Sincronizar dados quando voltar online
+
+  // Manipulador para sincronização
   const handleSync = async () => {
     if (!isOnline) {
       toast({
-        title: "Offline",
-        description: "Você precisa estar online para sincronizar dados",
-        variant: "destructive"
+        title: 'Sem conexão',
+        description: 'Não é possível sincronizar enquanto estiver offline',
+        variant: 'destructive'
       });
       return;
     }
-    
-    if (!onSync) {
-      toast({
-        title: "Sincronização automática",
-        description: "A sincronização será realizada automaticamente quando você ficar online"
-      });
-      return;
-    }
-    
+
+    if (!onSync) return;
+
+    setIsSyncing(true);
     try {
-      toast({
-        title: "Sincronizando",
-        description: "Sincronizando dados com o servidor...",
-      });
-      
       await onSync();
-      
-      // Verificar operações pendentes após sincronização
-      const pendingOps = await getPendingOperations();
-      setPendingOperationsCount(pendingOps.length);
-      
-      toast({
-        title: "Sincronização concluída",
-        description: pendingOps.length > 0 
-          ? `Ainda há ${pendingOps.length} operações pendentes.` 
-          : "Todos os dados foram sincronizados."
-      });
+      // Recarregar o status após a sincronização
+      const status = await getSyncStatus();
+      setPendingChanges(status.pendingChanges);
+      setSyncStatus(status.syncStatus);
     } catch (error) {
-      console.error('Erro ao sincronizar:', error);
-      
+      console.error('Erro durante sincronização:', error);
       toast({
-        title: "Erro na sincronização",
-        description: error instanceof Error ? error.message : "Ocorreu um erro ao sincronizar os dados",
-        variant: "destructive"
+        title: 'Erro na sincronização',
+        description: 'Ocorreu um erro ao sincronizar dados. Tente novamente mais tarde.',
+        variant: 'destructive'
       });
+    } finally {
+      setIsSyncing(false);
     }
   };
-  
-  // Se não há operações pendentes e está online, não mostrar nada
-  if (isOnline && pendingOperationsCount === 0 && !showInstall) {
+
+  // Se está online e sem mudanças pendentes, não mostramos o indicador
+  if (isOnline && pendingChanges === 0 && !canInstall) {
     return null;
   }
-  
+
   return (
-    <div 
+    <div
       className={cn(
-        "fixed left-0 right-0 px-4 py-2 z-50",
-        position === 'top' ? "top-0" : "bottom-0",
-        isOnline ? "bg-blue-50 border-t border-blue-200 text-blue-800 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-100" 
-                 : "bg-amber-50 border-t border-amber-200 text-amber-800 dark:bg-amber-900/30 dark:border-amber-800 dark:text-amber-100",
-        className
+        'fixed left-0 right-0 px-2 py-1 flex items-center justify-between bg-background border z-50 transition-all duration-300',
+        position === 'top' 
+          ? 'top-0 border-b rounded-b-md shadow-md' 
+          : 'bottom-0 border-t rounded-t-md shadow-[0_-2px_10px_rgba(0,0,0,0.1)]',
+        !isOnline && 'bg-yellow-50 border-yellow-200',
+        syncStatus === 'error' && 'bg-red-50 border-red-200'
       )}
     >
-      <div className="container mx-auto flex items-center justify-between">
-        <div className="flex items-center">
-          {isOnline ? (
+      {/* Indicador de status */}
+      <div className="flex items-center gap-2">
+        {!isOnline ? (
+          <>
+            <WifiOff size={16} className="text-yellow-500" />
+            <span className="text-xs font-medium text-yellow-700">
+              Offline
+            </span>
+          </>
+        ) : pendingChanges > 0 ? (
+          <>
+            <Wifi size={16} className="text-blue-500" />
+            <span className="text-xs font-medium text-blue-700">
+              {pendingChanges} {pendingChanges === 1 ? 'alteração' : 'alterações'} pendente{pendingChanges !== 1 && 's'}
+            </span>
+          </>
+        ) : syncStatus === 'error' ? (
+          <>
+            <RefreshCw size={16} className="text-red-500" />
+            <span className="text-xs font-medium text-red-700">
+              Erro na sincronização
+            </span>
+          </>
+        ) : canInstall ? (
+          <>
+            <Download size={16} className="text-primary" />
+            <span className="text-xs font-medium text-primary">
+              Instalar aplicativo
+            </span>
+          </>
+        ) : null}
+      </div>
+
+      {/* Botão de ação */}
+      {canInstall ? (
+        <Button
+          size="xs"
+          variant="outline"
+          className="h-7 px-2 py-1 text-xs"
+          onClick={handleInstall}
+        >
+          Instalar
+        </Button>
+      ) : pendingChanges > 0 && isOnline && onSync ? (
+        <Button
+          size="xs"
+          variant="outline"
+          className="h-7 px-2 py-1 text-xs"
+          onClick={handleSync}
+          disabled={isSyncing}
+        >
+          {isSyncing ? (
             <>
-              <Wifi className="h-4 w-4 mr-2" />
-              <span className="text-sm font-medium">
-                Online
-                {pendingOperationsCount > 0 && ` (${pendingOperationsCount} sincronizações pendentes)`}
-              </span>
+              <RefreshCw size={14} className="mr-1 animate-spin" />
+              Sincronizando...
             </>
           ) : (
-            <>
-              <WifiOff className="h-4 w-4 mr-2" />
-              <span className="text-sm font-medium">Modo Offline</span>
-            </>
+            'Sincronizar agora'
           )}
-        </div>
-        
-        <div className="flex gap-2">
-          {pendingOperationsCount > 0 && isOnline && onSync && (
-            <Button 
-              size="sm" 
-              variant="outline" 
-              className="h-7 text-xs"
-              onClick={handleSync}
-            >
-              Sincronizar
-            </Button>
-          )}
-          
-          {showInstall && showInstallPrompt && (
-            <Button 
-              size="sm" 
-              variant="outline" 
-              className="h-7 text-xs"
-              onClick={handleInstallClick}
-            >
-              <Download className="h-3 w-3 mr-1" />
-              Instalar App
-            </Button>
-          )}
-        </div>
-      </div>
+        </Button>
+      ) : null}
     </div>
   );
 }
 
-interface ConnectivityBannerProps {
-  className?: string;
-  onSync?: () => Promise<void>;
-}
-
 /**
- * Banner que exibe informações sobre o status de conectividade
- * e oferece ações como sincronização
+ * Componente de linha de status fora do modo fullscreen
+ * para exibir informações não intrusivas sobre conectividade
  */
-export function ConnectivityBanner({ className, onSync }: ConnectivityBannerProps) {
+export function StatusLine() {
   const { isOnline } = useNetworkStatus();
-  const [pendingOperationsCount, setPendingOperationsCount] = useState(0);
-  const { toast } = useToast();
-  
-  // Verificar operações pendentes
+  const [pendingChanges, setPendingChanges] = useState(0);
+
+  // Verificar se há mudanças pendentes
   useEffect(() => {
-    const checkPendingOperations = async () => {
+    const checkPendingChanges = async () => {
       try {
-        const pendingOps = await getPendingOperations();
-        setPendingOperationsCount(pendingOps.length);
+        const status = await getSyncStatus();
+        setPendingChanges(status.pendingChanges);
       } catch (error) {
-        console.error('Erro ao verificar operações pendentes:', error);
+        console.error('Erro ao verificar mudanças pendentes:', error);
       }
     };
+
+    checkPendingChanges();
     
-    checkPendingOperations();
-    const intervalId = setInterval(checkPendingOperations, 30000);
+    // Verificar a cada 30 segundos
+    const interval = setInterval(checkPendingChanges, 30000);
     
-    return () => clearInterval(intervalId);
+    return () => clearInterval(interval);
   }, []);
-  
-  // Se não há informações importantes para mostrar, não exibir o banner
-  if (isOnline && pendingOperationsCount === 0) {
+
+  // Se está online e sem mudanças pendentes, não mostramos o indicador
+  if (isOnline && pendingChanges === 0) {
     return null;
   }
-  
-  // Sincronizar dados quando voltar online
-  const handleSync = async () => {
-    if (!isOnline) {
-      toast({
-        title: "Offline",
-        description: "Você precisa estar online para sincronizar dados",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (!onSync) {
-      toast({
-        title: "Sincronização automática",
-        description: "A sincronização será realizada automaticamente quando você ficar online"
-      });
-      return;
-    }
-    
-    try {
-      await onSync();
-      
-      // Verificar operações pendentes após sincronização
-      const pendingOps = await getPendingOperations();
-      setPendingOperationsCount(pendingOps.length);
-      
-      toast({
-        title: "Sincronização concluída",
-        description: pendingOps.length > 0 
-          ? `Ainda há ${pendingOps.length} operações pendentes.` 
-          : "Todos os dados foram sincronizados."
-      });
-    } catch (error) {
-      console.error('Erro ao sincronizar:', error);
-      
-      toast({
-        title: "Erro na sincronização",
-        description: error instanceof Error ? error.message : "Ocorreu um erro ao sincronizar os dados",
-        variant: "destructive"
-      });
-    }
-  };
-  
+
   return (
-    <div 
-      className={cn(
-        "rounded-lg p-4 mb-4",
-        isOnline 
-          ? "bg-blue-50 text-blue-800 dark:bg-blue-900/30 dark:text-blue-100" 
-          : "bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-100",
-        className
-      )}
-    >
-      <div className="flex items-start gap-3">
-        <div className="mt-0.5">
-          {isOnline ? (
-            <Info className="h-5 w-5" />
-          ) : (
-            <AlertCircle className="h-5 w-5" />
-          )}
-        </div>
-        
-        <div className="flex-1">
-          <h3 className="font-medium">
-            {isOnline 
-              ? "Você está online" 
-              : "Modo offline"
-            }
-          </h3>
-          
-          <p className="text-sm mt-1">
-            {!isOnline ? (
-              "Você está trabalhando offline. Suas alterações serão salvas localmente e sincronizadas quando estiver online novamente."
-            ) : pendingOperationsCount > 0 ? (
-              `Você tem ${pendingOperationsCount} ${pendingOperationsCount === 1 ? 'operação pendente' : 'operações pendentes'} de sincronização.`
-            ) : (
-              "Todos os dados estão sincronizados."
-            )}
-          </p>
-          
-          {(pendingOperationsCount > 0 || !isOnline) && onSync && (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="mt-2"
-              onClick={handleSync}
-              disabled={!isOnline}
-            >
-              {isOnline ? "Sincronizar agora" : "Sincronizar quando online"}
-            </Button>
-          )}
-        </div>
-      </div>
+    <div className={cn(
+      'px-3 py-0.5 text-xs font-medium rounded-sm flex items-center justify-center gap-1',
+      !isOnline ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'
+    )}>
+      {!isOnline ? (
+        <>
+          <WifiOff size={12} />
+          <span>Offline</span>
+        </>
+      ) : pendingChanges > 0 ? (
+        <>
+          <RefreshCw size={12} />
+          <span>{pendingChanges} pendente{pendingChanges !== 1 && 's'}</span>
+        </>
+      ) : null}
     </div>
   );
 }

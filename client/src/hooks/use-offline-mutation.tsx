@@ -1,391 +1,313 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { UseMutationResult, useMutation, MutationOptions, useQueryClient } from '@tanstack/react-query';
 import { useNetworkStatus } from './use-mobile';
-import { useToast } from './use-toast';
-import { 
-  addPendingOperation, 
-  storeOfflineEntity, 
-  OfflineEntity, 
-  syncOfflineData 
+import { generateOfflineId } from '@/lib/offline-utils';
+import {
+  savePendingRequest,
+  getPendingRequests,
+  removePendingRequest,
+  updateSyncStatus
 } from '@/lib/offline-storage';
-import { useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
+import { useToast } from './use-toast';
 
-interface UseOfflineMutationOptions<TData, TEntity extends OfflineEntity> {
-  // Nome da entidade (para armazenamento offline)
-  entityType: string;
-  
-  // Endpoint da API
+/**
+ * Tipo de configuração para mutação offline
+ */
+interface OfflineMutationOptions<TData = unknown, TError = Error, TVariables = void, TContext = unknown>
+  extends MutationOptions<TData, TError, TVariables, TContext> {
   endpoint: string;
-  
-  // Callback para quando a mutação for bem-sucedida online
-  onOnlineSuccess?: (data: TEntity) => void;
-  
-  // Callback para quando a mutação for armazenada offline
-  onOfflineSuccess?: (data: TEntity) => void;
-  
-  // Callback para erros
-  onError?: (error: Error) => void;
-  
-  // Mensagem de sucesso para Toast (online)
-  onlineSuccessMessage?: string;
-  
-  // Mensagem de sucesso para Toast (offline)
-  offlineSuccessMessage?: string;
-  
-  // ID da entidade para atualizações
-  entityId?: string | number;
-  
-  // Se deve substituir a entidade existente no cache
-  replace?: boolean;
-  
-  // Chave de invalidação do query client após mutação bem-sucedida
-  invalidateQueries?: string[];
+  method: 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+  processOfflineResponse?: (variables: TVariables) => TData;
+  onSyncSuccess?: (data: TData, variables: TVariables) => void;
+  onSyncError?: (error: TError, variables: TVariables) => void;
+  queryKeysToInvalidate?: string | string[] | (string | string[])[];
+  enableOfflineSupport?: boolean;
 }
 
 /**
- * Hook personalizado para mutações com suporte offline
- * Permite que o usuário crie/atualize dados mesmo quando estiver offline
+ * Hook personalizado para realizar mutações com suporte a operações offline
  */
-export function useOfflineMutation<TData, TEntity extends OfflineEntity>(
-  options: UseOfflineMutationOptions<TData, TEntity>
-) {
+export function useOfflineMutation<TData = unknown, TError = Error, TVariables = void, TContext = unknown>(
+  options: OfflineMutationOptions<TData, TError, TVariables, TContext>
+): UseMutationResult<TData, TError, TVariables, TContext> & {
+  syncPending: () => Promise<{ success: number; failed: number }>;
+  hasPendingSync: boolean;
+} {
+  const { isOnline } = useNetworkStatus();
+  const [hasPendingSync, setHasPendingSync] = useState(false);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  
+  // Opções padrão
   const {
-    entityType,
     endpoint,
-    onOnlineSuccess,
-    onOfflineSuccess,
-    onError,
-    onlineSuccessMessage = 'Operação realizada com sucesso',
-    offlineSuccessMessage = 'Dados salvos localmente e serão sincronizados quando você estiver online',
-    entityId,
-    replace = false,
-    invalidateQueries = [],
+    method,
+    processOfflineResponse,
+    onSyncSuccess,
+    onSyncError,
+    queryKeysToInvalidate,
+    enableOfflineSupport = true,
+    ...mutationOptions
   } = options;
   
-  const [isPending, setIsPending] = useState(false);
-  const [isError, setIsError] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
-  const { isOnline } = useNetworkStatus();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  
-  const mutate = useCallback(async (data: TData) => {
-    setIsPending(true);
-    setIsError(false);
-    setError(null);
-    
+  /**
+   * Verifica se existem mutações pendentes e atualiza o estado
+   */
+  const checkPendingSync = useCallback(async () => {
     try {
-      if (isOnline) {
-        // Online: fazer a requisição à API
-        const method = entityId ? 'PUT' : 'POST';
-        const url = entityId ? `${endpoint}/${entityId}` : endpoint;
-        
-        const response = await apiRequest(method, url, data);
-        const responseData = await response.json() as TEntity;
-        
-        // Cache a resposta localmente
-        await storeOfflineEntity<TEntity>(
-          entityType,
-          responseData,
-          { overwrite: true, isPending: false }
-        );
-        
-        // Invalidar queries conforme necessário
-        if (invalidateQueries.length > 0) {
-          invalidateQueries.forEach(query => {
-            queryClient.invalidateQueries({ queryKey: [query] });
-          });
-        }
-        
-        // Exibir toast de sucesso
-        if (onlineSuccessMessage) {
-          toast({
-            title: 'Sucesso',
-            description: onlineSuccessMessage,
-          });
-        }
-        
-        // Chamar callback de sucesso
-        if (onOnlineSuccess) {
-          onOnlineSuccess(responseData);
-        }
-        
-        setIsPending(false);
-        return responseData;
-      } else {
-        // Offline: armazenar localmente e adicionar à fila de operações pendentes
-        const offlineData = data as unknown as TEntity;
-        
-        // Armazenar entidade localmente
-        const storedEntity = await storeOfflineEntity<TEntity>(
-          entityType,
-          { ...offlineData, id: entityId },
-          { overwrite: replace, isPending: true }
-        );
-        
-        // Adicionar operação à fila
-        await addPendingOperation({
-          operation: entityId ? 'update' : 'create',
-          entityType,
-          entityId: storedEntity.id,
-          data,
-          endpoint,
-        });
-        
-        // Exibir toast
-        if (offlineSuccessMessage) {
-          toast({
-            title: 'Salvamento offline',
-            description: offlineSuccessMessage,
-          });
-        }
-        
-        // Chamar callback de sucesso offline
-        if (onOfflineSuccess) {
-          onOfflineSuccess(storedEntity);
-        }
-        
-        setIsPending(false);
-        return storedEntity;
-      }
-    } catch (err) {
-      const errorObj = err instanceof Error ? err : new Error(String(err));
+      const pendingRequests = await getPendingRequests();
+      // Filtrar apenas as requisições relacionadas a este endpoint
+      const relevantRequests = pendingRequests.filter(req => 
+        req.url === endpoint && req.method === method
+      );
       
-      setIsError(true);
-      setError(errorObj);
-      setIsPending(false);
-      
-      toast({
-        title: 'Erro',
-        description: errorObj.message,
-        variant: 'destructive',
-      });
-      
-      if (onError) {
-        onError(errorObj);
-      }
-      
-      throw errorObj;
+      setHasPendingSync(relevantRequests.length > 0);
+    } catch (error) {
+      console.error('Erro ao verificar mutações pendentes:', error);
+      setHasPendingSync(false);
     }
-  }, [
-    isOnline, 
-    entityType, 
-    entityId, 
-    endpoint, 
-    replace, 
-    onOnlineSuccess, 
-    onOfflineSuccess, 
-    onError, 
-    onlineSuccessMessage, 
-    offlineSuccessMessage, 
-    invalidateQueries,
-    toast,
-    queryClient
-  ]);
+  }, [endpoint, method]);
   
-  const syncData = useCallback(async () => {
+  // Verificar mutações pendentes na inicialização e quando voltar online
+  useEffect(() => {
+    checkPendingSync();
+    
+    // Verificar novamente quando voltar online
+    if (isOnline) {
+      checkPendingSync();
+    }
+  }, [isOnline, checkPendingSync]);
+  
+  /**
+   * Sincroniza todas as mutações pendentes deste tipo
+   */
+  const syncPending = useCallback(async (): Promise<{ success: number; failed: number }> => {
     if (!isOnline) {
       toast({
-        title: 'Offline',
-        description: 'Você precisa estar online para sincronizar dados',
-        variant: 'destructive',
+        title: 'Sem conexão',
+        description: 'Não é possível sincronizar enquanto estiver offline',
+        variant: 'destructive'
       });
-      return;
+      return { success: 0, failed: 0 };
     }
     
     try {
-      setIsPending(true);
+      // Obter todas as requisições pendentes
+      const pendingRequests = await getPendingRequests();
       
-      const result = await syncOfflineData(async (endpoint, method, data) => {
-        const response = await apiRequest(method, endpoint, data);
-        return await response.json();
+      // Filtrar apenas as requisições relacionadas a este endpoint
+      const relevantRequests = pendingRequests.filter(req => 
+        req.url === endpoint && req.method === method
+      );
+      
+      if (relevantRequests.length === 0) {
+        return { success: 0, failed: 0 };
+      }
+      
+      // Atualizar o status para 'sincronizando'
+      await updateSyncStatus({
+        syncStatus: 'syncing'
       });
       
-      if (result.synced > 0) {
-        // Invalidar queries conforme necessário
-        if (invalidateQueries.length > 0) {
-          invalidateQueries.forEach(query => {
-            queryClient.invalidateQueries({ queryKey: [query] });
-          });
+      let successCount = 0;
+      let failedCount = 0;
+      
+      // Processar cada requisição pendente
+      for (const request of relevantRequests) {
+        try {
+          // Enviar a requisição
+          const response = await apiRequest(
+            request.method,
+            request.url,
+            request.body
+          );
+          
+          // Processar a resposta
+          const data = await response.json();
+          
+          // Callback de sucesso se fornecido
+          if (onSyncSuccess) {
+            onSyncSuccess(data as TData, request.body as TVariables);
+          }
+          
+          // Remover a requisição da fila
+          await removePendingRequest(request.id);
+          
+          // Invalidar queries afetadas para atualizar a UI
+          if (queryKeysToInvalidate) {
+            // Se for um array de arrays ou strings
+            if (Array.isArray(queryKeysToInvalidate)) {
+              for (const key of queryKeysToInvalidate) {
+                await queryClient.invalidateQueries({ queryKey: Array.isArray(key) ? key : [key] });
+              }
+            } else {
+              // Se for apenas uma string
+              await queryClient.invalidateQueries({ queryKey: [queryKeysToInvalidate] });
+            }
+          }
+          
+          successCount++;
+        } catch (error) {
+          // Callback de erro se fornecido
+          if (onSyncError) {
+            onSyncError(error as TError, request.body as TVariables);
+          }
+          
+          failedCount++;
+          
+          console.error(`Erro ao sincronizar requisição ${request.id}:`, error);
         }
-        
+      }
+      
+      // Notificar resultado da sincronização
+      if (successCount > 0) {
         toast({
           title: 'Sincronização concluída',
-          description: `${result.synced} ${result.synced === 1 ? 'item sincronizado' : 'itens sincronizados'} com sucesso.`,
+          description: `${successCount} alterações sincronizadas com sucesso`,
         });
       }
       
-      if (result.failed > 0) {
+      if (failedCount > 0) {
         toast({
-          title: 'Erros na sincronização',
-          description: `${result.failed} ${result.failed === 1 ? 'item falhou' : 'itens falharam'} ao sincronizar.`,
-          variant: 'destructive',
+          title: 'Sincronização parcial',
+          description: `${failedCount} alterações não puderam ser sincronizadas`,
+          variant: 'destructive'
         });
       }
       
-      if (result.synced === 0 && result.failed === 0) {
-        toast({
-          title: 'Sincronização',
-          description: 'Nenhum dado pendente para sincronizar.',
-        });
-      }
-      
-      return result;
-    } catch (err) {
-      const errorObj = err instanceof Error ? err : new Error(String(err));
-      
-      toast({
-        title: 'Erro na sincronização',
-        description: errorObj.message,
-        variant: 'destructive',
+      // Atualizar o status para 'ocioso'
+      await updateSyncStatus({
+        syncStatus: 'idle',
+        lastSync: Date.now()
       });
       
-      throw errorObj;
-    } finally {
-      setIsPending(false);
+      // Atualizar estado de pendências
+      await checkPendingSync();
+      
+      return { success: successCount, failed: failedCount };
+    } catch (error) {
+      console.error('Erro ao sincronizar mutações pendentes:', error);
+      
+      // Atualizar o status para 'erro'
+      await updateSyncStatus({
+        syncStatus: 'error',
+        errorMessage: (error as Error).message
+      });
+      
+      return { success: 0, failed: 0 };
     }
-  }, [isOnline, toast, invalidateQueries, queryClient]);
+  }, [isOnline, endpoint, method, onSyncSuccess, onSyncError, queryKeysToInvalidate, queryClient, toast, checkPendingSync]);
   
+  // Mutação real (online) ou com fallback offline
+  const mutation = useMutation<TData, TError, TVariables, TContext>({
+    ...mutationOptions,
+    mutationFn: async (variables: TVariables) => {
+      // Se estiver online, realizar a mutação normalmente
+      if (isOnline) {
+        try {
+          const response = await apiRequest(method, endpoint, variables);
+          const data = await response.json();
+          return data as TData;
+        } catch (error) {
+          // Se a opção offline estiver ativada e ocorrer um erro de rede
+          // tenta salvar offline
+          if (enableOfflineSupport && isNetworkError(error)) {
+            return handleOfflineMutation(variables);
+          }
+          
+          // Caso contrário, propaga o erro
+          throw error;
+        }
+      } else if (enableOfflineSupport) {
+        // Se estiver offline e o suporte offline estiver ativado
+        return handleOfflineMutation(variables);
+      } else {
+        // Se estiver offline e o suporte offline não estiver ativado
+        throw new Error('Você está offline e esta ação não suporta operação offline');
+      }
+    },
+    onSuccess: (data, variables, context) => {
+      // Invalidar queries afetadas
+      if (queryKeysToInvalidate) {
+        // Se for um array de arrays ou strings
+        if (Array.isArray(queryKeysToInvalidate)) {
+          for (const key of queryKeysToInvalidate) {
+            queryClient.invalidateQueries({ queryKey: Array.isArray(key) ? key : [key] });
+          }
+        } else {
+          // Se for apenas uma string
+          queryClient.invalidateQueries({ queryKey: [queryKeysToInvalidate] });
+        }
+      }
+      
+      // Chamar onSuccess original se fornecido
+      if (mutationOptions.onSuccess) {
+        mutationOptions.onSuccess(data, variables, context);
+      }
+    }
+  });
+  
+  /**
+   * Função para lidar com a mutação quando estiver offline
+   */
+  const handleOfflineMutation = async (variables: TVariables): Promise<TData> => {
+    // Gerar um ID para a requisição offline
+    const offlineId = generateOfflineId();
+    
+    // Salvar a requisição para processamento posterior
+    await savePendingRequest(endpoint, method, variables);
+    
+    // Verificar novamente se há pendências
+    await checkPendingSync();
+    
+    // Mostrar notificação de modo offline
+    toast({
+      title: 'Modo offline',
+      description: 'Sua ação foi salva e será sincronizada quando houver conexão',
+    });
+    
+    // Se houver uma função para processar a resposta offline, usá-la
+    if (processOfflineResponse) {
+      return processOfflineResponse(variables);
+    }
+    
+    // Caso contrário, retornar uma resposta simulada
+    // com o ID gerado
+    return {
+      id: offlineId,
+      createdOffline: true,
+      data: variables,
+      timestamp: Date.now()
+    } as unknown as TData;
+  };
+  
+  // Retornar a mutação com a função de sincronização
   return {
-    mutate,
-    syncData,
-    isPending,
-    isError,
-    error,
-    isOnline,
+    ...mutation,
+    syncPending,
+    hasPendingSync
   };
 }
 
 /**
- * Hook para deletar entidades com suporte offline
+ * Verifica se um erro é um erro de rede
  */
-export function useOfflineDelete<TEntity extends OfflineEntity>(
-  options: Omit<UseOfflineMutationOptions<undefined, TEntity>, 'replace'>
-) {
-  const {
-    entityType,
-    endpoint,
-    entityId,
-    onOnlineSuccess,
-    onOfflineSuccess,
-    onError,
-    onlineSuccessMessage = 'Item excluído com sucesso',
-    offlineSuccessMessage = 'Item marcado para exclusão e será sincronizado quando você estiver online',
-    invalidateQueries = [],
-  } = options;
+function isNetworkError(error: any): boolean {
+  if (error instanceof TypeError && error.message.includes('Network')) {
+    return true;
+  }
   
-  const [isPending, setIsPending] = useState(false);
-  const [isError, setIsError] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
-  const { isOnline } = useNetworkStatus();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
+  if (error instanceof Error && error.message.includes('Failed to fetch')) {
+    return true;
+  }
   
-  const mutate = useCallback(async () => {
-    if (!entityId) {
-      throw new Error('ID da entidade é obrigatório para exclusão');
-    }
-    
-    setIsPending(true);
-    setIsError(false);
-    setError(null);
-    
-    try {
-      if (isOnline) {
-        // Online: excluir diretamente via API
-        const url = `${endpoint}/${entityId}`;
-        const response = await apiRequest('DELETE', url);
-        
-        if (!response.ok) {
-          throw new Error(`Erro ao excluir: ${response.statusText}`);
-        }
-        
-        // Invalidar queries conforme necessário
-        if (invalidateQueries.length > 0) {
-          invalidateQueries.forEach(query => {
-            queryClient.invalidateQueries({ queryKey: [query] });
-          });
-        }
-        
-        // Exibir toast de sucesso
-        if (onlineSuccessMessage) {
-          toast({
-            title: 'Sucesso',
-            description: onlineSuccessMessage,
-          });
-        }
-        
-        // Chamar callback de sucesso
-        if (onOnlineSuccess) {
-          onOnlineSuccess({} as TEntity);
-        }
-        
-        setIsPending(false);
-        return true;
-      } else {
-        // Offline: marcar para exclusão futura
-        await addPendingOperation({
-          operation: 'delete',
-          entityType,
-          entityId,
-          endpoint: `${endpoint}/${entityId}`,
-        });
-        
-        // Exibir toast
-        if (offlineSuccessMessage) {
-          toast({
-            title: 'Exclusão offline',
-            description: offlineSuccessMessage,
-          });
-        }
-        
-        // Chamar callback de sucesso offline
-        if (onOfflineSuccess) {
-          onOfflineSuccess({} as TEntity);
-        }
-        
-        setIsPending(false);
-        return true;
-      }
-    } catch (err) {
-      const errorObj = err instanceof Error ? err : new Error(String(err));
-      
-      setIsError(true);
-      setError(errorObj);
-      setIsPending(false);
-      
-      toast({
-        title: 'Erro',
-        description: errorObj.message,
-        variant: 'destructive',
-      });
-      
-      if (onError) {
-        onError(errorObj);
-      }
-      
-      throw errorObj;
-    }
-  }, [
-    isOnline, 
-    entityType, 
-    entityId, 
-    endpoint, 
-    onOnlineSuccess, 
-    onOfflineSuccess, 
-    onError, 
-    onlineSuccessMessage, 
-    offlineSuccessMessage, 
-    invalidateQueries,
-    toast,
-    queryClient
-  ]);
+  if (error instanceof DOMException && (
+    error.message.includes('NetworkError') || 
+    error.message.includes('The network connection was lost')
+  )) {
+    return true;
+  }
   
-  return {
-    mutate,
-    isPending,
-    isError,
-    error,
-    isOnline,
-  };
+  return false;
 }
