@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Clínica Equidade</title>
+  <style>
+    :root {
+      --primary: #4b6cb7;
+      --primary-dark: #3a5a9c;
+      --secondary: #182848;
+      --text-main: #333;
+      --text-light: #666;
+      --bg-light: #f5f7fa;
+      --bg-white: #ffffff;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --border: #e5e7eb;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-light);
+      color: var(--text-main);
+      line-height: 1.5;
+    }
+    
+    .layout {
+      display: flex;
+      min-height: 100vh;
+    }
+    
+    /* Sidebar */
+    .sidebar {
+      width: 260px;
+      background-color: var(--secondary);
+      color: white;
+      padding: 20px 0;
+      position: fixed;
+      height: 100vh;
+      overflow-y: auto;
+    }
+    
+    .logo {
+      padding: 0 20px 20px;
+      font-size: 24px;
+      font-weight: 600;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      margin-bottom: 20px;
+    }
+    
+    .nav-list {
+      list-style: none;
+    }
+    
+    .nav-item {
+      margin-bottom: 5px;
+    }
+    
+    .nav-link {
+      display: flex;
+      align-items: center;
+      padding: 12px 20px;
+      color: rgba(255, 255, 255, 0.7);
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    
+    .nav-link:hover, .nav-link.active {
+      background-color: rgba(255, 255, 255, 0.1);
+      color: white;
+    }
+    
+    .nav-icon {
+      margin-right: 10px;
+      width: 20px;
+      text-align: center;
+    }
+    
+    /* Main content */
+    .main-content {
+      flex: 1;
+      margin-left: 260px;
+      padding: 20px;
+    }
+    
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      background-color: var(--bg-white);
+      padding: 15px 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    
+    .page-title {
+      font-size: 24px;
+      font-weight: 600;
+    }
+    
+    .user-menu {
+      display: flex;
+      align-items: center;
+    }
+    
+    .user-info {
+      margin-right: 15px;
+      text-align: right;
+    }
+    
+    .user-name {
+      font-weight: 500;
+    }
+    
+    .user-role {
+      font-size: 12px;
+      color: var(--text-light);
+    }
+    
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background-color: var(--primary);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+    }
+    
+    /* Cards */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .card {
+      background-color: var(--bg-white);
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    
+    .stat-card {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .stat-title {
+      font-size: 14px;
+      color: var(--text-light);
+      margin-bottom: 10px;
+    }
+    
+    .stat-value {
+      font-size: 28px;
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+    
+    .stat-change {
+      font-size: 12px;
+      color: var(--success);
+    }
+    
+    .card-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 15px;
+    }
+    
+    /* Table */
+    .table-container {
+      background-color: var(--bg-white);
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      overflow-x: auto;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    
+    th {
+      text-align: left;
+      padding: 12px 15px;
+      border-bottom: 1px solid var(--border);
+      font-weight: 500;
+      color: var(--text-light);
+    }
+    
+    td {
+      padding: 12px 15px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    tr:last-child td {
+      border-bottom: none;
+    }
+    
+    .status {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    
+    .status-completed {
+      background-color: rgba(16, 185, 129, 0.1);
+      color: var(--success);
+    }
+    
+    .status-scheduled {
+      background-color: rgba(75, 108, 183, 0.1);
+      color: var(--primary);
+    }
+    
+    .status-cancelled {
+      background-color: rgba(239, 68, 68, 0.1);
+      color: var(--danger);
+    }
+    
+    .action-button {
+      background: none;
+      border: none;
+      color: var(--primary);
+      cursor: pointer;
+      text-decoration: underline;
+      padding: 0;
+      font-size: 14px;
+    }
+    
+    .logout-button {
+      background-color: var(--danger);
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 14px;
+      cursor: pointer;
+      margin-left: 15px;
+    }
+    
+    .logout-button:hover {
+      background-color: #dc2626;
+    }
+    
+    /* User profile section */
+    .user-profile {
+      background-color: var(--bg-white);
+      border-radius: 8px;
+      padding: 30px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      margin-bottom: 30px;
+    }
+    
+    .profile-title {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .profile-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 20px;
+    }
+    
+    .profile-item {
+      margin-bottom: 15px;
+    }
+    
+    .profile-label {
+      font-size: 12px;
+      color: var(--text-light);
+      margin-bottom: 5px;
+    }
+    
+    .profile-value {
+      font-weight: 500;
+    }
+    
+    @media (max-width: 768px) {
+      .layout {
+        flex-direction: column;
+      }
+      
+      .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+      }
+      
+      .main-content {
+        margin-left: 0;
+      }
+      
+      .header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      
+      .user-menu {
+        margin-top: 15px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="logo">Clínica Equidade</div>
+      <nav>
+        <ul class="nav-list">
+          <li class="nav-item">
+            <a href="#" class="nav-link active">
+              <span class="nav-icon">📊</span>
+              Dashboard
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link">
+              <span class="nav-icon">👥</span>
+              Pacientes
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link">
+              <span class="nav-icon">👨‍⚕️</span>
+              Profissionais
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link">
+              <span class="nav-icon">📅</span>
+              Agendamentos
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link">
+              <span class="nav-icon">📝</span>
+              Evoluções
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link">
+              <span class="nav-icon">🏥</span>
+              Unidades
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link">
+              <span class="nav-icon">📊</span>
+              Relatórios
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link">
+              <span class="nav-icon">⚙️</span>
+              Configurações
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </aside>
+    
+    <main class="main-content">
+      <header class="header">
+        <h1 class="page-title">Dashboard</h1>
+        <div class="user-menu">
+          <div class="user-info">
+            <div class="user-name" id="userName">Carregando...</div>
+            <div class="user-role" id="userRole"></div>
+          </div>
+          <div class="avatar" id="userAvatar">U</div>
+          <button class="logout-button" id="logoutButton">Sair</button>
+        </div>
+      </header>
+      
+      <section class="user-profile">
+        <h2 class="profile-title">Informações do Usuário</h2>
+        <div class="profile-grid">
+          <div class="profile-item">
+            <div class="profile-label">ID</div>
+            <div class="profile-value" id="userId"></div>
+          </div>
+          <div class="profile-item">
+            <div class="profile-label">Nome de usuário</div>
+            <div class="profile-value" id="usernameValue"></div>
+          </div>
+          <div class="profile-item">
+            <div class="profile-label">Nome completo</div>
+            <div class="profile-value" id="fullNameValue"></div>
+          </div>
+          <div class="profile-item">
+            <div class="profile-label">E-mail</div>
+            <div class="profile-value" id="emailValue"></div>
+          </div>
+          <div class="profile-item">
+            <div class="profile-label">Função</div>
+            <div class="profile-value" id="roleValue"></div>
+          </div>
+          <div class="profile-item">
+            <div class="profile-label">Último login</div>
+            <div class="profile-value" id="lastLoginValue"></div>
+          </div>
+        </div>
+      </section>
+      
+      <div class="card-grid">
+        <div class="card stat-card">
+          <div class="stat-title">Total de Pacientes</div>
+          <div class="stat-value">248</div>
+          <div class="stat-change">+12% este mês</div>
+        </div>
+        
+        <div class="card stat-card">
+          <div class="stat-title">Agendamentos</div>
+          <div class="stat-value">42</div>
+          <div class="stat-change">Próximos 7 dias</div>
+        </div>
+        
+        <div class="card stat-card">
+          <div class="stat-title">Profissionais</div>
+          <div class="stat-value">18</div>
+          <div class="stat-change">2 novos este mês</div>
+        </div>
+        
+        <div class="card stat-card">
+          <div class="stat-title">Unidades</div>
+          <div class="stat-value">3</div>
+          <div class="stat-change">1 nova unidade em desenvolvimento</div>
+        </div>
+      </div>
+      
+      <div class="table-container">
+        <h2 class="card-title">Agendamentos Recentes</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Paciente</th>
+              <th>Profissional</th>
+              <th>Data/Hora</th>
+              <th>Tipo</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="appointmentsTable">
+            <tr>
+              <td>Carregando...</td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Elementos DOM
+    const userNameElement = document.getElementById('userName');
+    const userRoleElement = document.getElementById('userRole');
+    const userAvatarElement = document.getElementById('userAvatar');
+    const logoutButton = document.getElementById('logoutButton');
+    const userIdElement = document.getElementById('userId');
+    const usernameValueElement = document.getElementById('usernameValue');
+    const fullNameValueElement = document.getElementById('fullNameValue');
+    const emailValueElement = document.getElementById('emailValue');
+    const roleValueElement = document.getElementById('roleValue');
+    const lastLoginValueElement = document.getElementById('lastLoginValue');
+    const appointmentsTableElement = document.getElementById('appointmentsTable');
+    
+    // Verificar autenticação
+    async function checkAuth() {
+      try {
+        const response = await fetch('/api/user', {
+          credentials: 'include'
+        });
+        
+        if (!response.ok) {
+          // Não autenticado, redirecionar para login
+          window.location.href = '/login.html';
+          return;
+        }
+        
+        const userData = await response.json();
+        displayUserData(userData);
+        
+        // Carregar dados de exemplo para a tabela
+        loadSampleAppointments();
+      } catch (error) {
+        console.error('Erro ao verificar autenticação:', error);
+        window.location.href = '/login.html';
+      }
+    }
+    
+    // Exibir dados do usuário
+    function displayUserData(user) {
+      userNameElement.textContent = user.fullName;
+      userRoleElement.textContent = translateRole(user.role);
+      
+      // Iniciais do usuário para o avatar
+      const initials = user.fullName
+        .split(' ')
+        .map(name => name.charAt(0))
+        .join('')
+        .substring(0, 2)
+        .toUpperCase();
+      userAvatarElement.textContent = initials;
+      
+      // Preencher os valores do perfil
+      userIdElement.textContent = user.id;
+      usernameValueElement.textContent = user.username;
+      fullNameValueElement.textContent = user.fullName;
+      emailValueElement.textContent = user.email;
+      roleValueElement.textContent = translateRole(user.role);
+      
+      // Formatar data de último login
+      const lastLogin = new Date(user.lastLogin);
+      lastLoginValueElement.textContent = lastLogin.toLocaleString('pt-BR');
+    }
+    
+    // Traduzir função do inglês para português
+    function translateRole(role) {
+      const translations = {
+        'admin': 'Administrador',
+        'coordinator': 'Coordenador',
+        'professional': 'Profissional',
+        'intern': 'Estagiário',
+        'secretary': 'Secretário(a)'
+      };
+      
+      return translations[role] || role;
+    }
+    
+    // Traduzir status
+    function translateStatus(status) {
+      const translations = {
+        'scheduled': 'Agendado',
+        'confirmed': 'Confirmado',
+        'completed': 'Concluído',
+        'cancelled': 'Cancelado',
+        'no_show': 'Não compareceu',
+        'pending': 'Pendente'
+      };
+      
+      return translations[status] || status;
+    }
+    
+    // Obter classe CSS para status
+    function getStatusClass(status) {
+      switch (status) {
+        case 'completed':
+          return 'status-completed';
+        case 'scheduled':
+        case 'confirmed':
+          return 'status-scheduled';
+        case 'cancelled':
+        case 'no_show':
+          return 'status-cancelled';
+        default:
+          return '';
+      }
+    }
+    
+    // Traduzir tipo de procedimento
+    function translateProcedureType(type) {
+      const translations = {
+        'psychology_aba': 'Psicologia - ABA',
+        'psychology_cbt': 'Psicologia - TCC',
+        'speech_therapy': 'Fonoaudiologia',
+        'physical_therapy': 'Fisioterapia',
+        'occupational_therapy': 'Terapia Ocupacional',
+        'evaluation': 'Avaliação',
+        'other': 'Outro',
+        'free_time': 'Tempo Livre'
+      };
+      
+      return translations[type] || type;
+    }
+    
+    // Carregar dados de exemplo para a tabela de agendamentos
+    function loadSampleAppointments() {
+      const sampleAppointments = [
+        {
+          patient: 'Maria Silva',
+          professional: 'Dr. João Santos',
+          dateTime: '2025-05-07T14:30:00',
+          procedureType: 'psychology_aba',
+          status: 'scheduled'
+        },
+        {
+          patient: 'Carlos Oliveira',
+          professional: 'Dra. Ana Pereira',
+          dateTime: '2025-05-06T10:00:00',
+          procedureType: 'physical_therapy',
+          status: 'completed'
+        },
+        {
+          patient: 'Juliana Costa',
+          professional: 'Dr. Marcos Lima',
+          dateTime: '2025-05-08T16:15:00',
+          procedureType: 'speech_therapy',
+          status: 'confirmed'
+        },
+        {
+          patient: 'Pedro Souza',
+          professional: 'Dra. Paula Ribeiro',
+          dateTime: '2025-05-05T09:00:00',
+          procedureType: 'evaluation',
+          status: 'cancelled'
+        },
+        {
+          patient: 'Luciana Ferreira',
+          professional: 'Dr. Roberto Alves',
+          dateTime: '2025-05-07T11:30:00',
+          procedureType: 'occupational_therapy',
+          status: 'scheduled'
+        }
+      ];
+      
+      // Limpar tabela
+      appointmentsTableElement.innerHTML = '';
+      
+      // Adicionar linhas
+      sampleAppointments.forEach(appointment => {
+        const row = document.createElement('tr');
+        
+        const dateTime = new Date(appointment.dateTime);
+        const formattedDateTime = dateTime.toLocaleString('pt-BR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        
+        row.innerHTML = `
+          <td>${appointment.patient}</td>
+          <td>${appointment.professional}</td>
+          <td>${formattedDateTime}</td>
+          <td>${translateProcedureType(appointment.procedureType)}</td>
+          <td><span class="status ${getStatusClass(appointment.status)}">${translateStatus(appointment.status)}</span></td>
+          <td><button class="action-button">Ver detalhes</button></td>
+        `;
+        
+        appointmentsTableElement.appendChild(row);
+      });
+    }
+    
+    // Manipular logout
+    logoutButton.addEventListener('click', async () => {
+      try {
+        await fetch('/api/logout', {
+          method: 'POST',
+          credentials: 'include'
+        });
+        
+        window.location.href = '/login.html';
+      } catch (error) {
+        console.error('Erro ao fazer logout:', error);
+        alert('Erro ao fazer logout. Tente novamente.');
+      }
+    });
+    
+    // Inicializar
+    document.addEventListener('DOMContentLoaded', checkAuth);
+  </script>
+</body>
+</html>

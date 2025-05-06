@@ -69,9 +69,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
   setupAuth(app);
 
-  // Rota para página de login estática (HTML puro, sem React)
-  app.get('/static-login', (req, res) => {
-    res.sendFile(path.join(process.cwd(), 'client/public/login-static.html'));
+  // Rotas para páginas HTML estáticas (sem depender do React)
+  // Estas rotas devem ter precedência sobre as rotas do Vite
+  app.get('/login.html', (req, res) => {
+    res.sendFile(path.join(process.cwd(), 'client/public/login.html'));
+  });
+
+  app.get('/dashboard.html', (req, res) => {
+    res.sendFile(path.join(process.cwd(), 'client/public/dashboard.html'));
+  });
+  
+  // Rota raiz para redirecionar para a página de login HTML
+  app.get('/pure-html', (req, res) => {
+    res.redirect('/login.html');
   });
 
   // API prefix
