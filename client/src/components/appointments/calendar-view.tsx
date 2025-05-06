@@ -137,6 +137,9 @@ export function CalendarView({ facilityId, professionalId, patientId }: Calendar
       },
       backgroundColor: getEventColor(appointment.procedureType, appointment.status),
       borderColor: getEventColor(appointment.procedureType, appointment.status),
+      display: 'block',
+      classNames: ["appointment-event"],
+      textColor: '#ffffff',
     }));
   };
   
@@ -271,8 +274,14 @@ export function CalendarView({ facilityId, professionalId, patientId }: Calendar
                 stickyHeaderDates
                 nowIndicator
                 slotEventOverlap={false}
-                eventMaxStack={3}
+                eventDisplay="block"
+                displayEventTime={true}
+                displayEventEnd={true}
+                eventMaxStack={1}
                 slotDuration="00:15:00"
+                slotLabelInterval="01:00"
+                dayMaxEvents={false}
+                forceEventDuration={true}
                 businessHours={{
                   daysOfWeek: [1, 2, 3, 4, 5, 6],
                   startTime: '08:00',

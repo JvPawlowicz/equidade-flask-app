@@ -137,9 +137,12 @@
 }
 
 .fc-timegrid-event {
-  min-height: 25px;
-  margin-bottom: 1px;
-  padding: 2px 4px;
+  min-height: 25px !important;
+  margin-bottom: 1px !important;
+  padding: 2px 4px !important;
+  border-radius: 4px !important;
+  height: auto !important;
+  overflow: hidden !important;
 }
 
 .fc-timegrid-event .fc-event-main {
@@ -147,15 +150,30 @@
 }
 
 .fc-event-title {
-  font-size: 0.8rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  padding: 1px 0;
+  font-size: 0.8rem !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  padding: 1px 0 !important;
+  display: block !important;
+  width: 100% !important;
 }
 
 .fc-timegrid-slot {
   height: 40px !important;
+}
+
+.fc-timegrid-event-harness {
+  position: absolute !important;
+  z-index: 1 !important;
+}
+
+.fc-view-harness {
+  background-color: #fff;
+}
+
+.fc-timegrid-event-harness-inset .fc-timegrid-event {
+  box-shadow: 0 0 0 1px #fff !important;
 }
 
 .fc-timegrid-slots td {
@@ -171,4 +189,19 @@
 
 .fc-day-today {
   background-color: rgba(59, 130, 246, 0.05) !important;
+}
+
+.fc .fc-timegrid-col.fc-day-today {
+  background-color: rgba(59, 130, 246, 0.05) !important;
+}
+
+.fc-timegrid-cols .fc-timegrid-col {
+  position: relative !important;
+  min-height: 1em !important;
+}
+
+/* Adicional */
+.fc-event {
+  z-index: 1 !important;
+  position: relative !important;
 }
