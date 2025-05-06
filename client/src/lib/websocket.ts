@@ -1,299 +1,384 @@
-import { User } from "@shared/schema";
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
-/**
- * WebSocketManager - Singleton para gerenciar conexões WebSocket
- * 
- * Esta classe gerencia uma única conexão WebSocket e permite
- * enviar e receber mensagens.
- */
-class WebSocketManager {
-  private static instance: WebSocketManager;
-  private socket: WebSocket | null = null;
-  private listeners: Map<string, Function[]> = new Map();
-  private reconnectTimer: NodeJS.Timeout | null = null;
-  private reconnectAttempts = 0;
-  private maxReconnectAttempts = 5;
-  private reconnectDelay = 3000; // 3 segundos
-  private currentUser: User | null = null;
-  private messageQueue: any[] = [];
-  private connected = false;
+// Tipos de estado da conexão WebSocket
+export type WebSocketStatus = 'connecting' | 'open' | 'closing' | 'closed' | 'reconnecting';
 
-  private constructor() {
-    // Construtor privado para padrão Singleton
-  }
+// Interface para mensagens
+export interface WebSocketMessage {
+  type: string;
+  payload: any;
+  id?: string;
+  timestamp?: number;
+  offline?: boolean;
+  pendingSync?: boolean;
+  localId?: string;
+}
 
-  public static getInstance(): WebSocketManager {
-    if (!WebSocketManager.instance) {
-      WebSocketManager.instance = new WebSocketManager();
+// Interface para mensagens offline que estendem a interface básica
+export interface OfflineWebSocketMessage extends WebSocketMessage {
+  offline: boolean;
+  pendingSync: boolean;
+  localId: string;
+}
+
+// Configurações do WebSocket
+interface WebSocketOptions {
+  // Tempo entre tentativas de reconexão (ms)
+  reconnectInterval?: number;
+  // Tempo máximo entre tentativas (ms)
+  maxReconnectInterval?: number;
+  // Número máximo de tentativas de reconexão
+  maxReconnectAttempts?: number;
+  // Tempo antes de considerar a conexão como inativa (ms)
+  pingInterval?: number;
+  // Suporte a conexões instáveis em mobile
+  mobileOptimized?: boolean;
+  // Armazenar mensagens não entregues para envio posterior
+  storeUndeliveredMessages?: boolean;
+  // Manipulador personalizado para reconexão
+  onReconnect?: () => void;
+  // Manipulador para quando a reconexão falhar completamente
+  onReconnectFailed?: () => void;
+}
+
+// Estado para rastreamento de reconexão
+interface ReconnectState {
+  attempts: number;
+  timeout: number | null;
+}
+
+// Hook para WebSocket com otimização para mobile
+export function useWebSocket(
+  url: string,
+  options: WebSocketOptions = {}
+) {
+  const defaultOptions: WebSocketOptions = {
+    reconnectInterval: 1000,
+    maxReconnectInterval: 30000,
+    maxReconnectAttempts: 50, // Mais tentativas para redes móveis instáveis
+    pingInterval: 30000,
+    mobileOptimized: true,
+    storeUndeliveredMessages: true,
+  };
+
+  const opts = { ...defaultOptions, ...options };
+  const socketRef = useRef<WebSocket | null>(null);
+  const reconnectRef = useRef<ReconnectState>({ attempts: 0, timeout: null });
+  const messageQueueRef = useRef<WebSocketMessage[]>([]);
+  const [status, setStatus] = useState<WebSocketStatus>('closed');
+  const [lastMessage, setLastMessage] = useState<WebSocketMessage | null>(null);
+  const { toast } = useToast();
+
+  // Determinar protocolo WebSocket com base no protocolo da página
+  const getWebSocketUrl = useCallback(() => {
+    // Se o URL já incluir ws:// ou wss://, use-o como está
+    if (url.startsWith('ws://') || url.startsWith('wss://')) {
+      return url;
     }
-    return WebSocketManager.instance;
-  }
 
-  /**
-   * Conecta ao servidor WebSocket e autentica o usuário
-   */
-  public connect(user: User): void {
-    if (this.socket && this.connected) {
-      console.log('WebSocket: Já conectado');
-      return;
+    // Caso contrário, adicione o protocolo apropriado
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    // Se o URL começar com uma barra, considere-o um caminho relativo
+    if (url.startsWith('/')) {
+      return `${protocol}//${window.location.host}${url}`;
     }
+    // Caso contrário, considere-o um URL completo sem protocolo
+    return `${protocol}//${url}`;
+  }, [url]);
 
-    this.currentUser = user;
-    this.reconnectAttempts = 0;
-    this.establishConnection();
-  }
+  // Função para conectar ao WebSocket
+  const connect = useCallback(() => {
+    if (socketRef.current?.readyState === WebSocket.OPEN) return;
 
-  /**
-   * Estabelece a conexão WebSocket e configura handlers
-   */
-  private establishConnection(): void {
     try {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/ws`;
-      
-      console.log(`WebSocket: Conectando a ${wsUrl}`);
-      this.socket = new WebSocket(wsUrl);
+      const websocketUrl = getWebSocketUrl();
+      const socket = new WebSocket(websocketUrl);
+      socketRef.current = socket;
+      setStatus('connecting');
 
-      this.socket.onopen = this.handleOpen.bind(this);
-      this.socket.onmessage = this.handleMessage.bind(this);
-      this.socket.onclose = this.handleClose.bind(this);
-      this.socket.onerror = this.handleError.bind(this);
-    } catch (error) {
-      console.error('WebSocket: Erro ao estabelecer conexão:', error);
-      this.scheduleReconnect();
-    }
-  }
+      socket.onopen = () => {
+        setStatus('open');
+        console.log('WebSocket conectado');
+        reconnectRef.current.attempts = 0;
 
-  /**
-   * Manipula evento de abertura da conexão
-   */
-  private handleOpen(): void {
-    console.log('WebSocket: Conexão estabelecida');
-    this.connected = true;
-    this.reconnectAttempts = 0;
-    
-    // Autenticar usuário
-    if (this.currentUser) {
-      this.socket?.send(JSON.stringify({
-        type: 'auth',
-        userId: this.currentUser.id,
-        token: 'session-auth' // Podemos melhorar isso depois
-      }));
-    }
-    
-    // Enviar mensagens em fila
-    this.flushMessageQueue();
-    
-    // Notificar ouvintes da conexão
-    this.emit('connected', { timestamp: new Date().toISOString() });
-  }
-
-  /**
-   * Manipula mensagens recebidas
-   */
-  private handleMessage(event: MessageEvent): void {
-    try {
-      const data = JSON.parse(event.data);
-      console.log('WebSocket: Mensagem recebida:', data);
-      
-      // Emitir evento baseado no tipo de mensagem
-      if (data.type) {
-        this.emit(data.type, data);
-      }
-      
-      // Emitir evento para qualquer mensagem
-      this.emit('message', data);
-    } catch (error) {
-      console.error('WebSocket: Erro ao processar mensagem:', error);
-    }
-  }
-
-  /**
-   * Manipula fechamento da conexão
-   */
-  private handleClose(event: CloseEvent): void {
-    console.log(`WebSocket: Conexão fechada. Código: ${event.code}, Razão: ${event.reason}`);
-    this.connected = false;
-    this.socket = null;
-    
-    // Notificar ouvintes da desconexão
-    this.emit('disconnected', { 
-      code: event.code, 
-      reason: event.reason,
-      timestamp: new Date().toISOString() 
-    });
-    
-    // Tentar reconectar se não foi um fechamento limpo
-    if (event.code !== 1000) {
-      this.scheduleReconnect();
-    }
-  }
-
-  /**
-   * Manipula erros de conexão
-   */
-  private handleError(event: Event): void {
-    console.error('WebSocket: Erro na conexão:', event);
-    this.emit('error', { event, timestamp: new Date().toISOString() });
-  }
-
-  /**
-   * Programa tentativa de reconexão
-   */
-  private scheduleReconnect(): void {
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
-    }
-    
-    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.log('WebSocket: Máximo de tentativas de reconexão atingido');
-      this.emit('reconnect_failed', { 
-        attempts: this.reconnectAttempts,
-        timestamp: new Date().toISOString() 
-      });
-      return;
-    }
-    
-    this.reconnectAttempts++;
-    const delay = this.reconnectDelay * this.reconnectAttempts;
-    
-    console.log(`WebSocket: Tentando reconectar em ${delay}ms (tentativa ${this.reconnectAttempts})`);
-    
-    this.reconnectTimer = setTimeout(() => {
-      console.log(`WebSocket: Tentando reconexão ${this.reconnectAttempts}/${this.maxReconnectAttempts}`);
-      this.establishConnection();
-    }, delay);
-  }
-
-  /**
-   * Envia mensagens em fila quando a conexão é estabelecida
-   */
-  private flushMessageQueue(): void {
-    if (!this.connected || !this.socket) return;
-    
-    while (this.messageQueue.length > 0) {
-      const message = this.messageQueue.shift();
-      try {
-        this.socket.send(JSON.stringify(message));
-        console.log('WebSocket: Mensagem em fila enviada:', message);
-      } catch (error) {
-        console.error('WebSocket: Erro ao enviar mensagem em fila:', error);
-        // Recolocar na fila se for erro de conexão
-        this.messageQueue.unshift(message);
-        break;
-      }
-    }
-  }
-
-  /**
-   * Desconecta do servidor WebSocket
-   */
-  public disconnect(): void {
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
-      this.reconnectTimer = null;
-    }
-    
-    if (this.socket) {
-      this.socket.close(1000, 'Desconexão solicitada pelo cliente');
-      this.socket = null;
-    }
-    
-    this.connected = false;
-    this.currentUser = null;
-    console.log('WebSocket: Desconectado');
-  }
-
-  /**
-   * Envia dados para o servidor
-   * @returns true se enviado com sucesso, false se enfileirado ou falhou
-   */
-  public send(data: any): boolean {
-    if (!this.socket || !this.connected) {
-      console.log('WebSocket: Não conectado, enfileirando mensagem');
-      this.messageQueue.push(data);
-      return false;
-    }
-    
-    try {
-      this.socket.send(JSON.stringify(data));
-      return true;
-    } catch (error) {
-      console.error('WebSocket: Erro ao enviar mensagem:', error);
-      this.messageQueue.push(data);
-      return false;
-    }
-  }
-
-  /**
-   * Envia mensagem de chat
-   */
-  public sendChatMessage(content: string, recipientId?: number, groupId?: number): boolean {
-    if (!this.currentUser) {
-      console.error('WebSocket: Usuário não autenticado');
-      return false;
-    }
-    
-    return this.send({
-      type: 'chat_message',
-      senderId: this.currentUser.id,
-      recipientId,
-      groupId,
-      content,
-      timestamp: new Date().toISOString()
-    });
-  }
-
-  /**
-   * Registra callback para um evento
-   */
-  public on(event: string, callback: Function): void {
-    if (!this.listeners.has(event)) {
-      this.listeners.set(event, []);
-    }
-    this.listeners.get(event)?.push(callback);
-  }
-
-  /**
-   * Remove callback para um evento
-   */
-  public off(event: string, callback: Function): void {
-    if (this.listeners.has(event)) {
-      const callbacks = this.listeners.get(event);
-      if (callbacks) {
-        const index = callbacks.indexOf(callback);
-        if (index !== -1) {
-          callbacks.splice(index, 1);
+        // Enviar mensagens que estavam na fila
+        if (opts.storeUndeliveredMessages && messageQueueRef.current.length > 0) {
+          messageQueueRef.current.forEach(msg => {
+            if (socket.readyState === WebSocket.OPEN) {
+              socket.send(JSON.stringify(msg));
+            }
+          });
+          messageQueueRef.current = [];
         }
-      }
-    }
-  }
 
-  /**
-   * Emite evento para todos os callbacks registrados
-   */
-  private emit(event: string, data: any): void {
-    if (this.listeners.has(event)) {
-      const callbacks = this.listeners.get(event);
-      if (callbacks) {
-        callbacks.forEach((callback) => {
-          try {
-            callback(data);
-          } catch (error) {
-            console.error(`WebSocket: Erro ao executar callback para evento ${event}`, error);
-          }
-        });
-      }
-    }
-  }
+        // Iniciar ping para manter a conexão ativa em redes móveis
+        if (opts.mobileOptimized && opts.pingInterval) {
+          startPing();
+        }
+      };
 
-  /**
-   * Verifica se está conectado
-   */
-  public isConnected(): boolean {
-    return this.connected && this.socket !== null;
+      socket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          setLastMessage(data);
+        } catch (e) {
+          console.error('Erro ao processar mensagem WebSocket:', e);
+        }
+      };
+
+      socket.onclose = (event) => {
+        setStatus('closed');
+        console.log(`WebSocket fechado, código: ${event.code}, razão: ${event.reason}`);
+        stopPing();
+
+        // Não tentar reconectar automaticamente em casos de fechamento normal
+        if (event.code !== 1000) {
+          scheduleReconnect();
+        }
+      };
+
+      socket.onerror = (error) => {
+        console.error('Erro no WebSocket:', error);
+        socket.close();
+      };
+
+    } catch (error) {
+      console.error('Erro ao conectar WebSocket:', error);
+      scheduleReconnect();
+    }
+  }, [getWebSocketUrl, opts.pingInterval, opts.mobileOptimized, opts.storeUndeliveredMessages]);
+
+  // Função para agendar reconexão
+  const scheduleReconnect = useCallback(() => {
+    if (reconnectRef.current.timeout !== null) {
+      clearTimeout(reconnectRef.current.timeout);
+    }
+
+    if (reconnectRef.current.attempts >= (opts.maxReconnectAttempts || 50)) {
+      console.log('Número máximo de tentativas de reconexão atingido');
+      if (opts.onReconnectFailed) {
+        opts.onReconnectFailed();
+      }
+      
+      // Notificar o usuário
+      toast({
+        title: "Falha na conexão",
+        description: "Não foi possível estabelecer conexão com o servidor. Verifique sua conexão de internet.",
+        variant: "destructive"
+      });
+      
+      return;
+    }
+
+    // Tempo exponencial de espera com máximo
+    const delay = Math.min(
+      (opts.reconnectInterval || 1000) * Math.pow(1.5, reconnectRef.current.attempts),
+      opts.maxReconnectInterval || 30000
+    );
+
+    setStatus('reconnecting');
+    
+    // Mostrar mensagem apenas nas primeiras tentativas para não irritar o usuário
+    if (reconnectRef.current.attempts === 0) {
+      toast({
+        title: "Reconectando...",
+        description: "Tentando reestabelecer a conexão com o servidor.",
+      });
+    }
+
+    reconnectRef.current.attempts += 1;
+    reconnectRef.current.timeout = window.setTimeout(() => {
+      if (opts.onReconnect) {
+        opts.onReconnect();
+      }
+      connect();
+    }, delay);
+  }, [connect, opts.maxReconnectAttempts, opts.reconnectInterval, opts.maxReconnectInterval, opts.onReconnect, opts.onReconnectFailed, toast]);
+
+  // Função para ping para manter conexão ativa
+  const pingTimeoutRef = useRef<number | null>(null);
+
+  const startPing = useCallback(() => {
+    if (pingTimeoutRef.current) {
+      clearTimeout(pingTimeoutRef.current);
+    }
+
+    pingTimeoutRef.current = window.setTimeout(() => {
+      if (socketRef.current?.readyState === WebSocket.OPEN) {
+        socketRef.current.send(JSON.stringify({ type: 'PING' }));
+      }
+      startPing();
+    }, opts.pingInterval);
+  }, [opts.pingInterval]);
+
+  const stopPing = useCallback(() => {
+    if (pingTimeoutRef.current) {
+      clearTimeout(pingTimeoutRef.current);
+      pingTimeoutRef.current = null;
+    }
+  }, []);
+
+  // Enviar mensagem através do WebSocket
+  const sendMessage = useCallback((message: WebSocketMessage) => {
+    const enhancedMessage = {
+      ...message,
+      id: message.id || `msg_${Date.now()}${Math.random().toString(36).substr(2, 5)}`,
+      timestamp: message.timestamp || Date.now()
+    };
+
+    if (socketRef.current?.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify(enhancedMessage));
+      return true;
+    } else {
+      // Se o WebSocket não estiver aberto e tivermos a opção de armazenar mensagens
+      if (opts.storeUndeliveredMessages) {
+        messageQueueRef.current.push(enhancedMessage);
+        
+        // Tentativa de reconexão se não estiver já tentando
+        if (status !== 'connecting' && status !== 'reconnecting') {
+          scheduleReconnect();
+        }
+        
+        return false;
+      }
+      
+      return false;
+    }
+  }, [status, scheduleReconnect, opts.storeUndeliveredMessages]);
+
+  // Desconectar WebSocket
+  const disconnect = useCallback(() => {
+    if (socketRef.current) {
+      setStatus('closing');
+      socketRef.current.close();
+      socketRef.current = null;
+    }
+
+    stopPing();
+
+    if (reconnectRef.current.timeout !== null) {
+      clearTimeout(reconnectRef.current.timeout);
+      reconnectRef.current.timeout = null;
+    }
+  }, [stopPing]);
+
+  // Conectar WebSocket quando o componente montar
+  useEffect(() => {
+    connect();
+
+    // Adicionar listeners para conectividade de rede
+    const handleOnline = () => {
+      if (status === 'closed' || status === 'reconnecting') {
+        connect();
+      }
+    };
+
+    const handleOffline = () => {
+      if (socketRef.current) {
+        // Apenas registrar o estado, não fechar o socket ainda
+        // pois a conexão pode ser retomada
+        console.log('Dispositivo offline, aguardando reconexão à rede...');
+      }
+    };
+
+    // Detectar mudanças no estado da rede
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    // Detectar quando o aplicativo volta ao primeiro plano em dispositivos móveis
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && 
+          (status === 'closed' || status === 'reconnecting')) {
+        connect();
+      }
+    });
+
+    return () => {
+      disconnect();
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [connect, disconnect, status]);
+
+  return {
+    status,
+    lastMessage,
+    sendMessage,
+    connect,
+    disconnect,
+    reconnect: connect,
+    pendingMessages: messageQueueRef.current.length
+  };
+}
+
+// Helper para guardar mensagens localmente para o modo offline
+export function storeOfflineMessage(channelId: string, message: WebSocketMessage): void {
+  try {
+    const key = `offline_messages_${channelId}`;
+    const stored = localStorage.getItem(key);
+    const messages = stored ? JSON.parse(stored) : [];
+    
+    const offlineMessage: OfflineWebSocketMessage = {
+      ...message,
+      offline: true,
+      pendingSync: true,
+      localId: `local_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      timestamp: message.timestamp || Date.now()
+    };
+    
+    messages.push(offlineMessage);
+    
+    // Limitar o número de mensagens offline para economizar espaço
+    const limitedMessages = messages.slice(-100);
+    localStorage.setItem(key, JSON.stringify(limitedMessages));
+  } catch (error) {
+    console.error('Erro ao armazenar mensagem offline:', error);
   }
 }
 
-export const webSocketManager = WebSocketManager.getInstance();
-export default webSocketManager;
+// Helper para obter mensagens offline
+export function getOfflineMessages(channelId: string): WebSocketMessage[] {
+  try {
+    const key = `offline_messages_${channelId}`;
+    const stored = localStorage.getItem(key);
+    return stored ? JSON.parse(stored) : [];
+  } catch (error) {
+    console.error('Erro ao recuperar mensagens offline:', error);
+    return [];
+  }
+}
+
+// Continuando com a implementação para mensagens offline...
+
+// Helper para sincronizar mensagens offline quando a conexão voltar
+export async function syncOfflineMessages(
+  channelId: string, 
+  sendFn: (message: WebSocketMessage) => boolean
+): Promise<number> {
+  try {
+    const messages = getOfflineMessages(channelId) as OfflineWebSocketMessage[];
+    let syncedCount = 0;
+    
+    // Sincronizar cada mensagem
+    for (const message of messages) {
+      if (message.pendingSync) {
+        const success = sendFn(message);
+        
+        if (success) {
+          syncedCount++;
+          message.pendingSync = false;
+        }
+      }
+    }
+    
+    // Atualizar o armazenamento com as mensagens que ainda não foram sincronizadas
+    const pendingMessages = messages.filter(m => m.pendingSync);
+    localStorage.setItem(`offline_messages_${channelId}`, JSON.stringify(pendingMessages));
+    
+    return syncedCount;
+  } catch (error) {
+    console.error('Erro ao sincronizar mensagens offline:', error);
+    return 0;
+  }
+}

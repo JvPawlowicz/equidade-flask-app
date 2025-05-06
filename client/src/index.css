@@ -2,6 +2,83 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Mobile optimizations */
+@layer utilities {
+  /* Utility para remover tap highlight em dispositivos touch */
+  .tap-highlight-transparent {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Otimização para manipulação touch */
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+  
+  /* Classes para melhorar cliques em dispositivos touch */
+  .touch-target-large {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Classes para rolagem suave em dispositivos móveis */
+  .scroll-smooth {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Prevenir zoom em dispositivos iOS em foco de inputs */
+  .prevent-zoom {
+    font-size: 16px;
+  }
+  
+  /* Sticky safe para mobile (considerar safe-area) */
+  .sticky-safe-bottom {
+    position: sticky;
+    bottom: 0;
+    bottom: env(safe-area-inset-bottom, 0);
+  }
+  
+  .sticky-safe-top {
+    position: sticky;
+    top: 0;
+    top: env(safe-area-inset-top, 0);
+  }
+  
+  /* Espaçamento para safe-area em dispositivos modernos */
+  .padding-safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0.5rem);
+  }
+  
+  .padding-safe-top {
+    padding-top: env(safe-area-inset-top, 0.5rem);
+  }
+  
+  /* Classe para ocultar elementos quando offline */
+  .hide-when-offline {
+    display: none;
+  }
+  
+  /* WebKit scrollbar customization */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background-color: transparent;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 dark:bg-gray-700;
+    border-radius: 3px;
+  }
+  
+  /* Utilidade para backface visibility (melhorar performance em transforms) */
+  .backface-hidden {
+    backface-visibility: hidden;
+  }
+}
+
 @layer base {
   :root {
     /* Cores padrão */
@@ -272,9 +349,99 @@
     grid-column: 1;
   }
   
-  @media (max-width: 768px) {
+  /* Otimizações para mobile */
+@media (max-width: 768px) {
+    /* Calendário em mobile */
     .calendar-grid {
       grid-template-columns: 60px repeat(1, 1fr);
+    }
+    
+    /* Ajustes para melhorar experiência touch */
+    button, 
+    a, 
+    [role="button"], 
+    input[type="button"], 
+    input[type="submit"], 
+    input[type="reset"] {
+      @apply touch-target-large touch-manipulation tap-highlight-transparent;
+    }
+    
+    /* Espaçamento maior entre elementos em formulários */
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+    
+    /* Labels mais visíveis em mobile */
+    label {
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
+      display: block;
+    }
+    
+    /* Inputs e selects maiores em mobile */
+    input:not([type="checkbox"]):not([type="radio"]),
+    select,
+    textarea {
+      font-size: 16px; /* Prevenir zoom em iOS */
+      height: 48px;
+      padding: 0.75rem;
+    }
+    
+    textarea {
+      height: auto;
+      min-height: 100px;
+    }
+    
+    /* Botões mais fáceis de clicar */
+    .btn, button:not(.inline-btn) {
+      min-height: 44px;
+      padding: 0.75rem 1rem;
+    }
+    
+    /* Ajustes para melhorar visibilidade na rolagem */
+    .table-responsive {
+      @apply scroll-smooth custom-scrollbar;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Ajustes para tabelas em mobile */
+    .mobile-stack-table th {
+      display: none;
+    }
+    
+    .mobile-stack-table td {
+      display: block;
+      width: 100%;
+      text-align: right;
+      padding-left: 50%;
+      position: relative;
+    }
+    
+    .mobile-stack-table td::before {
+      content: attr(data-label);
+      position: absolute;
+      left: 1rem;
+      width: 45%;
+      white-space: nowrap;
+      text-align: left;
+      font-weight: 500;
+    }
+    
+    /* Melhorar o espaçamento em cards e listas */
+    .card {
+      margin-bottom: 1rem;
+    }
+    
+    /* Ajustar menus dropdowns */
+    .dropdown-content {
+      width: 100%;
+      max-height: 50vh;
+    }
+    
+    /* Melhorar legibilidade de fonte */
+    p, li, td, th {
+      font-size: 1rem;
+      line-height: 1.6;
     }
   }
 

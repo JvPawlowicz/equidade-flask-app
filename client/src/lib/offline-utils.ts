@@ -257,7 +257,10 @@ export function useOfflineMutation<T, TData = unknown>(
         // Solicitar sincronização quando ficar online novamente
         if (navigator.serviceWorker && navigator.serviceWorker.controller) {
           navigator.serviceWorker.ready.then(registration => {
-            registration.sync.register('sync-pending-data');
+            // Verificar se a API Background Sync está disponível
+            if ('sync' in registration) {
+              (registration as any).sync.register('sync-pending-data');
+            }
           });
         }
         
