@@ -79,6 +79,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.sendFile(path.join(process.cwd(), 'client/public/dashboard.html'));
   });
   
+  app.get('/patients.html', (req, res) => {
+    res.sendFile(path.join(process.cwd(), 'client/public/patients.html'));
+  });
+  
   // Rota raiz para redirecionar para a página de login HTML
   app.get('/pure-html', (req, res) => {
     res.redirect('/login.html');
