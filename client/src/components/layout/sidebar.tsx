@@ -127,16 +127,18 @@ export function Sidebar() {
           {/* Navigation */}
           <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
             {filteredNavItems.map((item) => (
-              <Link key={item.path} href={item.path}>
-                <a className={cn(
+              <Link 
+                key={item.path} 
+                href={item.path}
+                className={cn(
                   "flex items-center px-2 py-2 text-sm font-medium rounded-md group transition-colors",
                   location === item.path 
                     ? "text-primary bg-primary/10"
                     : "text-sidebar-foreground hover:text-primary hover:bg-primary/10"
-                )}>
-                  {item.icon}
-                  <span className="ml-3">{item.label}</span>
-                </a>
+                )}
+              >
+                {item.icon}
+                <span className="ml-3">{item.label}</span>
               </Link>
             ))}
           </nav>

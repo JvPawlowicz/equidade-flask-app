@@ -107,6 +107,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API prefix
   const apiPrefix = "/api";
 
+  // Rota para listar todos os usuários
+  app.get(`${apiPrefix}/users`, async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Não autenticado" });
+    }
+    
+    try {
+      const allUsers = await db.query.users.findMany();
+      res.json(allUsers);
+    } catch (error) {
+      console.error("Erro ao buscar usuários:", error);
+      res.status(500).json({ error: "Erro ao buscar usuários" });
+    }
+  });
+
   // Configuração do servidor HTTP e WebSocket
   const httpServer = createServer(app);
   

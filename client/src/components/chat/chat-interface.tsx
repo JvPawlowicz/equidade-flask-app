@@ -25,9 +25,9 @@ export function ChatInterface() {
   const [selectedMembers, setSelectedMembers] = useState<number[]>([]);
   const messageContainerRef = useRef<HTMLDivElement>(null);
   
-  // Fetch users
+  // Fetch all users
   const { data: users, isLoading: isLoadingUsers } = useQuery<any[]>({
-    queryKey: ["/api/user"],
+    queryKey: ["/api/users"],
   });
   
   // Fetch chat groups
