@@ -107,11 +107,135 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API prefix
   const apiPrefix = "/api";
 
-  // Apenas servidor HTTP simples, WebSocket temporariamente desativado
+  // Configuração do servidor HTTP e WebSocket
   const httpServer = createServer(app);
   
-  // Mensagem explicativa no console
-  console.log("WebSocket desativado temporariamente até resolvermos problemas de autenticação");
+  // Configurar WebSocket em um caminho separado para não conflitar com HMR do Vite
+  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+
+  // Map para armazenar conexões ativas por ID de usuário
+  const activeConnections = new Map<number, WebSocket>();
+  
+  wss.on('connection', (ws: WebSocket) => {
+    console.log('Nova conexão WebSocket estabelecida');
+    
+    // Autenticar o usuário
+    ws.on('message', (message: string) => {
+      try {
+        const data = JSON.parse(message);
+        
+        // Autenticação inicial
+        if (data.type === 'auth') {
+          const userId = parseInt(data.userId);
+          const authToken = data.token;
+          
+          // Verificar autenticação (simplificado, estamos apenas usando userId)
+          if (userId && !isNaN(userId)) {
+            // Armazenar a conexão mapeada pelo ID do usuário
+            activeConnections.set(userId, ws);
+            
+            // Enviar confirmação
+            ws.send(JSON.stringify({
+              type: 'auth_success',
+              userId: userId,
+              timestamp: new Date().toISOString()
+            }));
+            
+            console.log(`Usuário ${userId} autenticado via WebSocket`);
+          } else {
+            ws.send(JSON.stringify({
+              type: 'auth_error',
+              message: 'Falha na autenticação',
+              timestamp: new Date().toISOString()
+            }));
+          }
+        }
+        
+        // Mensagem de chat
+        if (data.type === 'chat_message' && activeConnections.has(parseInt(data.senderId))) {
+          // Processar mensagem
+          const { recipientId, groupId, content, senderId } = data;
+          
+          // Salvar mensagem no banco
+          (async () => {
+            try {
+              const [savedMessage] = await db.insert(chatMessages).values({
+                senderId: parseInt(senderId),
+                recipientId: recipientId ? parseInt(recipientId) : null,
+                groupId: groupId ? parseInt(groupId) : null,
+                content: content,
+                isRead: false
+              }).returning();
+              
+              // Mensagem direta para um usuário
+              if (recipientId && activeConnections.has(parseInt(recipientId))) {
+                const recipientWs = activeConnections.get(parseInt(recipientId));
+                if (recipientWs && recipientWs.readyState === WebSocket.OPEN) {
+                  recipientWs.send(JSON.stringify({
+                    type: 'new_message',
+                    message: savedMessage,
+                    timestamp: new Date().toISOString()
+                  }));
+                }
+              }
+              
+              // Mensagem para um grupo
+              if (groupId) {
+                // Buscar membros do grupo
+                const groupMembers = await db.query.chatGroupMembers.findMany({
+                  where: eq(chatGroupMembers.groupId, parseInt(groupId))
+                });
+                
+                // Enviar para todos os membros online, exceto o remetente
+                for (const member of groupMembers) {
+                  if (member.userId !== parseInt(senderId) && activeConnections.has(member.userId)) {
+                    const memberWs = activeConnections.get(member.userId);
+                    if (memberWs && memberWs.readyState === WebSocket.OPEN) {
+                      memberWs.send(JSON.stringify({
+                        type: 'new_group_message',
+                        message: savedMessage,
+                        groupId: parseInt(groupId),
+                        timestamp: new Date().toISOString()
+                      }));
+                    }
+                  }
+                }
+              }
+              
+              // Confirmar envio para o remetente
+              ws.send(JSON.stringify({
+                type: 'message_sent',
+                messageId: savedMessage.id,
+                timestamp: new Date().toISOString()
+              }));
+              
+            } catch (error) {
+              console.error('Erro ao salvar mensagem:', error);
+              ws.send(JSON.stringify({
+                type: 'error',
+                message: 'Erro ao processar mensagem',
+                timestamp: new Date().toISOString()
+              }));
+            }
+          })();
+        }
+      } catch (error) {
+        console.error('Erro ao processar mensagem WebSocket:', error);
+      }
+    });
+    
+    // Gerenciar desconexão
+    ws.on('close', () => {
+      // Remover conexão ao desconectar
+      for (const [userId, connection] of activeConnections.entries()) {
+        if (connection === ws) {
+          activeConnections.delete(userId);
+          console.log(`Usuário ${userId} desconectado do WebSocket`);
+          break;
+        }
+      }
+    });
+  });
 
   // API routes
 
