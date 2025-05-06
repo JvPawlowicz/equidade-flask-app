@@ -1162,7 +1162,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         search
       } = req.query;
 
-      // Construir a consulta base selecionando campos específicos para evitar problemas com o campo description
+      // Construir a consulta base selecionando campos específicos existentes no banco
       let query = db.select({
         id: documents.id,
         name: documents.name,
@@ -1179,8 +1179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: documents.createdAt,
         updatedAt: documents.updatedAt,
         version: documents.version,
-        parentDocumentId: documents.parentDocumentId,
-        needsSignature: documents.needsSignature
+        description: documents.description
       }).from(documents);
       
       // Aplicar filtros conforme necessário
