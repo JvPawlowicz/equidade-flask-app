@@ -114,27 +114,43 @@ export function setupAuth(app: Express) {
 
   app.post("/api/login", (req, res, next) => {
     try {
+      console.log("SERVIDOR: Recebendo solicitação de login:", JSON.stringify(req.body));
+      
       // Validate request body against the schema
       loginUserSchema.parse(req.body);
+      console.log("SERVIDOR: Validação do schema bem-sucedida");
 
       passport.authenticate("local", (err, user, info) => {
-        if (err) return next(err);
+        if (err) {
+          console.error("SERVIDOR: Erro durante autenticação:", err);
+          return next(err);
+        }
         if (!user) {
+          console.log("SERVIDOR: Usuário não encontrado ou senha inválida");
           return res.status(401).json({ error: "Credenciais inválidas" });
         }
         
+        console.log("SERVIDOR: Usuário autenticado com sucesso:", user.username);
+        
         req.login(user, (err) => {
-          if (err) return next(err);
+          if (err) {
+            console.error("SERVIDOR: Erro durante login na sessão:", err);
+            return next(err);
+          }
+          
+          console.log("SERVIDOR: Sessão estabelecida com sucesso");
           
           // Update last login
           storage.updateUser(user.id, { lastLogin: new Date() });
           
           // Don't send the password back
           const { password, ...userWithoutPassword } = user;
+          console.log("SERVIDOR: Enviando resposta de login bem-sucedido");
           return res.json(userWithoutPassword);
         });
       })(req, res, next);
     } catch (error) {
+      console.error("SERVIDOR: Erro durante o login:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: "Dados de login inválidos", details: error.errors });
       }

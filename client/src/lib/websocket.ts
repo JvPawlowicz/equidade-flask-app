@@ -26,6 +26,11 @@ class WebSocketManager {
     }
 
     try {
+      // Desabilitar temporariamente o WebSocket até resolvermos o login
+      console.log('WebSocket: Conexão temporariamente desabilitada enquanto resolvemos o login');
+      return;
+      
+      /*
       // Usar o hostname atual garantindo compatibilidade com o ambiente Replit
       const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsHostname = window.location.host;
@@ -41,35 +46,41 @@ class WebSocketManager {
       console.log('WebSocket: Tentando conectar em', wsUrl);
       
       this.socket = new WebSocket(wsUrl);
+      */
       
-      this.socket.onopen = () => {
-        console.log('WebSocket: Conexão estabelecida');
-        this.connected = true;
-        this.reconnectAttempts = 0;
-        this.emit('connected', { connected: true });
-      };
-      
-      this.socket.onclose = () => {
-        console.log('WebSocket: Conexão fechada');
-        this.connected = false;
-        this.socket = null;
-        this.emit('disconnected', { connected: false });
-        this.scheduleReconnect(user);
-      };
-      
-      this.socket.onerror = (error) => {
-        console.error('WebSocket: Erro na conexão', error);
-        this.emit('error', error);
-      };
-      
-      this.socket.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          this.emit(data.type, data);
-        } catch (error) {
-          console.error('WebSocket: Erro ao processar mensagem', error);
-        }
-      };
+      // Gerenciar eventos WebSocket temporariamente desativado
+      /*
+      if (this.socket) {
+        this.socket.onopen = () => {
+          console.log('WebSocket: Conexão estabelecida');
+          this.connected = true;
+          this.reconnectAttempts = 0;
+          this.emit('connected', { connected: true });
+        };
+        
+        this.socket.onclose = () => {
+          console.log('WebSocket: Conexão fechada');
+          this.connected = false;
+          this.socket = null;
+          this.emit('disconnected', { connected: false });
+          this.scheduleReconnect(user);
+        };
+        
+        this.socket.onerror = (error) => {
+          console.error('WebSocket: Erro na conexão', error);
+          this.emit('error', error);
+        };
+        
+        this.socket.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            this.emit(data.type, data);
+          } catch (error) {
+            console.error('WebSocket: Erro ao processar mensagem', error);
+          }
+        };
+      }
+      */
     } catch (error) {
       console.error('WebSocket: Erro ao criar conexão', error);
     }

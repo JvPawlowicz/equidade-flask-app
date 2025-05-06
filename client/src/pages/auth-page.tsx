@@ -3,6 +3,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import { useToast } from "@/hooks/use-toast";
+import { queryClient } from "@/lib/queryClient";
 import { z } from "zod";
 import {
   Card,
@@ -51,6 +53,7 @@ export default function AuthPage() {
   const [activeTab, setActiveTab] = useState<string>("login");
   const { user, loginMutation, registerMutation } = useAuth();
   const [location, navigate] = useLocation();
+  const { toast } = useToast();
 
   // If user is already logged in, redirect to dashboard
   useEffect(() => {
@@ -83,11 +86,46 @@ export default function AuthPage() {
 
   const onLoginSubmit = (data: LoginFormValues) => {
     console.log("Tentando fazer login com:", data);
-    if (loginMutation && typeof loginMutation.mutate === 'function') {
-      loginMutation.mutate(data);
-    } else {
-      console.error("loginMutation.mutate não é uma função", loginMutation);
-    }
+    
+    // Realizar login manual sem depender da mutação
+    fetch('/api/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+      credentials: 'include',
+    })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Falha na autenticação');
+        }
+        return response.json();
+      })
+      .then(userData => {
+        console.log('Login bem-sucedido:', userData);
+        
+        // Atualizar manualmente o cache do query client
+        queryClient.setQueryData(['/api/user'], userData);
+        queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+        
+        // Mostrar toast de sucesso
+        toast({
+          title: 'Login bem-sucedido',
+          description: `Bem-vindo(a), ${userData.fullName}!`,
+        });
+        
+        // Redirecionar para a página inicial
+        navigate('/');
+      })
+      .catch(error => {
+        console.error('Erro no login:', error);
+        toast({
+          title: 'Falha no login',
+          description: error.message,
+          variant: 'destructive',
+        });
+      });
   };
 
   const onRegisterSubmit = (data: RegisterFormValues) => {
