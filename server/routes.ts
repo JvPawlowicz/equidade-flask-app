@@ -95,6 +95,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.sendFile(path.join(process.cwd(), 'client/public/facilities.html'));
   });
   
+  app.get('/professionals.html', (req, res) => {
+    res.sendFile(path.join(process.cwd(), 'client/public/professionals.html'));
+  });
+  
   // Rota raiz para redirecionar para a página de login HTML
   app.get('/pure-html', (req, res) => {
     res.redirect('/login.html');
@@ -247,6 +251,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching professional:", error);
       res.status(500).json({ error: "Erro ao buscar profissional" });
+    }
+  });
+  
+  // Professional statistics
+  app.get(`${apiPrefix}/professionals/:id/stats`, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const professionalId = parseInt(id);
+      
+      // Get current month start and end dates
+      const now = new Date();
+      const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+      
+      // Count appointments for this month
+      const appointmentsQuery = await db.query.appointments.findMany({
+        where: and(
+          eq(appointments.professionalId, professionalId),
+          gte(appointments.date, firstDayOfMonth),
+          lte(appointments.date, lastDayOfMonth)
+        )
+      });
+      
+      const totalAppointments = appointmentsQuery.length;
+      
+      // Calculate total hours
+      let totalHours = 0;
+      appointmentsQuery.forEach(appointment => {
+        const startTime = new Date(`${appointment.date.toISOString().split('T')[0]}T${appointment.startTime}`);
+        const endTime = new Date(`${appointment.date.toISOString().split('T')[0]}T${appointment.endTime}`);
+        const durationHours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+        totalHours += durationHours;
+      });
+      
+      // Count unique patients
+      const uniquePatientIds = new Set(appointmentsQuery.map(a => a.patientId));
+      const patientCount = uniquePatientIds.size;
+      
+      // Count evolutions
+      const evolutionsQuery = await db.query.evolutions.findMany({
+        where: eq(evolutions.professionalId, professionalId)
+      });
+      
+      const evolutionCount = evolutionsQuery.length;
+      
+      res.json({
+        totalAppointments,
+        totalHours: parseFloat(totalHours.toFixed(1)),
+        patientCount,
+        evolutionCount
+      });
+    } catch (error) {
+      console.error("Error fetching professional stats:", error);
+      res.status(500).json({ error: "Erro ao buscar estatísticas do profissional" });
     }
   });
 
