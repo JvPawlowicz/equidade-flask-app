@@ -74,11 +74,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API prefix
   const apiPrefix = "/api";
 
-  // Rota para listar todos os usuários
+  // Rota para listar todos os usuários - com dados sensíveis removidos
   app.get(`${apiPrefix}/users`, checkPermission('users', 'read'), async (req: Request, res: Response) => {
     try {
       const allUsers = await db.query.users.findMany();
-      res.json(allUsers);
+      // Remover senhas antes de retornar para o cliente
+      const safeUsers = allUsers.map(user => {
+        const { password, ...userWithoutPassword } = user;
+        return userWithoutPassword;
+      });
+      res.json(safeUsers);
     } catch (error) {
       console.error("Erro ao buscar usuários:", error);
       res.status(500).json({ error: "Erro ao buscar usuários" });
@@ -1779,6 +1784,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Erro ao buscar metadados de logs de auditoria:", error);
       res.status(500).json({ error: "Erro ao buscar metadados de logs de auditoria" });
+    }
+  });
+
+  // Endpoint para adicionar log de auditoria manualmente
+  app.post(`${apiPrefix}/audit-logs`, checkPermission('users', 'create'), async (req, res) => {
+    try {
+      // Verificar se é admin ou coordenador
+      if (!['admin', 'coordinator'].includes(req.user.role)) {
+        return res.status(403).json({ error: "Acesso negado. Apenas administradores e coordenadores podem criar logs de auditoria manual." });
+      }
+      
+      const userId = req.body.userId || req.user.id;
+      const action = req.body.action;
+      const resource = req.body.resource;
+      const resourceId = req.body.resourceId;
+      const details = req.body.details || {};
+      
+      // Validar campos obrigatórios
+      if (!action || !resource) {
+        return res.status(400).json({ error: "Campos obrigatórios: action, resource" });
+      }
+      
+      // Criar registro de auditoria
+      const [newLog] = await db.insert(auditLogs).values({
+        userId,
+        action,
+        resource,
+        resourceId: resourceId ? parseInt(resourceId) : null,
+        ipAddress: req.ip || req.socket.remoteAddress,
+        userAgent: req.headers['user-agent'],
+        details: JSON.stringify(details)
+      }).returning();
+      
+      res.status(201).json({
+        id: newLog.id,
+        message: "Log de auditoria criado com sucesso",
+        timestamp: newLog.timestamp
+      });
+    } catch (error) {
+      console.error("Erro ao criar log de auditoria manual:", error);
+      res.status(500).json({ error: "Erro ao criar log de auditoria" });
     }
   });
 
