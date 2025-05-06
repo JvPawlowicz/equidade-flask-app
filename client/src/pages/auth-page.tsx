@@ -37,6 +37,8 @@ const registerSchema = z.object({
   password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
   fullName: z.string().min(3, "Nome completo deve ter pelo menos 3 caracteres"),
   email: z.string().email("Email inválido"),
+  phone: z.string().optional(),
+  facilityId: z.number().optional(),
   role: z.enum(["admin", "coordinator", "professional", "intern", "secretary"], {
     errorMap: () => ({ message: "Papel inválido" }),
   }),
@@ -74,6 +76,7 @@ export default function AuthPage() {
       password: "",
       fullName: "",
       email: "",
+      phone: "",
       role: "professional",
     },
   });
@@ -252,6 +255,19 @@ export default function AuthPage() {
                           <FormLabel>Email</FormLabel>
                           <FormControl>
                             <Input type="email" placeholder="Digite seu email" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={registerForm.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Telefone</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Digite seu telefone" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
