@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { db } from "@db";
-import { auditLogs } from "@shared/schema";
+import { auditLogs, appointments, evolutions, patients } from "@shared/schema";
+import { eq, and } from "drizzle-orm";
 
 // Definição das permissões por função
 export const permissions = {
@@ -136,6 +137,60 @@ export function requireApproval(resource: string, action: string) {
   };
 }
 
+// Tradução para recursos e ações (para exibição na UI)
+export const resourceTranslations: Record<string, string> = {
+  users: 'Usuários',
+  facilities: 'Unidades',
+  rooms: 'Salas',
+  professionals: 'Profissionais',
+  patients: 'Pacientes',
+  appointments: 'Agendamentos',
+  evolutions: 'Evoluções',
+  documents: 'Documentos',
+  reports: 'Relatórios',
+  insurancePlans: 'Planos de Saúde',
+  dashboard: 'Painel',
+  auditLogs: 'Logs de Auditoria'
+};
+
+export const actionTranslations: Record<string, string> = {
+  create: 'Criação',
+  read: 'Leitura',
+  update: 'Atualização',
+  delete: 'Exclusão',
+  approve: 'Aprovação',
+  reject: 'Rejeição',
+  sign: 'Assinatura',
+  share: 'Compartilhamento',
+  generate: 'Geração',
+  export: 'Exportação',
+  manage: 'Gerenciamento',
+  confirm: 'Confirmação',
+  cancel: 'Cancelamento',
+  'approval_requested': 'Solicitação de Aprovação'
+};
+
+// Função para obter texto do recurso
+export function getResourceText(resource: string): string {
+  return resourceTranslations[resource] || resource;
+}
+
+// Função para obter texto da ação
+export function getActionText(action: string): string {
+  const baseAction = action.split(':')[0];
+  const actionText = actionTranslations[baseAction] || baseAction;
+  
+  if (action.includes(':own')) {
+    return `${actionText} (Próprio)`;
+  }
+  
+  if (action.includes(':supervised')) {
+    return `${actionText} (Supervisionado)`;
+  }
+  
+  return actionText;
+}
+
 // Log de ações para auditoria
 async function logAuditAction(req: Request, resource: string, action: string) {
   try {
@@ -143,6 +198,12 @@ async function logAuditAction(req: Request, resource: string, action: string) {
     const resourceId = req.params.id || req.body.id || null;
     const ipAddress = req.ip || req.socket.remoteAddress;
     const userAgent = req.headers['user-agent'];
+    
+    // Filtrar dados sensíveis do corpo para evitar log de senhas
+    const filteredBody = {...req.body};
+    if (filteredBody.password) filteredBody.password = '********';
+    if (filteredBody.currentPassword) filteredBody.currentPassword = '********';
+    if (filteredBody.newPassword) filteredBody.newPassword = '********';
     
     // Dados da ação para o log
     const actionData = {
@@ -155,7 +216,7 @@ async function logAuditAction(req: Request, resource: string, action: string) {
       details: JSON.stringify({
         params: req.params,
         query: req.query,
-        body: req.body
+        body: filteredBody
       })
     };
     
@@ -182,33 +243,30 @@ export async function isOwnerOrSupervisor(req: Request, resourceTable: string, r
       case 'appointments':
         // Verificar se é o profissional associado ao agendamento
         const appointment = await db.query.appointments.findFirst({
-          where: (fields, { eq, and }) => 
-            and(
-              eq(fields.id, resourceIdInt),
-              eq(fields.professionalId, userId)
-            )
+          where: and(
+            eq(appointments.id, resourceIdInt),
+            eq(appointments.professionalId, userId)
+          )
         });
         return !!appointment;
       
       case 'evolutions':
         // Verificar se é o autor da evolução
         const evolution = await db.query.evolutions.findFirst({
-          where: (fields, { eq, and }) => 
-            and(
-              eq(fields.id, resourceIdInt),
-              eq(fields.professionalId, userId)
-            )
+          where: and(
+            eq(evolutions.id, resourceIdInt),
+            eq(evolutions.professionalId, userId)
+          )
         });
         return !!evolution;
       
       case 'patients':
         // Verificar se é um profissional que atende este paciente
         const patientAppointment = await db.query.appointments.findFirst({
-          where: (fields, { eq, and }) => 
-            and(
-              eq(fields.patientId, resourceIdInt),
-              eq(fields.professionalId, userId)
-            )
+          where: and(
+            eq(appointments.patientId, resourceIdInt),
+            eq(appointments.professionalId, userId)
+          )
         });
         return !!patientAppointment;
       

@@ -1766,8 +1766,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Parâmetros opcionais de filtro
-      const { userId, resource, action, startDate, endDate } = req.query;
+      const { userId, resource, action, startDate, endDate, page = '1', pageSize = '20' } = req.query;
       
+      const pageNumber = parseInt(page as string);
+      const limit = parseInt(pageSize as string);
+      const offset = (pageNumber - 1) * limit;
+      
+      // Consulta base
       let query = db.select({
         id: auditLogs.id,
         userId: auditLogs.userId,
@@ -1787,34 +1792,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
       })
       .from(auditLogs)
       .leftJoin(users, eq(auditLogs.userId, users.id))
-      .orderBy(desc(auditLogs.timestamp))
-      .limit(100); // Limitar a 100 resultados para prevenir sobrecarga
+      .orderBy(desc(auditLogs.timestamp));
+      
+      // Consulta para contagem total com os mesmos filtros
+      let countQuery = db.select({
+        count: sql`count(*)`
+      })
+      .from(auditLogs);
       
       // Adicionar filtros condicionais
       if (userId) {
-        query = query.where(eq(auditLogs.userId, parseInt(userId as string)));
+        const userIdInt = parseInt(userId as string);
+        query = query.where(eq(auditLogs.userId, userIdInt));
+        countQuery = countQuery.where(eq(auditLogs.userId, userIdInt));
       }
       
       if (resource) {
         query = query.where(eq(auditLogs.resource, resource as string));
+        countQuery = countQuery.where(eq(auditLogs.resource, resource as string));
       }
       
       if (action) {
         query = query.where(eq(auditLogs.action, action as string));
+        countQuery = countQuery.where(eq(auditLogs.action, action as string));
       }
       
       if (startDate) {
         const start = new Date(startDate as string);
         query = query.where(gte(auditLogs.timestamp, start));
+        countQuery = countQuery.where(gte(auditLogs.timestamp, start));
       }
       
       if (endDate) {
         const end = new Date(endDate as string);
         query = query.where(lte(auditLogs.timestamp, end));
+        countQuery = countQuery.where(lte(auditLogs.timestamp, end));
       }
       
+      // Adicionar paginação
+      query = query.limit(limit).offset(offset);
+      
+      // Executar consultas
       const logs = await query;
-      res.json(logs);
+      const [totalResult] = await countQuery;
+      const totalLogs = Number(totalResult?.count || '0');
+      
+      // Adicionar traduções para facilitar exibição no frontend
+      const logsWithTranslations = logs.map(log => ({
+        ...log,
+        resourceText: getResourceText(log.resource),
+        actionText: getActionText(log.action),
+      }));
+      
+      res.json({
+        logs: logsWithTranslations,
+        pagination: {
+          page: pageNumber,
+          pageSize: limit,
+          totalCount: totalLogs,
+          totalPages: Math.ceil(totalLogs / limit)
+        }
+      });
     } catch (error) {
       console.error("Erro ao buscar logs de auditoria:", error);
       res.status(500).json({ error: "Erro ao buscar logs de auditoria" });
@@ -1877,11 +1915,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get(`${apiPrefix}/reports/appointments-by-procedure`, async (req, res) => {
+  app.get(`${apiPrefix}/reports/appointments-by-procedure`, checkPermission('reports', 'read'), async (req, res) => {
     try {
-      if (!req.isAuthenticated() || !["admin", "coordinator"].includes(req.user.role)) {
-        return res.status(403).json({ error: "Acesso não autorizado" });
-      }
 
       const startDate = req.query.startDate as string;
       const endDate = req.query.endDate as string;
@@ -1916,11 +1951,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get(`${apiPrefix}/reports/patients-by-facility`, async (req, res) => {
+  app.get(`${apiPrefix}/reports/patients-by-facility`, checkPermission('reports', 'read'), async (req, res) => {
     try {
-      if (!req.isAuthenticated() || !["admin", "coordinator"].includes(req.user.role)) {
-        return res.status(403).json({ error: "Acesso não autorizado" });
-      }
 
       const query = db.select({
         facilityId: patientFacilities.facilityId,
@@ -1953,12 +1985,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Relatório de atendimentos por período
-  app.get(`${apiPrefix}/reports/appointments-by-period`, async (req, res) => {
+  app.get(`${apiPrefix}/reports/appointments-by-period`, checkPermission('reports', 'read'), async (req, res) => {
     try {
-      // Assegurar autenticação e permissão
-      if (!req.isAuthenticated() || !["admin", "coordinator"].includes(req.user.role)) {
-        return res.status(403).json({ error: "Acesso não autorizado" });
-      }
       
       const { startDate, endDate, facilityId, period = 'month' } = req.query;
       
@@ -2047,12 +2075,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Relatório de evolução de pacientes ao longo do tempo
-  app.get(`${apiPrefix}/reports/patient-evolution-over-time`, async (req, res) => {
+  app.get(`${apiPrefix}/reports/patient-evolution-over-time`, checkPermission('reports', 'read'), async (req, res) => {
     try {
-      // Assegurar autenticação e permissão
-      if (!req.isAuthenticated() || !["admin", "coordinator", "professional"].includes(req.user.role)) {
-        return res.status(403).json({ error: "Acesso não autorizado" });
-      }
       
       const { patientId, startDate, endDate, professionalId } = req.query;
       
