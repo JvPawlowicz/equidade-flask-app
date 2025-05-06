@@ -128,10 +128,18 @@ export function DocumentUpload({
       setSelectedFile(null);
     },
     onError: (error: Error) => {
+      console.error("Erro no upload:", error);
+      
+      // Mensagem mais detalhada com instruções
+      let errorMessage = error.message;
+      if (errorMessage.includes("associar o documento")) {
+        errorMessage = "É necessário associar o documento a um paciente, unidade, evolução ou consulta. Por favor, use este componente a partir de uma página de paciente, unidade ou evolução.";
+      }
+      
       toast({
         variant: "destructive",
         title: "Erro ao enviar documento",
-        description: error.message,
+        description: errorMessage,
       });
     },
   });
