@@ -32,8 +32,11 @@ import {
   AlertTriangle,
   CheckCircle,
   BarChart2,
-  ArrowUpRight
+  ArrowUpRight,
+  FileUp
 } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import {
   BarChart,
   Bar,
@@ -203,6 +206,117 @@ export default function ReportsPage() {
     document.body.removeChild(link);
   };
 
+  // Export to PDF
+  const exportToPDF = (
+    data: any[], 
+    filename: string, 
+    title: string,
+    columns?: string[],
+    extraInfo?: { label: string, value: string }[]
+  ) => {
+    if (!data || data.length === 0) return;
+    
+    const doc = new jsPDF();
+    
+    // Add title and logo
+    doc.setFontSize(18);
+    doc.setTextColor(44, 62, 80);
+    doc.text("Equidade Clínica", 105, 15, { align: 'center' });
+    
+    doc.setFontSize(14);
+    doc.text(title, 105, 25, { align: 'center' });
+    
+    // Add report info
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 105, 32, { align: 'center' });
+    
+    // Add filter information if available
+    if (extraInfo && extraInfo.length > 0) {
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      let yPosition = 40;
+      
+      extraInfo.forEach((info) => {
+        doc.text(`${info.label}: ${info.value}`, 105, yPosition, { align: 'center' });
+        yPosition += 5;
+      });
+      
+      // Adjust start position for table
+      yPosition += 5;
+      
+      // Generate the table
+      generatePDFTable(doc, data, columns, yPosition);
+    } else {
+      // Generate the table with default position
+      generatePDFTable(doc, data, columns, 40);
+    }
+    
+    // Save the PDF
+    doc.save(filename);
+  };
+  
+  // Helper function to generate PDF table
+  const generatePDFTable = (doc: jsPDF, data: any[], columns?: string[], startY: number = 40) => {
+    if (!data || data.length === 0) return;
+    
+    // Determine columns to show
+    const keys = columns || Object.keys(data[0]);
+    
+    // Map data for the table
+    const tableData = data.map(item => {
+      return keys.map(key => {
+        let value = item[key];
+        
+        // Format dates
+        if (key.toLowerCase().includes('date') && value) {
+          try {
+            value = new Date(value).toLocaleDateString('pt-BR');
+          } catch (e) {
+            // Keep original value if date parsing fails
+          }
+        }
+        
+        // Handle nested objects
+        if (typeof value === 'object' && value !== null) {
+          value = JSON.stringify(value);
+        }
+        
+        return value === null || value === undefined ? '' : String(value);
+      });
+    });
+    
+    // Format column headers for better readability
+    const tableHeaders = keys.map(key => {
+      // Convert snake_case or camelCase to Title Case
+      return key
+        .replace(/_/g, ' ')
+        .replace(/([A-Z])/g, ' $1')
+        .replace(/^./, str => str.toUpperCase())
+        .trim();
+    });
+    
+    // Generate table
+    autoTable(doc, {
+      head: [tableHeaders],
+      body: tableData,
+      startY: startY,
+      theme: 'grid',
+      styles: {
+        fontSize: 8,
+        cellPadding: 3,
+      },
+      headStyles: {
+        fillColor: [59, 130, 246],
+        textColor: 255,
+        fontStyle: 'bold',
+      },
+      alternateRowStyles: {
+        fillColor: [240, 240, 240],
+      },
+    });
+  };
+
   if (!canAccessReports) {
     return (
       <AppLayout>
@@ -336,15 +450,47 @@ export default function ReportsPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Horas Trabalhadas por Profissional</CardTitle>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => exportToCSV(professionalsHoursData || [], 'horas_profissionais.csv')}
-                disabled={!professionalsHoursData || professionalsHoursData.length === 0}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Exportar CSV
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => exportToCSV(professionalsHoursData || [], 'horas_profissionais.csv')}
+                  disabled={!professionalsHoursData || professionalsHoursData.length === 0}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Exportar CSV
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => {
+                    if (professionalsHoursData && professionalsHoursData.length > 0) {
+                      const columns = ["professional.user.fullName", "professionalType", "totalHours", "appointmentsCount"];
+                      const extraInfo = [
+                        { label: "Período", value: `${formatDate(new Date(startDate))} a ${formatDate(new Date(endDate))}` },
+                        { label: "Unidade", value: selectedFacilityId 
+                          ? facilities?.find(f => f.id.toString() === selectedFacilityId)?.name || "Desconhecida" 
+                          : "Todas" }
+                      ];
+                      exportToPDF(
+                        professionalsHoursData.map(item => ({
+                          ...item,
+                          "professional.user.fullName": item.professional?.user?.fullName || "—",
+                          "professionalType": item.professional?.professionalType || "—"
+                        })), 
+                        'horas_profissionais.pdf',
+                        'Relatório de Horas por Profissional',
+                        columns,
+                        extraInfo
+                      );
+                    }
+                  }}
+                  disabled={!professionalsHoursData || professionalsHoursData.length === 0}
+                >
+                  <FileUp className="h-4 w-4 mr-2" />
+                  Exportar PDF
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {isLoadingProfessionalsHours ? (
@@ -429,15 +575,50 @@ export default function ReportsPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Atendimentos por Tipo de Procedimento</CardTitle>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => exportToCSV(appointmentsByProcedureData || [], 'atendimentos_por_procedimento.csv')}
-                disabled={!appointmentsByProcedureData || appointmentsByProcedureData.length === 0}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Exportar CSV
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => exportToCSV(appointmentsByProcedureData || [], 'atendimentos_por_procedimento.csv')}
+                  disabled={!appointmentsByProcedureData || appointmentsByProcedureData.length === 0}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Exportar CSV
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => {
+                    if (appointmentsByProcedureData && appointmentsByProcedureData.length > 0) {
+                      const columns = ["procedureType", "count"];
+                      const extraInfo = [
+                        { label: "Período", value: `${formatDate(new Date(startDate))} a ${formatDate(new Date(endDate))}` },
+                        { label: "Unidade", value: selectedFacilityId 
+                          ? facilities?.find(f => f.id.toString() === selectedFacilityId)?.name || "Desconhecida" 
+                          : "Todas" }
+                      ];
+                      
+                      // Formatar dados para o PDF
+                      const formattedData = appointmentsByProcedureData.map(item => ({
+                        procedureType: getProcedureText(item.procedureType),
+                        count: parseInt(item.count)
+                      }));
+                      
+                      exportToPDF(
+                        formattedData, 
+                        'atendimentos_por_procedimento.pdf',
+                        'Relatório de Atendimentos por Procedimento',
+                        columns,
+                        extraInfo
+                      );
+                    }
+                  }}
+                  disabled={!appointmentsByProcedureData || appointmentsByProcedureData.length === 0}
+                >
+                  <FileUp className="h-4 w-4 mr-2" />
+                  Exportar PDF
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {isLoadingAppointmentsByProcedure ? (
