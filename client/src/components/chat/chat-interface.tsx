@@ -12,6 +12,7 @@ import { AvatarInitials } from "@/components/common/avatar-initials";
 import { Loader2, Users, UserPlus, Send, PlusCircle } from "lucide-react";
 import { formatRelativeTime } from "@/lib/utils";
 import { queryClient } from "@/lib/queryClient";
+import { webSocketManager } from "@/lib/websocket";
 
 export function ChatInterface() {
   const { user } = useAuth();
@@ -23,7 +24,6 @@ export function ChatInterface() {
   const [newGroupName, setNewGroupName] = useState("");
   const [selectedMembers, setSelectedMembers] = useState<number[]>([]);
   const messageContainerRef = useRef<HTMLDivElement>(null);
-  const [socket, setSocket] = useState<WebSocket | null>(null);
   
   // Fetch users
   const { data: users, isLoading: isLoadingUsers } = useQuery<any[]>({
@@ -51,54 +51,46 @@ export function ChatInterface() {
   useEffect(() => {
     if (!user) return;
     
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/ws?userId=${user.id}`;
-    const newSocket = new WebSocket(wsUrl);
+    // Conectar ao WebSocket
+    webSocketManager.connect(user);
     
-    newSocket.onopen = () => {
-      console.log("WebSocket connected");
-    };
-    
-    newSocket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
+    // Ouvir mensagens
+    const handleNewMessage = (data: any) => {
+      // Check if this is a message for the current conversation
+      const isCurrentConversation = (
+        (selectedTab === "direct" && data.message.senderId === selectedUserId && data.message.recipientId === user.id) ||
+        (selectedTab === "group" && data.message.groupId === selectedGroupId)
+      );
       
-      if (data.type === "chat_message" || data.type === "group_message") {
-        // Check if this is a message for the current conversation
-        const isCurrentConversation = (
-          (selectedTab === "direct" && data.message.senderId === selectedUserId && data.message.recipientId === user.id) ||
-          (selectedTab === "group" && data.message.groupId === selectedGroupId)
+      if (isCurrentConversation) {
+        // Add message to the current conversation
+        queryClient.setQueryData(
+          [
+            selectedTab === "direct"
+              ? `/api/chat/messages?userId=${selectedUserId}`
+              : `/api/chat/messages?groupId=${selectedGroupId}`
+          ],
+          (oldData: any[] | undefined) => {
+            if (!oldData) return [data.message];
+            return [...oldData, data.message];
+          }
         );
-        
-        if (isCurrentConversation) {
-          // Add message to the current conversation
-          queryClient.setQueryData(
-            [
-              selectedTab === "direct"
-                ? `/api/chat/messages?userId=${selectedUserId}`
-                : `/api/chat/messages?groupId=${selectedGroupId}`
-            ],
-            (oldData: any[] | undefined) => {
-              if (!oldData) return [data.message];
-              return [...oldData, data.message];
-            }
-          );
-        }
-        
-        // Always invalidate to update unread counts, etc.
-        queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
       }
+      
+      // Always invalidate to update unread counts, etc.
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
     };
     
-    newSocket.onclose = () => {
-      console.log("WebSocket disconnected");
-    };
-    
-    setSocket(newSocket);
+    // Registrar listeners
+    webSocketManager.on('new_message', handleNewMessage);
+    webSocketManager.on('new_group_message', handleNewMessage);
     
     return () => {
-      newSocket.close();
+      // Remover listeners ao desmontar
+      webSocketManager.off('new_message', handleNewMessage);
+      webSocketManager.off('new_group_message', handleNewMessage);
     };
-  }, [user]);
+  }, [user, selectedTab, selectedUserId, selectedGroupId]);
   
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -109,21 +101,38 @@ export function ChatInterface() {
   
   // Handle sending a message
   const sendMessage = () => {
-    if (!message.trim() || !socket || socket.readyState !== WebSocket.OPEN) return;
+    if (!message.trim() || !webSocketManager.isConnected()) return;
     
     if (selectedTab === "direct" && selectedUserId) {
-      socket.send(JSON.stringify({
-        type: "chat_message",
-        recipientId: selectedUserId,
-        content: message,
-      }));
+      // Enviar mensagem direta
+      webSocketManager.sendChatMessage(message, selectedUserId);
     } else if (selectedTab === "group" && selectedGroupId) {
-      socket.send(JSON.stringify({
-        type: "group_message",
-        groupId: selectedGroupId,
-        content: message,
-      }));
+      // Enviar mensagem para grupo
+      webSocketManager.sendChatMessage(message, undefined, selectedGroupId);
     }
+    
+    // Adicionar a mensagem localmente antes da confirmação do servidor para UI mais responsiva
+    queryClient.setQueryData(
+      [
+        selectedTab === "direct"
+          ? `/api/chat/messages?userId=${selectedUserId}`
+          : `/api/chat/messages?groupId=${selectedGroupId}`
+      ],
+      (oldData: any[] | undefined) => {
+        const newMessage = {
+          id: `temp-${Date.now()}`, // ID temporário
+          senderId: user?.id,
+          recipientId: selectedTab === "direct" ? selectedUserId : null,
+          groupId: selectedTab === "group" ? selectedGroupId : null,
+          content: message,
+          createdAt: new Date().toISOString(),
+          isRead: false
+        };
+        
+        if (!oldData) return [newMessage];
+        return [...oldData, newMessage];
+      }
+    );
     
     setMessage("");
   };
