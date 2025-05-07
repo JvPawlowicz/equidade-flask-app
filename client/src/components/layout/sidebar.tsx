@@ -96,6 +96,7 @@ export function Sidebar({ isOpen: externalIsOpen, setIsOpen: setExternalIsOpen }
     if (item.path === "/profissionais" && user.role === "secretary") return false;
     if (item.path === "/unidades" && user.role !== "admin") return false;
     if (item.path === "/relatorios" && !["admin", "coordinator"].includes(user.role)) return false;
+    // Pacientes podem ser cadastrados por todos os usuários
     
     return true;
   });

@@ -293,7 +293,7 @@ export default function PatientsPage() {
 
       {/* New Patient Dialog */}
       <Dialog open={isPatientFormOpen} onOpenChange={setIsPatientFormOpen}>
-        <DialogContent className="sm:max-w-[700px]">
+        <DialogContent className="sm:max-w-[620px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Cadastrar Novo Paciente</DialogTitle>
           </DialogHeader>
