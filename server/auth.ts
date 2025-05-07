@@ -2,13 +2,13 @@ import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { Express, Request, Response, NextFunction } from "express";
 import session from "express-session";
-import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
 import { insertUserSchema, loginUserSchema, User as SelectUser } from "@shared/schema";
 import { z } from "zod";
 import { db } from "@db";
 import { auditLogs } from "@shared/schema";
+import * as crypto from "crypto";
 
 declare global {
   namespace Express {
@@ -16,10 +16,10 @@ declare global {
   }
 }
 
-const scryptAsync = promisify(scrypt);
+const scryptAsync = promisify(crypto.scrypt);
 
 async function hashPassword(password: string) {
-  const salt = randomBytes(16).toString("hex");
+  const salt = crypto.randomBytes(16).toString("hex");
   const buf = (await scryptAsync(password, salt, 64)) as Buffer;
   return `${buf.toString("hex")}.${salt}`;
 }
@@ -28,7 +28,7 @@ async function comparePasswords(supplied: string, stored: string) {
   const [hashed, salt] = stored.split(".");
   const hashedBuf = Buffer.from(hashed, "hex");
   const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
-  return timingSafeEqual(hashedBuf, suppliedBuf);
+  return crypto.timingSafeEqual(hashedBuf, suppliedBuf);
 }
 
 // Middleware de autenticação para proteção de rotas
@@ -61,9 +61,10 @@ async function logLoginAttempt(userId: number | null, username: string, success:
 }
 
 export function setupAuth(app: Express) {
+  // Usar crypto já importado para gerar chave de sessão se necessário
   if (!process.env.SESSION_SECRET) {
-    process.env.SESSION_SECRET = randomBytes(32).toString('hex');
-    console.warn("SESSION_SECRET not set, using generated secret. This will invalidate sessions on restart.");
+    process.env.SESSION_SECRET = crypto.randomBytes(32).toString('hex');
+    console.warn("SESSION_SECRET não definido, usando chave gerada. Isso invalidará as sessões ao reiniciar.");
   }
 
   const sessionSettings: session.SessionOptions = {
@@ -72,8 +73,8 @@ export function setupAuth(app: Express) {
     saveUninitialized: false,
     store: storage.sessionStore,
     cookie: {
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      secure: false, // Definido como false para funcionar tanto em HTTP quanto HTTPS
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 dias
       httpOnly: true,
       sameSite: 'lax',
       path: '/'

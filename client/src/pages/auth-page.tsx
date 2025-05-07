@@ -6,7 +6,6 @@ import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { z } from "zod";
-import { LoginWithReplit } from "@/components/auth/login-with-replit";
 import {
   Card,
   CardContent,
