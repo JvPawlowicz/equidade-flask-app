@@ -36,7 +36,7 @@ export const requireAuth = (req: Request, res: Response, next: NextFunction) => 
   if (!req.isAuthenticated()) {
     return res.status(401).json({ error: "Não autenticado" });
   }
-  
+
   next();
 };
 
@@ -114,7 +114,7 @@ export function setupAuth(app: Express) {
     try {
       // Validate request body against the schema
       const validatedData = insertUserSchema.parse(req.body);
-      
+
       // Check if username already exists
       const existingUser = await storage.getUserByUsername(validatedData.username);
       if (existingUser) {
@@ -123,7 +123,7 @@ export function setupAuth(app: Express) {
 
       // Hash the password
       const hashedPassword = await hashPassword(validatedData.password);
-      
+
       // Create the user with hashed password
       const user = await storage.createUser({
         ...validatedData,
@@ -148,13 +148,14 @@ export function setupAuth(app: Express) {
 
   app.post("/api/login", (req, res, next) => {
     res.setHeader('Content-Type', 'application/json');
-    
+
     try {
-      console.log("SERVIDOR: Recebendo solicitação de login:", JSON.stringify(req.body));
-      
+      if (!req.body || !req.body.username || !req.body.password) {
+        return res.status(400).json({ error: "Dados de login inválidos" });
+      }
+
       // Validate request body against the schema
       const validData = loginUserSchema.parse(req.body);
-      console.log("SERVIDOR: Validação do schema bem-sucedida");
 
       // Get client IP for logging
       const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
@@ -164,30 +165,30 @@ export function setupAuth(app: Express) {
           console.error("SERVIDOR: Erro durante autenticação:", err);
           return next(err);
         }
-        
+
         if (!user) {
           console.log("SERVIDOR: Usuário não encontrado ou senha inválida");
           // Log failed login attempt
           logLoginAttempt(null, validData.username, false, clientIp);
           return res.status(401).json({ error: "Credenciais inválidas" });
         }
-        
+
         console.log("SERVIDOR: Usuário autenticado com sucesso:", user.username);
-        
+
         req.login(user, (err) => {
           if (err) {
             console.error("SERVIDOR: Erro durante login na sessão:", err);
             return next(err);
           }
-          
+
           console.log("SERVIDOR: Sessão estabelecida com sucesso");
-          
+
           // Update last login
           storage.updateUser(user.id, { lastLogin: new Date() });
-          
+
           // Log successful login
           logLoginAttempt(user.id, user.username, true, clientIp);
-          
+
           // Don't send the password back
           const { password, ...userWithoutPassword } = user;
           console.log("SERVIDOR: Enviando resposta de login bem-sucedido");
@@ -208,10 +209,10 @@ export function setupAuth(app: Express) {
     const userId = req.user.id;
     const username = req.user.username;
     const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
-    
+
     req.logout((err) => {
       if (err) return next(err);
-      
+
       // Log the logout event
       db.insert(auditLogs).values({
         action: 'logout',
@@ -227,7 +228,7 @@ export function setupAuth(app: Express) {
       }).catch(error => {
         console.error("Erro ao registrar logout:", error);
       });
-      
+
       res.status(200).json({ message: "Logout bem-sucedido" });
     });
   });
