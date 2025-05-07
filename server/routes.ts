@@ -143,13 +143,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API prefix
   const apiPrefix = "/api";
   
-  // Root route redirecionando para página de autenticação
+  // Root route redirecionando para página de autenticação ou retornando HTML simples
   app.get('/', (req, res) => {
-    if (req.isAuthenticated()) {
-      res.redirect('/dashboard');
-    } else {
-      res.redirect('/auth');
+    // Verificar o tipo de solicitação - se for JSON, responder com OK
+    if (req.accepts('json') && !req.accepts('html')) {
+      return res.status(200).json({ status: 'ok' });
     }
+
+    // Para solicitações normais do navegador, redirecionar
+    return res.status(200).send(`
+      <!DOCTYPE html>
+      <html lang="pt-BR">
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Equidade - Sistema de Gestão</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f2f5;
+            margin: 0;
+            flex-direction: column;
+            text-align: center;
+          }
+          .container {
+            max-width: 500px;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          }
+          h1 {
+            color: #003366;
+            margin-bottom: 20px;
+          }
+          .loader {
+            border: 5px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 5px solid #003366;
+            width: 40px;
+            height: 40px;
+            margin: 20px auto;
+            animation: spin 1s linear infinite;
+          }
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+          .btn {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 15px;
+            background-color: #003366;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+          }
+        </style>
+        <script>
+          // Redirecionamento automático após 1 segundo
+          setTimeout(() => {
+            window.location.href = "/auth";
+          }, 1000);
+        </script>
+      </head>
+      <body>
+        <div class="container">
+          <h1>Equidade - Sistema de Gestão</h1>
+          <p>Redirecionando para a página de login...</p>
+          <div class="loader"></div>
+          <p>Se o redirecionamento não funcionar:</p>
+          <a href="/auth" class="btn">Ir para a página de login</a>
+        </div>
+      </body>
+      </html>
+    `);
   });
   
   // Rota de healthcheck para monitoramento (não requer autenticação)
@@ -2849,18 +2922,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       .from(auditLogs);
       
       // Adicionar filtros condicionais
-      if (userId) {
+      if (userId && userId !== 'all_users') {
         const userIdInt = parseInt(userId as string);
         query = query.where(eq(auditLogs.userId, userIdInt));
         countQuery = countQuery.where(eq(auditLogs.userId, userIdInt));
       }
       
-      if (resource) {
+      if (resource && resource !== 'all_resources') {
         query = query.where(eq(auditLogs.resource, resource as string));
         countQuery = countQuery.where(eq(auditLogs.resource, resource as string));
       }
       
-      if (action) {
+      if (action && action !== 'all_actions') {
         query = query.where(eq(auditLogs.action, action as string));
         countQuery = countQuery.where(eq(auditLogs.action, action as string));
       }

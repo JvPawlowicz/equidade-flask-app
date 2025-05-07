@@ -145,4 +145,37 @@ if (htmlFiles.length === 0) {
   console.log('✅ Criado arquivo index.html de fallback em dist/public/');
 }
 
+// Copiar arquivos estáticos importantes de server/public para dist/public
+const serverPublicDir = path.join(rootDir, 'server', 'public');
+if (fs.existsSync(serverPublicDir)) {
+  console.log('📋 Copiando arquivos estáticos de server/public para dist/public...');
+  
+  try {
+    const serverPublicFiles = fs.readdirSync(serverPublicDir);
+    for (const file of serverPublicFiles) {
+      const sourcePath = path.join(serverPublicDir, file);
+      const destPath = path.join(publicDir, file);
+      
+      if (!fs.existsSync(destPath)) {
+        fs.copyFileSync(sourcePath, destPath);
+        console.log(`✅ Arquivo ${file} copiado para dist/public/`);
+      }
+    }
+  } catch (error) {
+    console.error('❌ Erro ao copiar arquivos estáticos:', error);
+  }
+}
+
+// Copia o arquivo index.html do projeto se existir e não tiver sido copiado
+const clientPublicDir = path.join(rootDir, 'client', 'public');
+const clientIndexHtml = path.join(clientPublicDir, 'index.html');
+
+if (fs.existsSync(clientIndexHtml)) {
+  const destIndexHtml = path.join(publicDir, 'index.html');
+  if (!fs.existsSync(destIndexHtml)) {
+    fs.copyFileSync(clientIndexHtml, destIndexHtml);
+    console.log('✅ Arquivo index.html do client copiado para dist/public/');
+  }
+}
+
 console.log('✅ Script de pós-build concluído com sucesso!');

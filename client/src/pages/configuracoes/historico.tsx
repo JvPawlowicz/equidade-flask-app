@@ -60,9 +60,9 @@ import {
 } from "@/components/ui/pagination";
 
 const filterSchema = z.object({
-  userId: z.string().optional(),
-  resource: z.string().optional(),
-  action: z.string().optional(),
+  userId: z.string().default("all_users"),
+  resource: z.string().default("all_resources"),
+  action: z.string().default("all_actions"),
   startDate: z.date().nullable().optional(),
   endDate: z.date().nullable().optional(),
 });
@@ -84,9 +84,9 @@ export default function HistoricoPage() {
   const form = useForm<FilterValues>({
     resolver: zodResolver(filterSchema),
     defaultValues: {
-      userId: "",
-      resource: "",
-      action: "",
+      userId: "all_users",
+      resource: "all_resources",
+      action: "all_actions",
       startDate: null,
       endDate: null,
     },
@@ -235,7 +235,7 @@ export default function HistoricoPage() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">Todos os usuários</SelectItem>
+                        <SelectItem value="all_users">Todos os usuários</SelectItem>
                         {metadata?.users?.map((user: any) => (
                           <SelectItem
                             key={user.id}
@@ -267,7 +267,7 @@ export default function HistoricoPage() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">Todos os recursos</SelectItem>
+                        <SelectItem value="all_resources">Todos os recursos</SelectItem>
                         {metadata?.resources?.map((resource: any) => (
                           <SelectItem key={resource.key} value={resource.key}>
                             {resource.text}
@@ -296,7 +296,7 @@ export default function HistoricoPage() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">Todas as ações</SelectItem>
+                        <SelectItem value="all_actions">Todas as ações</SelectItem>
                         {metadata?.actions?.map((action: any) => (
                           <SelectItem key={action.key} value={action.key}>
                             {action.text}
@@ -401,9 +401,9 @@ export default function HistoricoPage() {
                   variant="outline"
                   onClick={() => {
                     form.reset({
-                      userId: "",
-                      resource: "",
-                      action: "",
+                      userId: "all_users",
+                      resource: "all_resources",
+                      action: "all_actions",
                       startDate: null,
                       endDate: null,
                     });
