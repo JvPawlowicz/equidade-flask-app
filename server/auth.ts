@@ -19,9 +19,14 @@ declare global {
 const scryptAsync = promisify(crypto.scrypt);
 
 async function hashPassword(password: string) {
-  const salt = crypto.randomBytes(16).toString("hex");
-  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
-  return `${buf.toString("hex")}.${salt}`;
+  try {
+    const salt = crypto.randomBytes(16).toString("hex");
+    const buf = (await scryptAsync(password, salt, 64)) as Buffer;
+    return `${buf.toString("hex")}.${salt}`;
+  } catch (error) {
+    console.error("Erro ao fazer hash da senha:", error);
+    throw new Error("Erro ao processar senha");
+  }
 }
 
 async function comparePasswords(supplied: string, stored: string) {

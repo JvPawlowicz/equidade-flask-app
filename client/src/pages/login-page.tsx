@@ -17,6 +17,12 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
     setLoginStatus("Tentando login...");
+    
+    if (!username || !password) {
+      setLoginStatus("Usuário e senha são obrigatórios");
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const res = await apiRequest("POST", "/api/login", { username, password });

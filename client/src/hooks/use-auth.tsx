@@ -70,38 +70,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
-      // Limpar espaços extras
       const cleanedCredentials = {
         username: credentials.username.trim(),
         password: credentials.password
       };
-      
-      console.log("Tentando fazer login com:", cleanedCredentials);
-      try {
-        const res = await apiRequest("POST", "/api/login", cleanedCredentials);
-        const userData = await res.json();
-        console.log("Resposta do login:", userData);
-        return userData;
-      } catch (error) {
-        console.error("Erro ao chamar API de login:", error);
-        throw error;
+
+      const res = await apiRequest("POST", "/api/login", cleanedCredentials);
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Erro ao fazer login");
       }
+      return res.json();
     },
     onSuccess: (user: User) => {
       console.log("Login bem-sucedido, usuário:", user);
       queryClient.setQueryData(["/api/user"], user);
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-      
+
       // Recarregar os dados do usuário explicitamente
       refetchUser();
-      
+
       // Mostrar mensagem de sucesso
       toast({
         title: "Login realizado com sucesso",
         description: `Bem-vindo(a), ${user.fullName}!`,
         variant: "default",
       });
-      
+
       // Redirecionar para o dashboard após um pequeno atraso para dar tempo ao servidor
       // de estabelecer a sessão completamente
       setTimeout(() => {
@@ -128,7 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         fullName: userData.fullName.trim(),
         phone: userData.phone?.trim()
       };
-      
+
       console.log("Tentando registrar usuário:", cleanedUserData);
       const res = await apiRequest("POST", "/api/register", cleanedUserData);
       return await res.json();
@@ -136,16 +131,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     onSuccess: (user: User) => {
       queryClient.setQueryData(["/api/user"], user);
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-      
+
       // Recarregar os dados do usuário explicitamente
       refetchUser();
-      
+
       toast({
         title: "Cadastro realizado com sucesso",
         description: `Bem-vindo(a), ${user.fullName}!`,
         variant: "default",
       });
-      
+
       // Redirecionar para o dashboard após um pequeno atraso para dar tempo ao servidor
       // de estabelecer a sessão completamente
       setTimeout(() => {
