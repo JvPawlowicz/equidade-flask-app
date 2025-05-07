@@ -618,21 +618,23 @@ export default function ProfessionalsPage() {
                 )}
               />
               
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsProfessionalFormOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={createProfessionalMutation.isPending}>
-                  {createProfessionalMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Salvando...
-                    </>
-                  ) : (
-                    "Cadastrar Profissional"
-                  )}
-                </Button>
-              </DialogFooter>
+              <div className="pt-6 border-t mt-6">
+                <DialogFooter className="gap-2">
+                  <Button type="button" variant="outline" onClick={() => setIsProfessionalFormOpen(false)}>
+                    Cancelar
+                  </Button>
+                  <Button type="submit" disabled={createProfessionalMutation.isPending}>
+                    {createProfessionalMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Salvando...
+                      </>
+                    ) : (
+                      "Concluir Cadastro"
+                    )}
+                  </Button>
+                </DialogFooter>
+              </div>
             </form>
           </Form>
         </DialogContent>
