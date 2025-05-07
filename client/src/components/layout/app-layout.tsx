@@ -82,6 +82,11 @@ export function AppLayout({ children, onSearch, title }: AppLayoutProps) {
         >
           {children}
         </main>
+        
+        {/* Footer com copyright */}
+        <footer className="py-3 px-4 border-t border-border text-center text-xs text-muted-foreground">
+          © {new Date().getFullYear()} Todos os direitos reservados - João Victor Gonzalez Pawlowicz - JVGP
+        </footer>
       </div>
     </div>
   );

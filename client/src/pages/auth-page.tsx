@@ -452,6 +452,11 @@ export default function AuthPage() {
           </Tabs>
         </Card>
       </div>
+      
+      {/* Copyright */}
+      <div className="absolute bottom-2 right-4 text-xs text-gray-500">
+        © {new Date().getFullYear()} Todos os direitos reservados - João Victor Gonzalez Pawlowicz - JVGP
+      </div>
     </div>
   );
 }
