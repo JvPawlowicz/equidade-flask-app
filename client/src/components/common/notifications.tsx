@@ -4,7 +4,9 @@ import { formatRelativeTime } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Loader2, Calendar, FileText, MessageCircle, Bell } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useAuth } from "@/hooks/use-auth";
+import { LgpdNotification } from "@/components/lgpd/lgpd-notification";
 
 interface NotificationsDropdownProps {
   onClose: () => void;
@@ -12,10 +14,36 @@ interface NotificationsDropdownProps {
 
 export function NotificationsDropdown({ onClose }: NotificationsDropdownProps) {
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
+  const [lgpdAccepted, setLgpdAccepted] = useState<boolean | null>(null);
   
   const { data: notifications, isLoading, error } = useQuery<any[]>({
     queryKey: ["/api/notifications"],
   });
+  
+  // Verificar status LGPD
+  useEffect(() => {
+    if (user && user.id) {
+      fetch('/api/users/lgpd-status', {
+        credentials: 'include'
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Erro ao obter status LGPD');
+        }
+        return response.json();
+      })
+      .then(data => {
+        // Atualizar estado com o status do termo
+        setLgpdAccepted(data && data.lgpdAccepted === true);
+      })
+      .catch(error => {
+        console.error('Erro ao verificar status LGPD:', error);
+        // Em caso de erro, assumimos que não aceitou (por precaução)
+        setLgpdAccepted(false);
+      });
+    }
+  }, [user]);
   
   // Click outside to close
   useEffect(() => {
@@ -85,6 +113,14 @@ export function NotificationsDropdown({ onClose }: NotificationsDropdownProps) {
     }
   };
   
+  // Mostrar ponto de notificação no sino se não aceitou LGPD
+  const hasImportantNotification = lgpdAccepted === false;
+  
+  // Atualizar UI após aceitar o termo
+  const handleLgpdAccepted = () => {
+    setLgpdAccepted(true);
+  };
+  
   return (
     <div
       ref={dropdownRef}
@@ -95,6 +131,12 @@ export function NotificationsDropdown({ onClose }: NotificationsDropdownProps) {
       </div>
       
       <div className="max-h-96 overflow-y-auto">
+        {/* LGPD Notification - mostrar primeiro e sempre que necessário */}
+        {lgpdAccepted === false && (
+          <LgpdNotification onClose={handleLgpdAccepted} />
+        )}
+        
+        {/* Notificações regulares */}
         {isLoading ? (
           <div className="flex justify-center py-6">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -126,7 +168,7 @@ export function NotificationsDropdown({ onClose }: NotificationsDropdownProps) {
               </div>
             </div>
           ))
-        ) : (
+        ) : !lgpdAccepted ? null : (
           <div className="p-4 text-center text-sm text-gray-500">
             Nenhuma notificação
           </div>

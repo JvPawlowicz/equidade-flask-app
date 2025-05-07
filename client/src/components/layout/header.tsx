@@ -8,6 +8,7 @@ import { NotificationsDropdown } from "../common/notifications";
 import { cn } from "@/lib/utils";
 import { useAccessibility } from "@/hooks/use-accessibility";
 import { FacilitySelector } from "./facility-selector";
+import { LgpdNotificationIndicator } from "@/components/lgpd/notification-indicator";
 
 interface HeaderProps {
   toggleSidebar: () => void;
@@ -165,11 +166,10 @@ export function Header({ toggleSidebar, onSearch }: HeaderProps) {
               aria-haspopup="true"
             >
               <Bell className="h-5 w-5" aria-hidden="true" />
-              <span 
-                className="absolute top-0 right-0 w-2 h-2 bg-destructive rounded-full"
-                aria-label="Novas notificações"
-                role="status"
-              ></span>
+              {/* Verificar LGPD status para mostrar indicador de notificação */}
+              {user && (
+                <LgpdNotificationIndicator userId={user.id} />
+              )}
             </Button>
             {showNotifications && (
               <NotificationsDropdown onClose={() => setShowNotifications(false)} />
