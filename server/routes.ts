@@ -143,9 +143,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API prefix
   const apiPrefix = "/api";
   
-  // Root health check for deployment
+  // Root route redirecionando para página de autenticação
   app.get('/', (req, res) => {
-    res.status(200).send('OK');
+    if (req.isAuthenticated()) {
+      res.redirect('/dashboard');
+    } else {
+      res.redirect('/auth');
+    }
   });
   
   // Rota de healthcheck para monitoramento (não requer autenticação)
