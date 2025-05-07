@@ -1,0 +1,43 @@
+# Configurar a normalização de fim de linha para garantir consistência entre sistemas operacionais
+* text=auto eol=lf
+
+# Garantir que scripts shell sejam tratados corretamente com LF
+*.sh text eol=lf
+scripts/* text eol=lf
+
+# Tratar binários corretamente
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.zip binary
+*.gz binary
+
+# Arquivos de texto específicos
+*.css text
+*.html text
+*.js text
+*.json text
+*.md text
+*.sql text
+*.ts text
+*.tsx text
+*.yml text
+*.yaml text
+*.toml text
+*.conf text
+
+# Tratar yarn.lock e package-lock.json como binários para evitar conflitos de merge
+package-lock.json binary
+yarn.lock binary
+
+# Arquivos específicos de Railway
+Procfile text eol=lf
+nixpacks.toml text eol=lf
+railway.json text eol=lf
+.railway/* text eol=lf

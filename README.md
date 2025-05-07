@@ -71,7 +71,40 @@ Equidade é um sistema completo de gestão para clínicas de atendimento a pesso
 
 Para implantar em produção, recomendamos utilizar o Railway, uma plataforma moderna e simples para hospedagem de aplicações web.
 
-Consulte o [Guia de Implantação no Railway](docs/railway_deployment_guide.md) para instruções detalhadas.
+### Arquivos de Configuração do Deploy
+
+O projeto conta com diversos arquivos para otimizar a implantação:
+
+- `railway.json`: Configuração principal para o Railway
+- `.railway/runtime.json`: Configurações de recursos e monitoramento
+- `nixpacks.toml`: Instruções para build do container
+- `Procfile`: Definição do comando de inicialização
+- `nginx.conf`: Configuração do servidor web
+- `scripts/railway-start.sh`: Script de inicialização específico para o Railway
+- `scripts/backup.sh`: Script para backup automático do banco de dados
+- `.github/workflows/railway-deploy.yml`: Configuração para CI/CD com GitHub Actions
+- `static.json`: Configuração para ativos estáticos
+- `.dockerignore`: Lista de arquivos a serem ignorados no build
+- `.gitattributes`: Configuração de atributos de arquivo
+- `.nvmrc`: Definição da versão do Node.js
+
+### Deployment com GitHub Actions
+
+Para configurar deploy automático via GitHub Actions:
+
+1. Faça fork do repositório para sua conta GitHub
+2. Crie um token de API no Railway (Settings > API > New Token)
+3. Adicione o token como um segredo no GitHub (Settings > Secrets > RAILWAY_TOKEN)
+4. Cada push para a branch principal iniciará automaticamente uma implantação
+
+### Deployment Manual
+
+1. Instale a CLI do Railway: `npm install -g @railway/cli`
+2. Faça login: `railway login`
+3. Vincule ao projeto: `railway link`
+4. Implante: `railway up`
+
+Para instruções detalhadas, consulte o [Guia de Implantação no Railway](docs/railway_deployment_guide.md).
 
 ## Estrutura do Projeto
 

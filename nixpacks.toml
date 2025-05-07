@@ -1,0 +1,30 @@
+[phases.setup]
+aptPkgs = ["postgresql-client", "gzip", "openssl", "ca-certificates", "nginx"]
+
+[phases.install]
+cmds = ["npm ci --omit=dev"]
+
+[phases.build]
+cmds = ["npm run build"]
+
+[start]
+cmd = "./scripts/railway-start.sh"
+onlyIncludeFiles = [
+  "dist/**",
+  "client/public/**",
+  "uploads/**",
+  "package.json",
+  "node_modules/**",
+  "scripts/**",
+  "drizzle.production.config.ts",
+  "nginx.conf",
+  ".env*",
+  "static.json",
+  "railway.json"
+]
+
+[phases.setup.nixPkgs]
+nodejs_20 = true
+
+[variables]
+NODE_ENV = "production"

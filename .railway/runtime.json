@@ -1,0 +1,24 @@
+{
+  "memory": 512,
+  "cpu": 1,
+  "storage": 512,
+  "env": {
+    "NODE_ENV": "production",
+    "PORT": "5000",
+    "TZ": "America/Sao_Paulo",
+    "FORCE_SEED": "false"
+  },
+  "restartPolicyType": "ON_FAILURE",
+  "restartPolicyMaxRetries": 10,
+  "healthcheck": {
+    "enabled": true,
+    "path": "/api/health",
+    "interval": "60s",
+    "timeout": "10s",
+    "retries": 5
+  },
+  "logs": {
+    "backup": true,
+    "retentionDays": 7
+  }
+}
