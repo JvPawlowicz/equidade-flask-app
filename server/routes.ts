@@ -245,6 +245,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Erro ao buscar usuários" });
     }
   });
+  
+  // Rota para excluir um usuário
+  app.delete(`${apiPrefix}/users/:id`, checkPermission('users', 'delete'), async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.params.id);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ error: "ID de usuário inválido" });
+      }
+      
+      // Verificar se o usuário existe
+      const user = await db.query.users.findFirst({
+        where: eq(users.id, userId)
+      });
+      
+      if (!user) {
+        return res.status(404).json({ error: "Usuário não encontrado" });
+      }
+      
+      // Verificar se o usuário não é o usuário logado
+      if (req.user.id === userId) {
+        return res.status(400).json({ error: "Não é possível excluir seu próprio usuário" });
+      }
+      
+      // Verificar se o usuário não é o último administrador
+      if (user.role === 'admin') {
+        const adminCount = await db.query.users.findMany({
+          where: eq(users.role, 'admin')
+        });
+        
+        if (adminCount.length <= 1) {
+          return res.status(400).json({ error: "Não é possível excluir o último administrador" });
+        }
+      }
+      
+      // Registrar a ação no log de auditoria
+      await logAuditAction(req, 'delete', 'users', userId.toString(), { deletedUser: user.username });
+      
+      // Verificar e tratar dependências antes de excluir
+      
+      // 1. Verificar se o usuário é um profissional
+      const professional = await db.query.professionals.findFirst({
+        where: eq(professionals.userId, userId)
+      });
+      
+      if (professional) {
+        // Excluir profissional associado
+        await db.delete(professionals).where(eq(professionals.userId, userId));
+      }
+      
+      // 2. Remover de grupos de chat
+      await db.delete(chatGroupMembers).where(eq(chatGroupMembers.userId, userId));
+      
+      // 3. Lidar com outras tabelas relacionadas de forma segura
+      // Marcar documentos como sistema
+      await db.update(documents)
+        .set({ uploadedBy: 1 }) // ID 1 geralmente é reservado para sistema
+        .where(eq(documents.uploadedBy, userId));
+      
+      // Finalmente, excluir o usuário
+      await db.delete(users).where(eq(users.id, userId));
+      
+      res.status(200).json({ message: "Usuário excluído com sucesso" });
+    } catch (error) {
+      console.error("Erro ao excluir usuário:", error);
+      res.status(500).json({ error: "Erro ao excluir usuário" });
+    }
+  });
 
   // Configuração do servidor HTTP e WebSocket
   const httpServer = createServer(app);
@@ -473,6 +541,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (error) {
         console.error("Erro ao criar unidade:", error);
         res.status(500).json({ error: "Erro ao criar unidade" });
+      }
+    }
+  );
+
+  // Rota para excluir uma unidade
+  app.delete(`${apiPrefix}/facilities/:id`, 
+    requireAuth,
+    checkPermission('facilities', 'delete'),
+    async (req: Request, res: Response) => {
+      try {
+        const { id } = req.params;
+        
+        // Validar ID
+        if (!id || isNaN(parseInt(id))) {
+          return res.status(400).json({ error: "ID da unidade inválido" });
+        }
+        
+        const facilityId = parseInt(id);
+        
+        // Verificar se a unidade existe
+        const facility = await db.query.facilities.findFirst({
+          where: eq(facilities.id, facilityId)
+        });
+        
+        if (!facility) {
+          return res.status(404).json({ error: "Unidade não encontrada" });
+        }
+        
+        // Verificar dependências antes de excluir
+        
+        // 1. Verificar se existem usuários associados
+        const usersInFacility = await db.query.users.findMany({
+          where: eq(users.facilityId, facilityId)
+        });
+        
+        if (usersInFacility.length > 0) {
+          return res.status(400).json({ 
+            error: "Não é possível excluir a unidade porque existem usuários associados a ela",
+            count: usersInFacility.length
+          });
+        }
+        
+        // 2. Verificar se existem pacientes associados
+        const patientsInFacility = await db.query.patientFacilities.findMany({
+          where: eq(patientFacilities.facilityId, facilityId)
+        });
+        
+        if (patientsInFacility.length > 0) {
+          return res.status(400).json({ 
+            error: "Não é possível excluir a unidade porque existem pacientes associados a ela",
+            count: patientsInFacility.length
+          });
+        }
+        
+        // 3. Verificar se existem salas associadas
+        const roomsInFacility = await db.query.rooms.findMany({
+          where: eq(rooms.facilityId, facilityId)
+        });
+        
+        // Remover salas associadas primeiro
+        if (roomsInFacility.length > 0) {
+          await db.delete(rooms).where(eq(rooms.facilityId, facilityId));
+        }
+        
+        // Log da auditoria
+        await logAuditAction(req, 'delete', 'facilities', id, {
+          facilityName: facility.name,
+          location: `${facility.city}, ${facility.state}`
+        });
+        
+        // Excluir a unidade
+        await db.delete(facilities).where(eq(facilities.id, facilityId));
+        
+        res.status(200).json({ message: "Unidade excluída com sucesso" });
+      } catch (error) {
+        console.error("Erro ao excluir unidade:", error);
+        res.status(500).json({ error: "Erro ao excluir unidade" });
       }
     }
   );
