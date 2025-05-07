@@ -203,12 +203,12 @@ export default function AuthPage() {
       <div className="bg-sidebar text-white lg:w-1/2 p-8 lg:p-16 flex flex-col justify-center" style={{ backgroundColor: 'hsl(204, 60%, 20%)' }}>
         <div className="max-w-lg mx-auto">
           <img 
-            src="/assets/images/logo.svg" 
-            alt="Equidade Clínica" 
+            src="/assets/images/logo-equidade-plus.svg" 
+            alt="Equidade+" 
             className="h-16 mb-6"
             aria-hidden="true"
           />
-          <h1 className="sr-only">Equidade Clínica</h1>
+          <h1 className="sr-only">Equidade+</h1>
           <p className="text-xl lg:text-2xl font-medium mb-4">
             Gerenciamento de Clínicas Multi e Interdisciplinares
           </p>

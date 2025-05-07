@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="120" height="120" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <!-- Cruz/símbolo de mais azul -->
+  <path d="M60,10 C60,10 60,10 60,10 C90,10 115,35 115,65 C115,95 90,120 60,120 C30,120 5,95 5,65 L5,10 Z" fill="#0077FF"/>
+  <path d="M60,120 C60,120 60,120 60,120 C30,120 5,95 5,65 C5,35 30,10 60,10 C90,10 115,35 115,65 L115,120 Z" fill="#0077FF"/>
+  
+  <!-- Círculo cinza sobreposto -->
+  <circle cx="60" cy="65" r="25" fill="#AAAAAA" opacity="0.8"/>
+</svg>
