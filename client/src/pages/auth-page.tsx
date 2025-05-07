@@ -26,6 +26,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, LogIn, UserPlus } from "lucide-react";
+import LoginWithReplit from "@/components/auth/login-with-replit";
 
 // Login form schema
 const loginSchema = z.object({
@@ -90,9 +91,9 @@ export default function AuthPage() {
       username: data.username.trim(),
       password: data.password
     };
-    
+
     console.log("Tentando fazer login com:", cleanedData);
-    
+
     try {
       // Fazer login diretamente sem usar a mutação
       const response = await fetch('/api/login', {
@@ -103,24 +104,24 @@ export default function AuthPage() {
         body: JSON.stringify(cleanedData),
         credentials: 'include',
       });
-      
+
       if (!response.ok) {
         throw new Error('Credenciais inválidas');
       }
-      
+
       const userData = await response.json();
       console.log('Login bem-sucedido:', userData);
-      
+
       // Atualizar manualmente o cache do query client
       queryClient.setQueryData(['/api/user'], userData);
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-      
+
       // Mostrar toast de sucesso
       toast({
         title: 'Login realizado com sucesso',
         description: `Bem-vindo(a), ${userData.fullName}!`,
       });
-      
+
       // Redirecionar para a interface React
       setTimeout(() => {
         navigate('/');
@@ -144,9 +145,9 @@ export default function AuthPage() {
       fullName: data.fullName.trim(),
       phone: data.phone?.trim()
     };
-    
+
     console.log("Tentando registrar:", cleanedData);
-    
+
     try {
       // Fazer registro diretamente sem usar a mutação
       const response = await fetch('/api/register', {
@@ -157,24 +158,24 @@ export default function AuthPage() {
         body: JSON.stringify(cleanedData),
         credentials: 'include',
       });
-      
+
       if (!response.ok) {
         throw new Error('Falha no registro');
       }
-      
+
       const userData = await response.json();
       console.log('Registro bem-sucedido:', userData);
-      
+
       // Atualizar manualmente o cache do query client
       queryClient.setQueryData(['/api/user'], userData);
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-      
+
       // Mostrar toast de sucesso
       toast({
         title: 'Registro realizado com sucesso',
         description: `Bem-vindo(a), ${userData.fullName}!`,
       });
-      
+
       // Redirecionar para a interface React
       setTimeout(() => {
         navigate('/');
@@ -246,7 +247,7 @@ export default function AuthPage() {
             <TabsList className="hidden">
               <TabsTrigger value="login">Login</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="login">
               <CardHeader>
                 <CardTitle>Entrar no Sistema</CardTitle>
@@ -302,7 +303,7 @@ export default function AuthPage() {
                     </Button>
                   </form>
                 </Form>
-                
+
                 <div className="relative my-4">
                   <div className="absolute inset-0 flex items-center">
                     <span className="w-full border-t border-gray-300" />
@@ -311,14 +312,14 @@ export default function AuthPage() {
                     <span className="bg-white px-2 text-gray-500">Ou</span>
                   </div>
                 </div>
-                
+
                 <LoginWithReplit />
               </CardContent>
               <CardFooter className="flex justify-center">
                 {/* Link de cadastro removido */}
               </CardFooter>
             </TabsContent>
-            
+
             <TabsContent value="register">
               <CardHeader>
                 <CardTitle>Criar Conta</CardTitle>
