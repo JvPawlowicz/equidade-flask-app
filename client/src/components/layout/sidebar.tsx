@@ -12,7 +12,10 @@ import {
   FileBarChart,
   ChevronLeft,
   ChevronRight,
-  File
+  File,
+  Settings,
+  History,
+  UserCog
 } from "lucide-react";
 import { formatDate, getCurrentLocation } from "@/lib/utils";
 import { useMobile } from "@/hooks/use-mobile";
@@ -80,12 +83,13 @@ export function Sidebar({ isOpen: externalIsOpen, setIsOpen: setExternalIsOpen }
     { path: "/", label: "Dashboard", icon: <BarChart className="h-5 w-5" aria-hidden="true" /> },
     { path: "/agenda", label: "Agenda", icon: <Calendar className="h-5 w-5" aria-hidden="true" /> },
     { path: "/pacientes", label: "Pacientes", icon: <Users className="h-5 w-5" aria-hidden="true" /> },
-    { path: "/profissionais", label: "Profissionais", icon: <User className="h-5 w-5" aria-hidden="true" /> },
+    { path: "/usuarios", label: "Usuários", icon: <UserCog className="h-5 w-5" aria-hidden="true" /> },
     { path: "/unidades", label: "Unidades", icon: <Building2 className="h-5 w-5" aria-hidden="true" /> },
     { path: "/evolucoes", label: "Evoluções", icon: <FileText className="h-5 w-5" aria-hidden="true" /> },
     { path: "/documentos", label: "Documentos", icon: <File className="h-5 w-5" aria-hidden="true" /> },
     { path: "/relatorios", label: "Relatórios", icon: <FileBarChart className="h-5 w-5" aria-hidden="true" /> },
     { path: "/chat", label: "Chat", icon: <MessageCircle className="h-5 w-5" aria-hidden="true" /> },
+    { path: "/configuracoes", label: "Configurações", icon: <Settings className="h-5 w-5" aria-hidden="true" /> },
   ];
 
   // Filter items based on user role
@@ -93,9 +97,10 @@ export function Sidebar({ isOpen: externalIsOpen, setIsOpen: setExternalIsOpen }
     if (!user) return false;
     
     // Restrict access based on role
-    if (item.path === "/profissionais" && user.role === "secretary") return false;
+    if (item.path === "/usuarios" && user.role === "secretary") return false;
     if (item.path === "/unidades" && user.role !== "admin") return false;
     if (item.path === "/relatorios" && !["admin", "coordinator"].includes(user.role)) return false;
+    if (item.path === "/configuracoes" && !["admin", "coordinator"].includes(user.role)) return false;
     // Pacientes podem ser cadastrados por todos os usuários
     
     return true;
