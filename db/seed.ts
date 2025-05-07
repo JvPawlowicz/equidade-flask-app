@@ -491,4 +491,277 @@ async function seed() {
   }
 }
 
-seed();
+async function createNewUnitsAndUsers() {
+  try {
+    console.log("Criando novas unidades e usuários...");
+    
+    const password = await hashPassword("muda1234");
+    
+    // Criar as novas unidades
+    const [unidade1] = await db.insert(schema.facilities).values({
+      name: "Unidade 1",
+      address: "Av. Brasil, 1500",
+      city: "São Paulo",
+      state: "SP",
+      zipCode: "01100-200",
+      phone: "(11) 3333-1111",
+      email: "unidade1@equidade.app",
+      cnpj: "12.345.678/0003-51",
+      licenseNumber: "SP-789123",
+    }).returning();
+    
+    const [unidade2] = await db.insert(schema.facilities).values({
+      name: "Unidade 2",
+      address: "Rua das Palmeiras, 300",
+      city: "São Paulo",
+      state: "SP",
+      zipCode: "04800-100",
+      phone: "(11) 3333-2222",
+      email: "unidade2@equidade.app",
+      cnpj: "12.345.678/0004-32",
+      licenseNumber: "SP-789124",
+    }).returning();
+    
+    const [unidade3] = await db.insert(schema.facilities).values({
+      name: "Unidade 3",
+      address: "Av. Faria Lima, 500",
+      city: "São Paulo",
+      state: "SP",
+      zipCode: "05426-100",
+      phone: "(11) 3333-3333",
+      email: "unidade3@equidade.app",
+      cnpj: "12.345.678/0005-13",
+      licenseNumber: "SP-789125",
+    }).returning();
+    
+    const [unidadeNavirai] = await db.insert(schema.facilities).values({
+      name: "Unidade Navirái-MS",
+      address: "Rua Campo Grande, 789",
+      city: "Navirái",
+      state: "MS",
+      zipCode: "79950-000",
+      phone: "(67) 3333-4444",
+      email: "navirai@equidade.app",
+      cnpj: "12.345.678/0006-04",
+      licenseNumber: "MS-123456",
+    }).returning();
+    
+    const [unidadeFisio] = await db.insert(schema.facilities).values({
+      name: "Unidade Fisioterapia",
+      address: "Rua Doutor Arnaldo, 450",
+      city: "São Paulo",
+      state: "SP",
+      zipCode: "01255-000",
+      phone: "(11) 3333-5555",
+      email: "fisioterapia@equidade.app",
+      cnpj: "12.345.678/0007-85",
+      licenseNumber: "SP-789126",
+    }).returning();
+    
+    const [unidadeTerapia] = await db.insert(schema.facilities).values({
+      name: "Unidade Terapia Ocupacional",
+      address: "Rua Augusta, 1200",
+      city: "São Paulo",
+      state: "SP",
+      zipCode: "01305-100",
+      phone: "(11) 3333-6666",
+      email: "terapia@equidade.app",
+      cnpj: "12.345.678/0008-66",
+      licenseNumber: "SP-789127",
+    }).returning();
+
+    // Criar salas para cada unidade
+    await Promise.all([
+      db.insert(schema.rooms).values([
+        { name: "Sala 1", facilityId: unidade1.id, capacity: 2, description: "Sala de atendimento" },
+        { name: "Sala 2", facilityId: unidade1.id, capacity: 2, description: "Sala de terapia" }
+      ]),
+      db.insert(schema.rooms).values([
+        { name: "Sala 1", facilityId: unidade2.id, capacity: 2, description: "Sala de atendimento" },
+        { name: "Sala 2", facilityId: unidade2.id, capacity: 2, description: "Sala de terapia" }
+      ]),
+      db.insert(schema.rooms).values([
+        { name: "Sala 1", facilityId: unidade3.id, capacity: 2, description: "Sala de atendimento" },
+        { name: "Sala 2", facilityId: unidade3.id, capacity: 2, description: "Sala de terapia" }
+      ]),
+      db.insert(schema.rooms).values([
+        { name: "Sala 1", facilityId: unidadeNavirai.id, capacity: 2, description: "Sala de atendimento" },
+        { name: "Sala 2", facilityId: unidadeNavirai.id, capacity: 2, description: "Sala de terapia" }
+      ]),
+      db.insert(schema.rooms).values([
+        { name: "Sala 1", facilityId: unidadeFisio.id, capacity: 2, description: "Sala de fisioterapia" },
+        { name: "Sala 2", facilityId: unidadeFisio.id, capacity: 2, description: "Sala de avaliação" }
+      ]),
+      db.insert(schema.rooms).values([
+        { name: "Sala 1", facilityId: unidadeTerapia.id, capacity: 2, description: "Sala de terapia ocupacional" },
+        { name: "Sala 2", facilityId: unidadeTerapia.id, capacity: 2, description: "Sala de atividades" }
+      ])
+    ]);
+    
+    // Criar usuários coordenadores
+    const [kathUser] = await db.insert(schema.users).values({
+      username: "kath",
+      password,
+      email: "kath@equidade.app",
+      fullName: "Kath Silva",
+      role: "coordinator",
+      facilityId: unidade1.id,
+      phone: "(11) 99999-1111",
+    }).returning();
+    
+    const [thaisUser] = await db.insert(schema.users).values({
+      username: "thais",
+      password,
+      email: "thais@equidade.app",
+      fullName: "Thais Oliveira",
+      role: "coordinator",
+      facilityId: unidade2.id,
+      phone: "(11) 99999-2222",
+    }).returning();
+    
+    const [daniUser] = await db.insert(schema.users).values({
+      username: "dani",
+      password,
+      email: "dani@equidade.app",
+      fullName: "Dani Pereira",
+      role: "coordinator",
+      facilityId: unidade3.id,
+      phone: "(11) 99999-3333",
+    }).returning();
+    
+    const [fernandaUser] = await db.insert(schema.users).values({
+      username: "fernanda",
+      password,
+      email: "fernanda@equidade.app",
+      fullName: "Fernanda Santos",
+      role: "coordinator",
+      facilityId: unidadeNavirai.id,
+      phone: "(67) 99999-4444",
+    }).returning();
+    
+    const [yuriUser] = await db.insert(schema.users).values({
+      username: "yuri",
+      password,
+      email: "yuri@equidade.app",
+      fullName: "Yuri Costa",
+      role: "coordinator",
+      facilityId: unidadeFisio.id,
+      phone: "(11) 99999-5555",
+    }).returning();
+    
+    const [leticiaUser] = await db.insert(schema.users).values({
+      username: "leticia",
+      password,
+      email: "leticia@equidade.app",
+      fullName: "Leticia Martins",
+      role: "coordinator",
+      facilityId: unidadeTerapia.id,
+      phone: "(11) 99999-6666",
+    }).returning();
+    
+    // Criar perfil profissional para cada coordenador
+    await Promise.all([
+      db.insert(schema.professionals).values({
+        userId: kathUser.id,
+        professionalType: "psychologist",
+        licenseNumber: "CRP 06/123457",
+        licenseType: "CRP",
+        specialization: "Coordenação Unidade 1",
+        employmentType: "employee",
+        hourlyRate: 180,
+      }),
+      
+      db.insert(schema.professionals).values({
+        userId: thaisUser.id,
+        professionalType: "psychologist",
+        licenseNumber: "CRP 06/123458",
+        licenseType: "CRP",
+        specialization: "Coordenação Unidade 2",
+        employmentType: "employee",
+        hourlyRate: 180,
+      }),
+      
+      db.insert(schema.professionals).values({
+        userId: daniUser.id,
+        professionalType: "psychologist",
+        licenseNumber: "CRP 06/123459",
+        licenseType: "CRP",
+        specialization: "Coordenação Unidade 3",
+        employmentType: "employee",
+        hourlyRate: 180,
+      }),
+      
+      db.insert(schema.professionals).values({
+        userId: fernandaUser.id,
+        professionalType: "psychologist",
+        licenseNumber: "CRP 14/123460",
+        licenseType: "CRP",
+        specialization: "Coordenação Unidade Navirái",
+        employmentType: "employee",
+        hourlyRate: 180,
+      }),
+      
+      db.insert(schema.professionals).values({
+        userId: yuriUser.id,
+        professionalType: "physiotherapist",
+        licenseNumber: "CREFITO 3/12346",
+        licenseType: "CREFITO",
+        specialization: "Coordenação Unidade Fisioterapia",
+        employmentType: "employee",
+        hourlyRate: 180,
+      }),
+      
+      db.insert(schema.professionals).values({
+        userId: leticiaUser.id,
+        professionalType: "occupational_therapist",
+        licenseNumber: "CREFITO 3/12347",
+        licenseType: "CREFITO",
+        specialization: "Coordenação Unidade Terapia Ocupacional",
+        employmentType: "employee",
+        hourlyRate: 180,
+      })
+    ]);
+    
+    // Adicionar novo usuário administrador
+    const [giovannaUser] = await db.insert(schema.users).values({
+      username: "giovanna",
+      password,
+      email: "giovanna@equidade.app",
+      fullName: "Giovanna Ribeiro",
+      role: "admin",
+      facilityId: unidade1.id,
+      phone: "(11) 98888-7777",
+    }).returning();
+    
+    // Adicionar conta de secretária solicitada
+    const [mariaUser] = await db.insert(schema.users).values({
+      username: "maria.santos",
+      password,
+      email: "maria.santos@grupoequidade.com.br",
+      fullName: "Maria Santos",
+      role: "secretary",
+      facilityId: unidade1.id,
+      phone: "(11) 97777-6666",
+    }).returning();
+    
+    console.log("Novas unidades e usuários criados com sucesso!");
+    return true;
+  } catch (error) {
+    console.error("Erro ao criar novas unidades e usuários:", error);
+    return false;
+  }
+}
+
+// Exportar as funções para que possam ser chamadas de outros scripts
+export { seed, createNewUnitsAndUsers };
+
+// Executar funções se este arquivo for executado diretamente
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const run = async () => {
+    await seed();
+    // Não executamos createNewUnitsAndUsers por padrão
+    // para evitar duplicações em servidores de produção
+  };
+  
+  run();
+}

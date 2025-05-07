@@ -14,6 +14,7 @@ import FacilityDetails from "@/pages/facility-details";
 import ReportsPage from "@/pages/reports-page";
 import ChatPage from "@/pages/chat-page";
 import DocumentsPage from "@/pages/documents-page";
+import ProfilePage from "@/pages/profile-page";
 import AuthPage from "@/pages/auth-page";
 import { ProtectedRoute } from "@/lib/protected-route";
 import { SkipLink } from "@/components/accessibility/skip-link";
@@ -181,6 +182,7 @@ function App() {
             <ProtectedRoute path="/relatorios" component={ReportsPage} />
             <ProtectedRoute path="/chat" component={ChatPage} />
             <ProtectedRoute path="/documentos" component={DocumentsPage} />
+            <ProtectedRoute path="/perfil" component={ProfilePage} />
             
             {/* Página 404 para rotas não encontradas */}
             <Route path="/404" component={NotFound} />

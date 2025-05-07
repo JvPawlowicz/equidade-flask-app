@@ -15,7 +15,8 @@ import {
   File,
   Settings,
   History,
-  UserCog
+  UserCog,
+  UserCircle
 } from "lucide-react";
 import { formatDate, getCurrentLocation } from "@/lib/utils";
 import { useMobile } from "@/hooks/use-mobile";
@@ -89,6 +90,7 @@ export function Sidebar({ isOpen: externalIsOpen, setIsOpen: setExternalIsOpen }
     { path: "/documentos", label: "Documentos", icon: <File className="h-5 w-5" aria-hidden="true" /> },
     { path: "/relatorios", label: "Relatórios", icon: <FileBarChart className="h-5 w-5" aria-hidden="true" /> },
     { path: "/chat", label: "Chat", icon: <MessageCircle className="h-5 w-5" aria-hidden="true" /> },
+    { path: "/perfil", label: "Meu Perfil", icon: <UserCircle className="h-5 w-5" aria-hidden="true" /> },
     { path: "/configuracoes", label: "Configurações", icon: <Settings className="h-5 w-5" aria-hidden="true" /> },
   ];
 

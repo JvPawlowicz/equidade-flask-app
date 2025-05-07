@@ -3397,6 +3397,116 @@ export async function registerRoutes(app: Express): Promise<Server> {
     );
   }
 
+  // API para atualizar perfil do usuário
+  app.put(`${apiPrefix}/users/profile`, requireAuth, async (req: Request, res: Response) => {
+    try {
+      if (!req.user || !req.user.id) {
+        return res.status(401).json({ error: "Usuário não autenticado" });
+      }
+
+      const { fullName, profileImage } = req.body;
+      
+      // Validar dados
+      if (!fullName) {
+        return res.status(400).json({ error: "Nome completo é obrigatório" });
+      }
+
+      // Atualizar usuário
+      const [updatedUser] = await db
+        .update(users)
+        .set({
+          fullName,
+          profileImage: profileImage || null,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, req.user.id))
+        .returning();
+
+      if (!updatedUser) {
+        return res.status(404).json({ error: "Usuário não encontrado" });
+      }
+
+      // Registrar ação no log de auditoria
+      await logAuditAction(req, "update_profile", "users");
+
+      res.json({
+        id: updatedUser.id,
+        username: updatedUser.username,
+        fullName: updatedUser.fullName,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        profileImage: updatedUser.profileImage
+      });
+    } catch (error) {
+      console.error("Erro ao atualizar perfil:", error);
+      res.status(500).json({ error: "Erro ao atualizar perfil" });
+    }
+  });
+
+  // API para obter e atualizar dados profissionais do usuário atual
+  app.get(`${apiPrefix}/professionals/me`, requireAuth, async (req: Request, res: Response) => {
+    try {
+      if (!req.user || !req.user.id) {
+        return res.status(401).json({ error: "Usuário não autenticado" });
+      }
+
+      // Buscar o profissional pelo userId
+      const professional = await db.query.professionals.findFirst({
+        where: eq(professionals.userId, req.user.id)
+      });
+
+      if (!professional) {
+        return res.status(404).json({ error: "Perfil profissional não encontrado" });
+      }
+
+      res.json(professional);
+    } catch (error) {
+      console.error("Erro ao buscar perfil profissional:", error);
+      res.status(500).json({ error: "Erro ao buscar perfil profissional" });
+    }
+  });
+
+  // API para atualizar dados profissionais do usuário atual
+  app.put(`${apiPrefix}/professionals/me`, requireAuth, async (req: Request, res: Response) => {
+    try {
+      if (!req.user || !req.user.id) {
+        return res.status(401).json({ error: "Usuário não autenticado" });
+      }
+
+      // Buscar o profissional pelo userId
+      const professional = await db.query.professionals.findFirst({
+        where: eq(professionals.userId, req.user.id)
+      });
+
+      if (!professional) {
+        return res.status(404).json({ error: "Perfil profissional não encontrado" });
+      }
+
+      const { cpf, birthDate, professionalCouncil, professionalCouncilNumber } = req.body;
+      
+      // Atualizar profissional
+      const [updatedProfessional] = await db
+        .update(professionals)
+        .set({
+          cpf: cpf || professional.cpf,
+          birthDate: birthDate ? new Date(birthDate) : professional.birthDate,
+          professionalCouncil: professionalCouncil || professional.professionalCouncil,
+          professionalCouncilNumber: professionalCouncilNumber || professional.professionalCouncilNumber,
+          updatedAt: new Date()
+        })
+        .where(eq(professionals.id, professional.id))
+        .returning();
+
+      // Registrar ação no log de auditoria
+      await logAuditAction(req, "update_profile", "professionals");
+
+      res.json(updatedProfessional);
+    } catch (error) {
+      console.error("Erro ao atualizar perfil profissional:", error);
+      res.status(500).json({ error: "Erro ao atualizar perfil profissional" });
+    }
+  });
+
   // Static files for uploaded documents
   app.use("/uploads", express.static(uploadDir));
 
