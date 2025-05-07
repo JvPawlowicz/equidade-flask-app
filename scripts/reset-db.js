@@ -1,10 +1,17 @@
-const { execSync } = require('child_process');
-const { Pool } = require('pg');
-const path = require('path');
-const dotenv = require('dotenv');
+import { execSync } from 'child_process';
+import pg from 'pg';
+import * as dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const { Pool } = pg;
 
 // Carregar variáveis de ambiente
 dotenv.config();
+
+// Obter o diretório atual para o módulo ES
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 async function resetDatabase() {
   try {
@@ -17,18 +24,34 @@ async function resetDatabase() {
       SELECT tablename FROM pg_tables WHERE schemaname='public'
     `);
     
-    // Desativar verificações de chave estrangeira temporariamente
-    await pool.query('SET session_replication_role = replica;');
+    // Dropar tabelas em ordem
+    const tables = tablesResult.rows.map(row => row.tablename);
+    console.log('Tabelas encontradas:', tables);
     
-    // Dropar todas as tabelas
-    for (const row of tablesResult.rows) {
-      const tableName = row.tablename;
-      console.log(`Dropando tabela: ${tableName}`);
-      await pool.query(`DROP TABLE IF EXISTS "${tableName}" CASCADE`);
+    // Desabilitar todas as restrições de chave estrangeira antes de dropar as tabelas
+    try {
+      await pool.query(`DO $$ 
+        DECLARE
+          r RECORD;
+        BEGIN
+          FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
+            EXECUTE 'ALTER TABLE IF EXISTS "' || r.tablename || '" DISABLE TRIGGER ALL;';
+          END LOOP;
+        END $$;`);
+      console.log('Restrições de chave estrangeira desabilitadas');
+    } catch (err) {
+      console.warn('Aviso ao desabilitar triggers:', err.message);
     }
     
-    // Restaurar verificações de chave estrangeira
-    await pool.query('SET session_replication_role = DEFAULT;');
+    // Dropar todas as tabelas com CASCADE
+    for (const tableName of tables) {
+      try {
+        console.log(`Dropando tabela: ${tableName}`);
+        await pool.query(`DROP TABLE IF EXISTS "${tableName}" CASCADE`);
+      } catch (err) {
+        console.warn(`Aviso ao dropar tabela ${tableName}:`, err.message);
+      }
+    }
     
     // Fechar a conexão com o pool
     await pool.end();

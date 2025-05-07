@@ -208,14 +208,14 @@
     --chart-3: 180 100% 50%;
     --chart-4: 240 100% 50%;
     --chart-5: 300 100% 50%;
-    --sidebar-background: 0 0% 0%;
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 60 100% 50%;
-    --sidebar-primary-foreground: 0 0% 0%;
-    --sidebar-accent: 0 0% 30%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 0 0% 100%;
-    --sidebar-ring: 60 100% 50%;
+    --sidebar-background: 0 0% 100%; /* Branco para sidebar mesmo no modo de alto contraste */
+    --sidebar-foreground: 0 0% 0%; /* Preto para texto na sidebar para maior contraste */
+    --sidebar-primary: 60 100% 50%; /* Amarelo brilhante para elementos principais */
+    --sidebar-primary-foreground: 0 0% 0%; /* Preto para texto em elementos principais */
+    --sidebar-accent: 0 0% 90%; /* Cinza claro para áreas de destaque secundário */
+    --sidebar-accent-foreground: 0 0% 0%; /* Preto para texto em áreas de destaque */
+    --sidebar-border: 0 0% 0%; /* Bordas pretas para maior contraste */
+    --sidebar-ring: 60 100% 50%; /* Amarelo brilhante para foco */
     
     /* Foco extremamente visível para alto contraste */
     --focus-ring-color: hsl(60 100% 50%);
