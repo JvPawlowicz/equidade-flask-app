@@ -42,7 +42,7 @@ app.use((req, res, next) => {
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
-    
+
     console.error("[Error]:", err);
     res.status(status).json({ message });
     // Don't throw the error again
@@ -57,12 +57,6 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // Configure Vite middleware for development
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
-  }
 
   // ALWAYS serve the app on port 5000
   // this serves both the API and the client.
