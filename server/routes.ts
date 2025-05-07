@@ -1148,14 +1148,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get(`${apiPrefix}/patients`, async (req, res) => {
     try {
       const search = req.query.search as string | undefined;
-      let query = db.select().from(patients);
-
-      if (search) {
-        query = query.where(ilike(patients.fullName, `%${search}%`));
+      const facilityIdParam = req.query.facilityId as string | undefined;
+      
+      // Se foi passado um facilityId, precisamos buscar os pacientes vinculados àquela unidade
+      if (facilityIdParam) {
+        const facilityId = parseInt(facilityIdParam);
+        
+        // Buscar pacientes vinculados a esta unidade usando a tabela de relacionamento
+        const patientsQuery = db.select({
+          patientId: patientFacilities.patientId
+        })
+        .from(patientFacilities)
+        .where(eq(patientFacilities.facilityId, facilityId));
+        
+        // Converter resultado em array de IDs
+        const patientFacilityRelations = await patientsQuery;
+        const patientIds = patientFacilityRelations.map(p => p.patientId);
+        
+        // Se não houver pacientes nesta unidade, retornar lista vazia
+        if (patientIds.length === 0) {
+          return res.json([]);
+        }
+        
+        // Buscar detalhes dos pacientes
+        let query = db.select().from(patients).where(inArray(patients.id, patientIds));
+        
+        // Aplicar filtro de busca por nome se fornecido
+        if (search) {
+          query = query.where(ilike(patients.fullName, `%${search}%`));
+        }
+        
+        const filteredPatients = await query.orderBy(patients.fullName);
+        return res.json(filteredPatients);
+      } 
+      // Caso não tenha filtro por unidade, buscar todos os pacientes
+      else {
+        let query = db.select().from(patients);
+  
+        if (search) {
+          query = query.where(ilike(patients.fullName, `%${search}%`));
+        }
+  
+        const allPatients = await query.orderBy(patients.fullName);
+        return res.json(allPatients);
       }
-
-      const allPatients = await query.orderBy(patients.fullName);
-      res.json(allPatients);
     } catch (error) {
       console.error("Error fetching patients:", error);
       res.status(500).json({ error: "Erro ao buscar pacientes" });

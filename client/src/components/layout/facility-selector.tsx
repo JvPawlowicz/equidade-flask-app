@@ -1,33 +1,17 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Building,
-  ChevronDown,
-  Check,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Check, Building, ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { useFacility } from "@/hooks/use-facility";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 interface FacilitySelectorProps {
   onFacilityChange?: (facilityId: number | null) => void;
@@ -37,149 +21,120 @@ interface FacilitySelectorProps {
 
 export function FacilitySelector({
   onFacilityChange,
-  buttonVariant = "outline",
+  buttonVariant = "default",
   showAllOption = true,
 }: FacilitySelectorProps) {
-  const { toast } = useToast();
-  const [selectedFacility, setSelectedFacility] = useState<number | null>(null);
-  
-  // Buscar lista de unidades (facilities)
-  const { data: facilities, isLoading } = useQuery<any[]>({
+  const { selectedFacilityId, setSelectedFacilityId, facilities, isLoading } = useFacility();
+  const [open, setOpen] = useState(false);
+
+  // Buscar as unidades diretamente se não estiver disponível no contexto
+  const { data: fallbackFacilities, isLoading: isFallbackLoading } = useQuery<any[]>({
     queryKey: ["/api/facilities"],
+    enabled: !facilities && isLoading, // Só carregar se não estiver já carregadas no contexto
   });
-  
-  // Definir unidade padrão quando a lista é carregada (se ainda não estiver definida)
-  useEffect(() => {
-    if (facilities && facilities.length > 0 && selectedFacility === null) {
-      // Verificar se há alguma preferência salva no localStorage
-      const savedFacilityId = localStorage.getItem('selectedFacilityId');
-      
-      if (savedFacilityId && facilities.some(f => f.id.toString() === savedFacilityId)) {
-        const facilityId = parseInt(savedFacilityId, 10);
-        setSelectedFacility(facilityId);
-        onFacilityChange?.(facilityId);
-      } else {
-        // Se não houver preferência salva, definir a primeira unidade como padrão
-        setSelectedFacility(facilities[0].id);
-        onFacilityChange?.(facilities[0].id);
-      }
-    }
-  }, [facilities, selectedFacility, onFacilityChange]);
-  
-  // Manipular mudança na seleção de unidade
-  const handleFacilityChange = (facilityId: string) => {
-    // "all" é uma string especial para representar "Todas as unidades"
-    const newFacilityId = facilityId === "all" ? null : parseInt(facilityId, 10);
+
+  // Escolher a fonte de dados correta
+  const facilitiesList = facilities || fallbackFacilities || [];
+  const isLoadingFacilities = isLoading || isFallbackLoading;
+
+  // Obter detalhes da unidade selecionada
+  const selectedFacility = selectedFacilityId !== null
+    ? facilitiesList.find(f => f.id === selectedFacilityId)
+    : null;
+
+  // Manipular mudança de unidade
+  const handleFacilityChange = (facilityId: number | null) => {
+    setSelectedFacilityId(facilityId);
     
-    // Atualizar estado local
-    setSelectedFacility(newFacilityId);
-    
-    // Salvar preferência no localStorage
-    if (newFacilityId === null) {
-      localStorage.removeItem('selectedFacilityId');
-    } else {
-      localStorage.setItem('selectedFacilityId', newFacilityId.toString());
+    if (onFacilityChange) {
+      onFacilityChange(facilityId);
     }
     
-    // Chamar callback informando a mudança
-    onFacilityChange?.(newFacilityId);
-    
-    // Mostrar feedback ao usuário
-    toast({
-      title: "Unidade alterada",
-      description: newFacilityId === null 
-        ? "Visualizando todas as unidades" 
-        : `Unidade: ${facilities?.find(f => f.id === newFacilityId)?.name || 'Selecionada'}`,
-      variant: "default",
-    });
+    setOpen(false);
   };
-  
-  // Se não há unidades ou apenas uma, não mostrar o seletor
-  if (isLoading || !facilities || facilities.length <= 1) {
-    return null;
-  }
-  
-  // Encontrar o nome da unidade selecionada
-  const selectedFacilityName = selectedFacility
-    ? facilities.find(f => f.id === selectedFacility)?.name || "Unidade"
-    : "Todas as unidades";
-  
-  // Renderizar como dropdown em dispositivos pequenos e select em dispositivos maiores
+
   return (
-    <div className="flex items-center">
-      {/* Versão mobile (dropdown) */}
-      <div className="lg:hidden">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant={buttonVariant} className="flex items-center gap-2">
-              <Building className="h-4 w-4" />
-              <span className="max-w-[140px] truncate">{selectedFacilityName}</span>
-              <ChevronDown className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>Selecionar Unidade</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            
-            {showAllOption && (
-              <DropdownMenuItem onClick={() => handleFacilityChange("all")}>
-                <div className="flex items-center justify-between w-full">
-                  <span>Todas as unidades</span>
-                  {selectedFacility === null && <Check className="h-4 w-4" />}
-                </div>
-              </DropdownMenuItem>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant={buttonVariant}
+          className="flex items-center gap-2 max-w-[200px] md:max-w-[250px] justify-start p-2 md:pl-3 md:pr-2"
+          aria-label="Selecionar unidade"
+        >
+          <Building className="h-4 w-4 flex-shrink-0" />
+          
+          <span className="text-sm truncate flex-1 text-left">
+            {isLoadingFacilities ? (
+              <Skeleton className="h-4 w-24" />
+            ) : selectedFacility ? (
+              selectedFacility.name
+            ) : (
+              "Todas as unidades"
             )}
-            
-            {facilities.map((facility) => (
-              <DropdownMenuItem 
-                key={facility.id}
-                onClick={() => handleFacilityChange(facility.id.toString())}
-              >
-                <div className="flex items-center justify-between w-full">
-                  <span>{facility.name}</span>
-                  {selectedFacility === facility.id && <Check className="h-4 w-4" />}
-                </div>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-      
-      {/* Versão desktop (select) */}
-      <div className="hidden lg:block">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div>
-                <Select 
-                  value={selectedFacility === null ? "all" : selectedFacility.toString()} 
-                  onValueChange={handleFacilityChange}
+          </span>
+          
+          <ChevronDown className="h-4 w-4 flex-shrink-0 opacity-50" />
+        </Button>
+      </DropdownMenuTrigger>
+
+      <DropdownMenuContent
+        align="start"
+        className="w-[240px] md:w-[280px]"
+        aria-label="Lista de unidades"
+      >
+        <ScrollArea className="max-h-[300px]">
+          {isLoadingFacilities ? (
+            <div className="p-2 space-y-2">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-8 w-full" />
+              ))}
+            </div>
+          ) : (
+            <>
+              {showAllOption && (
+                <DropdownMenuItem
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-2 cursor-pointer",
+                    selectedFacilityId === null && "bg-muted/50"
+                  )}
+                  onClick={() => handleFacilityChange(null)}
+                  role="option"
+                  aria-selected={selectedFacilityId === null}
                 >
-                  <SelectTrigger className={`w-[180px] ${buttonVariant === 'ghost' ? 'border-none' : ''}`}>
-                    <div className="flex items-center gap-2">
-                      <Building className="h-4 w-4" />
-                      <SelectValue placeholder="Selecionar unidade" />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {showAllOption && (
-                      <SelectItem value="all">Todas as unidades</SelectItem>
+                  <div className="w-4 h-4 flex items-center justify-center">
+                    {selectedFacilityId === null && (
+                      <Check className="h-4 w-4" />
                     )}
-                    {facilities.map((facility) => (
-                      <SelectItem key={facility.id} value={facility.id.toString()}>
-                        {facility.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Selecionar unidade para filtrar dados</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
-    </div>
+                  </div>
+                  <span className="flex-1">Todas as unidades</span>
+                </DropdownMenuItem>
+              )}
+
+              {facilitiesList.map((facility) => (
+                <DropdownMenuItem
+                  key={facility.id}
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-2 cursor-pointer",
+                    selectedFacilityId === facility.id && "bg-muted/50"
+                  )}
+                  onClick={() => handleFacilityChange(facility.id)}
+                  role="option"
+                  aria-selected={selectedFacilityId === facility.id}
+                >
+                  <div className="w-4 h-4 flex items-center justify-center">
+                    {selectedFacilityId === facility.id && (
+                      <Check className="h-4 w-4" />
+                    )}
+                  </div>
+                  <span className="flex-1 truncate" title={facility.name}>
+                    {facility.name}
+                  </span>
+                </DropdownMenuItem>
+              ))}
+            </>
+          )}
+        </ScrollArea>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
