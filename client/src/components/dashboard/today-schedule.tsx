@@ -61,76 +61,69 @@ export function TodaySchedule() {
   }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-lg font-semibold text-gray-800">Agenda de Hoje</CardTitle>
-        <Button variant="link" asChild>
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <Button variant="link" asChild className="p-0 h-auto text-primary">
           <Link href="/agenda">Ver toda agenda</Link>
         </Button>
-      </CardHeader>
-      <CardContent className="pt-0">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Horário</TableHead>
-                <TableHead>Paciente</TableHead>
-                <TableHead>Profissional</TableHead>
-                <TableHead>Procedimento</TableHead>
-                <TableHead>Sala</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {appointments && appointments.length > 0 ? (
-                appointments.map((appointment) => (
-                  <TableRow key={appointment.id} className="hover:bg-gray-50">
-                    <TableCell className="whitespace-nowrap">
-                      {formatTimeRange(appointment.startTime, appointment.endTime)}
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      <div className="flex items-center">
-                        <AvatarInitials
-                          name={appointment.patient?.fullName || ""}
-                          className="h-8 w-8 rounded-full bg-blue-100 text-blue-500"
-                        />
-                        <div className="ml-3">
-                          <div className="text-sm font-medium text-gray-900">
-                            {appointment.patient?.fullName}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {calculateAge(appointment.patient?.dateOfBirth)} anos
-                          </div>
+      </div>
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="text-xs">Horário</TableHead>
+              <TableHead className="text-xs">Paciente</TableHead>
+              <TableHead className="text-xs">Profissional</TableHead>
+              <TableHead className="text-xs">Procedimento</TableHead>
+              <TableHead className="text-xs">Status</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {appointments && appointments.length > 0 ? (
+              appointments.map((appointment) => (
+                <TableRow key={appointment.id} className="hover:bg-gray-50">
+                  <TableCell className="whitespace-nowrap py-2 text-xs">
+                    {formatTimeRange(appointment.startTime, appointment.endTime)}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap py-2">
+                    <div className="flex items-center">
+                      <AvatarInitials
+                        name={appointment.patient?.fullName || ""}
+                        className="h-7 w-7 rounded-full bg-blue-100 text-blue-500"
+                      />
+                      <div className="ml-2">
+                        <div className="text-xs font-medium text-gray-900">
+                          {appointment.patient?.fullName}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {calculateAge(appointment.patient?.dateOfBirth)} anos
                         </div>
                       </div>
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap text-sm">
-                      {appointment.professional?.user?.fullName}
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap text-sm">
-                      {getProcedureText(appointment.procedureType)}
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap text-sm">
-                      {appointment.room?.name}
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusClass(appointment.status)}`}>
-                        {getStatusText(appointment.status)}
-                      </span>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-4 text-gray-600">
-                    Não há agendamentos para hoje.
+                    </div>
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap text-xs py-2">
+                    {appointment.professional?.user?.fullName}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap text-xs py-2">
+                    {getProcedureText(appointment.procedureType)}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap py-2">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusClass(appointment.status)}`}>
+                      {getStatusText(appointment.status)}
+                    </span>
                   </TableCell>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
-    </Card>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-4 text-gray-600">
+                  Não há agendamentos para hoje.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
   );
 }

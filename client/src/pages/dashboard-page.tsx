@@ -116,18 +116,18 @@ export default function DashboardPage() {
           />
         </div>
 
-        {/* Main content in two columns on larger screens */}
+        {/* Main content with fixed height cards */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Today's Schedule - wider column */}
           <div className="lg:col-span-2">
-            <Card className="shadow-md h-full">
-              <CardHeader className="pb-2">
+            <Card className="shadow-md overflow-hidden flex flex-col" style={{ height: '580px' }}>
+              <CardHeader className="pb-2 flex-shrink-0">
                 <CardTitle className="text-lg font-semibold flex items-center">
                   <CalendarCheck className="mr-2 h-5 w-5 text-primary" />
                   Agenda de Hoje
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="flex-grow overflow-auto pb-6">
                 <TodaySchedule />
               </CardContent>
             </Card>
@@ -135,14 +135,14 @@ export default function DashboardPage() {
 
           {/* Pending Evolutions Section */}
           <div className="lg:col-span-1">
-            <Card className="shadow-md h-full">
-              <CardHeader className="pb-2">
+            <Card className="shadow-md overflow-hidden flex flex-col" style={{ height: '580px' }}>
+              <CardHeader className="pb-2 flex-shrink-0">
                 <CardTitle className="text-lg font-semibold flex items-center">
                   <FileWarning className="mr-2 h-5 w-5 text-accent" />
                   Evoluções Pendentes
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="flex-grow overflow-auto pb-6">
                 <PendingEvolutions />
               </CardContent>
             </Card>
