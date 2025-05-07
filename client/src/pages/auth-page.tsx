@@ -242,10 +242,9 @@ export default function AuthPage() {
       {/* Auth Forms */}
       <div className="lg:w-1/2 p-8 flex items-center justify-center">
         <Card className="w-full max-w-md">
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-2">
+          <Tabs value="login" defaultValue="login">
+            <TabsList className="hidden">
               <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="register">Cadastro</TabsTrigger>
             </TabsList>
             
             <TabsContent value="login">
@@ -305,9 +304,7 @@ export default function AuthPage() {
                 </Form>
               </CardContent>
               <CardFooter className="flex justify-center">
-                <Button variant="link" onClick={() => setActiveTab("register")}>
-                  Não tem uma conta? Cadastre-se
-                </Button>
+                {/* Link de cadastro removido */}
               </CardFooter>
             </TabsContent>
             
