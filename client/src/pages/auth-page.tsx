@@ -200,7 +200,7 @@ export default function AuthPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col lg:flex-row">
       {/* Hero Section */}
-      <div className="bg-sidebar text-white lg:w-1/2 p-8 lg:p-16 flex flex-col justify-center" style={{ backgroundColor: 'hsl(204, 60%, 20%)' }}>
+      <div className="text-white lg:w-1/2 p-8 lg:p-16 flex flex-col justify-center" style={{ backgroundColor: '#1A2B40' }}>
         <div className="max-w-lg mx-auto">
           <img 
             src="/assets/images/logo-equidade-plus.svg" 
@@ -208,36 +208,39 @@ export default function AuthPage() {
             className="h-16 mb-6"
             aria-hidden="true"
           />
-          <h1 className="sr-only">Equidade+</h1>
-          <p className="text-xl lg:text-2xl font-medium mb-4">
+          <h1 className="text-2xl lg:text-3xl font-bold mb-4 text-white flex items-center">
+            Equidade<span className="text-blue-400">+</span>
+          </h1>
+          <p className="text-xl lg:text-2xl font-medium mb-4 text-white">
             Gerenciamento de Clínicas Multi e Interdisciplinares
           </p>
-          <p className="text-primary-foreground/90 mb-8">
-            Uma plataforma completa para gerenciamento de clínicas, agendamentos, prontuários e evolução de pacientes.
-            Desenvolvida com foco em clínicas interdisciplinares para pessoas com deficiência.
+          <p className="text-white/90 mb-8 text-base">
+            Uma plataforma completa para gerenciamento de clínicas, agendamentos, prontuários 
+            e evolução de pacientes. Desenvolvida especialmente para clínicas 
+            interdisciplinares de atendimento a pessoas com deficiência.
           </p>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div className="bg-primary/10 p-4 rounded-lg border border-primary/30 shadow-sm hover:shadow-md transition-all duration-300">
-              <h3 className="font-medium mb-2 text-primary-foreground">Agendamento Simplificado</h3>
-              <p className="text-primary-foreground/90">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+            <div className="bg-white/10 p-5 rounded-lg border border-white/20 shadow-md hover:shadow-lg transition-all duration-300">
+              <h3 className="font-semibold mb-2 text-white text-base">Agendamento Simplificado</h3>
+              <p className="text-white/95">
                 Agende e gerencie consultas com facilidade, visualizando por dia, semana ou mês.
               </p>
             </div>
-            <div className="bg-primary/10 p-4 rounded-lg border border-primary/30 shadow-sm hover:shadow-md transition-all duration-300">
-              <h3 className="font-medium mb-2 text-primary-foreground">Prontuários Integrados</h3>
-              <p className="text-primary-foreground/90">
+            <div className="bg-white/10 p-5 rounded-lg border border-white/20 shadow-md hover:shadow-lg transition-all duration-300">
+              <h3 className="font-semibold mb-2 text-white text-base">Prontuários Integrados</h3>
+              <p className="text-white/95">
                 Registre e acompanhe o histórico de atendimentos e evoluções dos pacientes.
               </p>
             </div>
-            <div className="bg-primary/10 p-4 rounded-lg border border-primary/30 shadow-sm hover:shadow-md transition-all duration-300">
-              <h3 className="font-medium mb-2 text-primary-foreground">Equipe Multidisciplinar</h3>
-              <p className="text-primary-foreground/90">
+            <div className="bg-white/10 p-5 rounded-lg border border-white/20 shadow-md hover:shadow-lg transition-all duration-300">
+              <h3 className="font-semibold mb-2 text-white text-base">Equipe Multidisciplinar</h3>
+              <p className="text-white/95">
                 Colaboração entre diferentes profissionais com acesso adaptado às funções.
               </p>
             </div>
-            <div className="bg-primary/10 p-4 rounded-lg border border-primary/30 shadow-sm hover:shadow-md transition-all duration-300">
-              <h3 className="font-medium mb-2 text-primary-foreground">Supervisão de Estagiários</h3>
-              <p className="text-primary-foreground/90">
+            <div className="bg-white/10 p-5 rounded-lg border border-white/20 shadow-md hover:shadow-lg transition-all duration-300">
+              <h3 className="font-semibold mb-2 text-white text-base">Supervisão de Estagiários</h3>
+              <p className="text-white/95">
                 Supervisione evoluções de estagiários com sistema de aprovação integrado.
               </p>
             </div>
@@ -246,17 +249,20 @@ export default function AuthPage() {
       </div>
 
       {/* Auth Forms */}
-      <div className="lg:w-1/2 p-8 flex items-center justify-center">
-        <Card className="w-full max-w-md">
+      <div className="lg:w-1/2 p-8 flex items-center justify-center" style={{ backgroundColor: '#f5f8fa' }}>
+        <Card className="w-full max-w-md shadow-xl border-0">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="register">Cadastro</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 p-1">
+              <TabsTrigger value="login" className="text-base">Login</TabsTrigger>
+              <TabsTrigger value="register" className="text-base">Cadastro</TabsTrigger>
             </TabsList>
             
             <TabsContent value="login">
               <CardHeader>
-                <CardTitle>Entrar no Sistema</CardTitle>
+                <div className="flex items-center gap-2">
+                  <LogIn className="h-5 w-5 text-primary" />
+                  <CardTitle>Entrar no Sistema</CardTitle>
+                </div>
                 <CardDescription>
                   Entre com suas credenciais para acessar sua conta
                 </CardDescription>
@@ -292,7 +298,7 @@ export default function AuthPage() {
                     />
                     <Button
                       type="submit"
-                      className="w-full bg-primary hover:bg-primary/90"
+                      className="w-full bg-primary hover:bg-primary/90 text-white font-medium"
                       disabled={loginForm.formState.isSubmitting}
                     >
                       {loginForm.formState.isSubmitting ? (
@@ -319,7 +325,10 @@ export default function AuthPage() {
             
             <TabsContent value="register">
               <CardHeader>
-                <CardTitle>Criar Conta</CardTitle>
+                <div className="flex items-center gap-2">
+                  <UserPlus className="h-5 w-5 text-primary" />
+                  <CardTitle>Criar Conta</CardTitle>
+                </div>
                 <CardDescription>
                   Cadastre-se para acessar o sistema
                 </CardDescription>
@@ -416,7 +425,7 @@ export default function AuthPage() {
                     />
                     <Button
                       type="submit"
-                      className="w-full bg-primary hover:bg-primary/90"
+                      className="w-full bg-primary hover:bg-primary/90 text-white font-medium"
                       disabled={registerForm.formState.isSubmitting}
                     >
                       {registerForm.formState.isSubmitting ? (
