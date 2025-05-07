@@ -78,12 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       console.log("Tentando fazer login com:", cleanedCredentials);
       try {
-        const res = await apiRequest("POST", "/api/login", cleanedCredentials, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      });
+        const res = await apiRequest("POST", "/api/login", cleanedCredentials);
         const userData = await res.json();
         console.log("Resposta do login:", userData);
         return userData;
