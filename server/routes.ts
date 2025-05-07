@@ -137,6 +137,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // API prefix
   const apiPrefix = "/api";
+  
+  // Rota de healthcheck para monitoramento (não requer autenticação)
+  app.get(`${apiPrefix}/health`, healthCheck);
 
   // Rota para listar todos os usuários - com dados sensíveis removidos
   app.get(`${apiPrefix}/users`, checkPermission('users', 'read'), async (req: Request, res: Response) => {
