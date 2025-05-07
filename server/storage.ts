@@ -15,11 +15,11 @@ export interface IStorage {
   getAllUsers: () => Promise<SelectUser[]>;
   updateUser: (id: number, user: Partial<InsertUser>) => Promise<SelectUser | undefined>;
   validateUser: (credentials: LoginUser) => Promise<SelectUser | null>;
-  sessionStore: session.SessionStore;
+  sessionStore: any;
 }
 
 class DatabaseStorage implements IStorage {
-  sessionStore: session.SessionStore;
+  sessionStore: any;
 
   constructor() {
     this.sessionStore = new PostgresSessionStore({ 
