@@ -100,6 +100,9 @@ export const professionals = pgTable('professionals', {
   bio: text('bio'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  lgpdAccepted: boolean('lgpd_accepted').default(false).notNull(),
+  lgpdAcceptedAt: timestamp('lgpd_accepted_at'),
+  lgpdAcceptedIp: text('lgpd_accepted_ip'),
 });
 
 // Patients Table
