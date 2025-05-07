@@ -12,7 +12,7 @@ interface AppLayoutProps {
   title?: string;
 }
 
-function AppLayout({ children, onSearch, title }: AppLayoutProps) {
+export function AppLayout({ children, onSearch, title }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user } = useAuth();
   const { announce } = useAccessibility();
