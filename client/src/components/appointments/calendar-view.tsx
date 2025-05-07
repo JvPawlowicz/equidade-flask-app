@@ -8,6 +8,7 @@ import ptBrLocale from "@fullcalendar/core/locales/pt-br";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AppointmentForm } from "./appointment-form";
+import { ExportAgendaPdf } from "../agenda/export-agenda-pdf";
 import { 
   Dialog,
   DialogContent,
@@ -19,7 +20,7 @@ import {
 import { Loader2, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { getProcedureText, getStatusText } from "@/lib/utils";
+import { getProcedureText, getStatusText, getStatusClass } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 
 interface CalendarViewProps {
@@ -229,6 +230,15 @@ export function CalendarView({ facilityId, professionalId, patientId }: Calendar
           >
             Dia
           </Button>
+          
+          {appointments && appointments.length > 0 && (
+            <ExportAgendaPdf 
+              appointments={appointments}
+              professionalFilter={professionalId || null}
+              patientFilter={patientId || null}
+              view={view === "dayGridMonth" ? "Mês" : view === "timeGridWeek" ? "Semana" : "Dia"}
+            />
+          )}
         </div>
         
         {canEditAppointments && (

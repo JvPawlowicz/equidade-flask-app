@@ -10,6 +10,9 @@ interface ExportAgendaPdfProps {
   professionalFilter?: number | null;
   patientFilter?: number | null;
   statusFilter?: string | null;
+  professionalName?: string;
+  patientName?: string;
+  view?: string;
 }
 
 export function ExportAgendaPdf({
@@ -18,6 +21,9 @@ export function ExportAgendaPdf({
   professionalFilter,
   patientFilter,
   statusFilter,
+  professionalName,
+  patientName,
+  view = "Agenda Completa",
 }: ExportAgendaPdfProps) {
   const handleExport = () => {
     // Criar novo documento PDF
@@ -34,21 +40,31 @@ export function ExportAgendaPdf({
     if (dateRange) {
       doc.text(`Período: ${formatDate(dateRange.startDate)} até ${formatDate(dateRange.endDate)}`, 14, yPos);
       yPos += 6;
+    } else {
+      // Se não tiver período definido, mostrar a visualização atual (mês, semana, dia)
+      doc.text(`Visualização: ${view}`, 14, yPos);
+      yPos += 6;
     }
     
-    if (professionalFilter) {
-      const professionalName = appointments.find(a => a.professional?.id === professionalFilter)?.professional?.user?.fullName || "Todos";
+    if (professionalFilter && professionalName) {
       doc.text(`Profissional: ${professionalName}`, 14, yPos);
       yPos += 6;
-    }
-    
-    if (patientFilter) {
-      const patientName = appointments.find(a => a.patient?.id === patientFilter)?.patient?.fullName || "Todos";
-      doc.text(`Paciente: ${patientName}`, 14, yPos);
+    } else if (professionalFilter) {
+      const profName = appointments.find(a => a.professional?.id === professionalFilter)?.professional?.user?.fullName || "Todos";
+      doc.text(`Profissional: ${profName}`, 14, yPos);
       yPos += 6;
     }
     
-    if (statusFilter && statusFilter !== "all") {
+    if (patientFilter && patientName) {
+      doc.text(`Paciente: ${patientName}`, 14, yPos);
+      yPos += 6;
+    } else if (patientFilter) {
+      const patName = appointments.find(a => a.patient?.id === patientFilter)?.patient?.fullName || "Todos";
+      doc.text(`Paciente: ${patName}`, 14, yPos);
+      yPos += 6;
+    }
+    
+    if (statusFilter && statusFilter !== "all_statuses") {
       doc.text(`Status: ${getStatusText(statusFilter)}`, 14, yPos);
       yPos += 6;
     }
@@ -56,6 +72,25 @@ export function ExportAgendaPdf({
     // Data de geração
     doc.text(`Gerado em: ${formatDate(new Date())} às ${new Date().toLocaleTimeString()}`, 14, yPos);
     yPos += 10;
+    
+    // Resumo quantitativo dos agendamentos
+    const totalAppointments = appointments.length;
+    const statusCounts: Record<string, number> = {};
+    appointments.forEach(appointment => {
+      const status = appointment.status || "pending";
+      statusCounts[status] = (statusCounts[status] || 0) + 1;
+    });
+    
+    doc.text(`Total de Agendamentos: ${totalAppointments}`, 14, yPos);
+    yPos += 6;
+    
+    // Mostrar contagem por status
+    Object.entries(statusCounts).forEach(([status, count]) => {
+      doc.text(`${getStatusText(status)}: ${count}`, 14, yPos);
+      yPos += 4;
+    });
+    
+    yPos += 6;
     
     // Preparar dados para a tabela
     const tableData = appointments.map(appointment => [
