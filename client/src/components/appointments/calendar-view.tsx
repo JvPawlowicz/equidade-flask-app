@@ -73,13 +73,28 @@ export function CalendarView({ facilityId, professionalId, patientId }: Calendar
   
   // Fetch appointments
   const { data: appointments, isLoading, error } = useQuery<any[]>({
-    queryKey: [`/api/appointments?${buildQueryParams()}`],
+    queryKey: ['/api/appointments', facilityId, professionalId, patientId, currentDate, view],
+    queryFn: async () => {
+      const url = `/api/appointments?${buildQueryParams()}`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error('Erro ao buscar agendamentos');
+      }
+      return response.json();
+    }
   });
   
   // Fetch appointment details
   const { data: appointmentDetails, isLoading: isLoadingDetails } = useQuery<any>({
-    queryKey: [`/api/appointments/${clickedAppointmentId}`],
+    queryKey: ['/api/appointments', clickedAppointmentId],
     enabled: !!clickedAppointmentId && isAppointmentDetailsOpen,
+    queryFn: async () => {
+      const response = await fetch(`/api/appointments/${clickedAppointmentId}`);
+      if (!response.ok) {
+        throw new Error('Erro ao buscar detalhes do agendamento');
+      }
+      return response.json();
+    }
   });
   
   // Handle appointment deletion
