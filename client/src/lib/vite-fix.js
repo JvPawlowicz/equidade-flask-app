@@ -6,20 +6,29 @@
  * que causam erros de console
  */
 
-// Interceptador de WebSocket do Vite
+// Execute este código imediatamente
 (function() {
-  const originalWebSocket = window.WebSocket;
-
-  window.WebSocket = function(url, protocols) {
-    if (typeof url === 'string' && url.includes('vite')) {
-      console.log('Vite WebSocket interceptado:', url);
-      return {
+  // Armazene a implementação original do WebSocket
+  const OrigWebSocket = window.WebSocket;
+  
+  // Substitua o construtor WebSocket com nossa versão personalizada
+  window.WebSocket = function CustomWebSocket(url, protocols) {
+    // Verifique se a URL está relacionada ao HMR do Vite
+    if (typeof url === 'string' && (
+      url.includes('localhost:undefined') || 
+      url.endsWith('vite-hmr') || 
+      url.includes('?token=')
+    )) {
+      console.log('Vite WebSocket interceptado: ', url);
+      
+      // Crie um objeto falso que se comporta como WebSocket, mas não faz nada
+      const mockWs = {
         addEventListener: function() {},
         removeEventListener: function() {},
         send: function() {},
         close: function() {},
         url: url,
-        readyState: 3,
+        readyState: 3, // CLOSED
         protocol: '',
         extensions: '',
         bufferedAmount: 0,
@@ -29,17 +38,27 @@
         onmessage: null,
         onerror: null
       };
+      
+      // Simule um erro de conexão para que o Vite saiba que a conexão falhou
+      setTimeout(() => {
+        if (mockWs.onerror) mockWs.onerror(new Event('error'));
+        if (mockWs.onclose) mockWs.onclose(new CloseEvent('close'));
+      }, 0);
+      
+      return mockWs;
     }
-    return new originalWebSocket(url, protocols);
+    
+    // Para qualquer outra URL, use o WebSocket normal
+    return new OrigWebSocket(url, protocols);
   };
-
+  
   // Copie todas as propriedades do WebSocket original
-  for (const prop in originalWebSocket) {
-    window.WebSocket[prop] = originalWebSocket[prop];
+  for (const prop in OrigWebSocket) {
+    window.WebSocket[prop] = OrigWebSocket[prop];
   }
-
+  
   // Copie o protótipo
-  window.WebSocket.prototype = originalWebSocket.prototype;
-
+  window.WebSocket.prototype = OrigWebSocket.prototype;
+  
   console.log('WebSocket interceptor instalado');
 })();
