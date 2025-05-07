@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { NotificationsDropdown } from "../common/notifications";
 import { cn } from "@/lib/utils";
 import { useAccessibility } from "@/hooks/use-accessibility";
+import { FacilitySelector } from "./facility-selector";
 
 interface HeaderProps {
   toggleSidebar: () => void;
@@ -134,6 +135,24 @@ export function Header({ toggleSidebar, onSearch }: HeaderProps) {
 
         {/* Right side menu */}
         <div className="flex items-center space-x-4">
+          {/* Facility Selector */}
+          <FacilitySelector 
+            buttonVariant="ghost" 
+            onFacilityChange={(facilityId) => {
+              // Anunciar mudança para leitores de tela
+              announce(facilityId === null 
+                ? "Visualizando todas as unidades" 
+                : `Unidade selecionada: ${facilityId}`
+              );
+              
+              // Emitir evento personalizado para que outros componentes possam reagir à mudança
+              const event = new CustomEvent('facilityChanged', { 
+                detail: { facilityId } 
+              });
+              window.dispatchEvent(event);
+            }}
+          />
+          
           {/* Notifications */}
           <div className="relative" ref={notificationsRef}>
             <Button

@@ -27,6 +27,7 @@ import { ConnectivityStatus } from "@/components/mobile/connectivity-status";
 import { useNetworkStatus } from "@/hooks/use-mobile";
 import { useResponsive } from "@/hooks/use-mobile";
 import { registerServiceWorker } from "@/lib/offline-utils";
+import { FacilityProvider } from "@/hooks/use-facility";
 
 // Componente para anúncios de leitores de tela
 function ScreenReaderAnnouncer() {
@@ -160,59 +161,62 @@ function App() {
       
       {/* Conteúdo principal da aplicação */}
       <main id="main-content" tabIndex={-1}>
-        <Switch>
-          {/* Rotas simplificadas para fallback */}
-          <Route path="/simple-login" component={SimpleLogin} />
-          <Route path="/simple-dashboard" component={SimpleDashboard} />
+        {/* Provider para seleção de unidades */}
+        <FacilityProvider>
+          <Switch>
+            {/* Rotas simplificadas para fallback */}
+            <Route path="/simple-login" component={SimpleLogin} />
+            <Route path="/simple-dashboard" component={SimpleDashboard} />
+            
+            {/* Rota de autenticação */}
+            <Route path="/auth" component={AuthPage} />
+            
+            {/* Rotas protegidas */}
+            <ProtectedRoute path="/" component={DashboardPage} />
+            <ProtectedRoute path="/pacientes" component={PatientsPage} />
+            <ProtectedRoute path="/pacientes/:id" component={PatientDetails} />
+            <ProtectedRoute path="/profissionais" component={ProfessionalsPage} />
+            <ProtectedRoute path="/profissionais/:id" component={ProfessionalDetails} />
+            <ProtectedRoute path="/agenda" component={AppointmentsPage} />
+            <ProtectedRoute path="/evolucoes" component={EvolutionsPage} />
+            <ProtectedRoute path="/unidades" component={FacilitiesPage} />
+            <ProtectedRoute path="/unidades/:id" component={FacilityDetails} />
+            <ProtectedRoute path="/relatorios" component={ReportsPage} />
+            <ProtectedRoute path="/chat" component={ChatPage} />
+            <ProtectedRoute path="/documentos" component={DocumentsPage} />
+            
+            {/* Página 404 para rotas não encontradas */}
+            <Route path="/404" component={NotFound} />
+            
+            {/* Redirecionar para autenticação quando não estiver logado */}
+            <Route path="/:rest*">
+              {user ? <Redirect to="/" /> : <Redirect to="/auth" />}
+            </Route>
+          </Switch>
           
-          {/* Rota de autenticação */}
-          <Route path="/auth" component={AuthPage} />
-          
-          {/* Rotas protegidas */}
-          <ProtectedRoute path="/" component={DashboardPage} />
-          <ProtectedRoute path="/pacientes" component={PatientsPage} />
-          <ProtectedRoute path="/pacientes/:id" component={PatientDetails} />
-          <ProtectedRoute path="/profissionais" component={ProfessionalsPage} />
-          <ProtectedRoute path="/profissionais/:id" component={ProfessionalDetails} />
-          <ProtectedRoute path="/agenda" component={AppointmentsPage} />
-          <ProtectedRoute path="/evolucoes" component={EvolutionsPage} />
-          <ProtectedRoute path="/unidades" component={FacilitiesPage} />
-          <ProtectedRoute path="/unidades/:id" component={FacilityDetails} />
-          <ProtectedRoute path="/relatorios" component={ReportsPage} />
-          <ProtectedRoute path="/chat" component={ChatPage} />
-          <ProtectedRoute path="/documentos" component={DocumentsPage} />
-          
-          {/* Página 404 para rotas não encontradas */}
-          <Route path="/404" component={NotFound} />
-          
-          {/* Redirecionar para autenticação quando não estiver logado */}
-          <Route path="/:rest*">
-            {user ? <Redirect to="/" /> : <Redirect to="/auth" />}
-          </Route>
-        </Switch>
-        
-        {/* Componente de status de conectividade para dispositivos móveis */}
-        {deviceType === 'mobile' && user && (
-          <ConnectivityStatus 
-            position="bottom"
-            showInstallPrompt={true}
-            onSync={async () => {
-              try {
-                // Sincronizar dados offline
-                // Esta função será implementada quando tivermos a lógica completa de sincronização
-                announce("Sincronizando dados...", "polite");
-                // Por enquanto apenas exibimos a mensagem
-                setTimeout(() => {
-                  announce("Sincronização concluída", "polite");
-                }, 1500);
-                return Promise.resolve();
-              } catch (error) {
-                console.error('Erro na sincronização:', error);
-                return Promise.reject(error);
-              }
-            }}
-          />
-        )}
+          {/* Componente de status de conectividade para dispositivos móveis */}
+          {deviceType === 'mobile' && user && (
+            <ConnectivityStatus 
+              position="bottom"
+              showInstallPrompt={true}
+              onSync={async () => {
+                try {
+                  // Sincronizar dados offline
+                  // Esta função será implementada quando tivermos a lógica completa de sincronização
+                  announce("Sincronizando dados...", "polite");
+                  // Por enquanto apenas exibimos a mensagem
+                  setTimeout(() => {
+                    announce("Sincronização concluída", "polite");
+                  }, 1500);
+                  return Promise.resolve();
+                } catch (error) {
+                  console.error('Erro na sincronização:', error);
+                  return Promise.reject(error);
+                }
+              }}
+            />
+          )}
+        </FacilityProvider>
       </main>
     </>
   );
