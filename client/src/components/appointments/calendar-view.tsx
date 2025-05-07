@@ -22,16 +22,18 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { getProcedureText, getStatusText, getStatusClass } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
+import { useFacility } from "@/hooks/use-facility";
 
 interface CalendarViewProps {
-  facilityId?: number;
-  professionalId?: number;
-  patientId?: number;
+  facilityId?: number | null;
+  professionalId?: number | null;
+  patientId?: number | null;
 }
 
-export function CalendarView({ facilityId, professionalId, patientId }: CalendarViewProps) {
+export function CalendarView({ facilityId: propsFacilityId, professionalId, patientId }: CalendarViewProps) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { selectedFacilityId } = useFacility();
   const [view, setView] = useState<"dayGridMonth" | "timeGridWeek" | "timeGridDay">("timeGridWeek");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isAppointmentFormOpen, setIsAppointmentFormOpen] = useState(false);
@@ -41,6 +43,9 @@ export function CalendarView({ facilityId, professionalId, patientId }: Calendar
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [clickedAppointmentId, setClickedAppointmentId] = useState<number | null>(null);
+  
+  // Use facility from props if provided, otherwise use global context
+  const facilityId = propsFacilityId || selectedFacilityId;
   
   // Build query parameters
   const buildQueryParams = useCallback(() => {
@@ -217,7 +222,10 @@ export function CalendarView({ facilityId, professionalId, patientId }: Calendar
     
     // Professionals can only update status of their own appointments
     if (user.role === "professional" || user.role === "intern") {
-      return user.professional?.id === appointmentData?.professionalId;
+      if (appointmentData?.professional) {
+        // Verificar se o usuário atual é o profissional deste agendamento
+        return appointmentData.professional.userId === user.id;
+      }
     }
     
     return false;
@@ -333,8 +341,8 @@ export function CalendarView({ facilityId, professionalId, patientId }: Calendar
         <AppointmentForm
           isOpen={isAppointmentFormOpen}
           onClose={() => setIsAppointmentFormOpen(false)}
-          appointmentId={selectedAppointment || undefined}
-          facilityId={facilityId}
+          appointmentId={selectedAppointment !== null ? selectedAppointment : undefined}
+          facilityId={facilityId !== null ? facilityId : undefined}
           date={selectedDate || undefined}
           time={selectedTime || undefined}
         />

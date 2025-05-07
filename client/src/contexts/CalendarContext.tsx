@@ -79,7 +79,7 @@ export const CalendarProvider: React.FC<{children: ReactNode}> = ({ children }) 
       // Construir a URL com os query params
       const url = `/api/appointments${params.toString() ? `?${params.toString()}` : ''}`;
       
-      const responseData = await apiRequest('GET', url);
+      const responseData = await apiRequest<any[]>('GET', url);
       
       // Processar os eventos recebidos
       const formattedEvents = responseData.map((appointment: any) => ({
