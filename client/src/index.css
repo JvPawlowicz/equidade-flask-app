@@ -81,39 +81,39 @@
 
 @layer base {
   :root {
-    /* Cores padrão - Nova Identidade Visual da Clínica Equidade */
-    --background: 204 20% 98%; /* Azul muito claro */
-    --foreground: 204 70% 15%; /* Azul escuro */
+    /* Cores padrão - Paleta Atualizada da Clínica Equidade */
+    --background: 196 30% 99%; /* Azul suave fundo */
+    --foreground: 210 50% 20%; /* Azul profundo texto */
     --card: 0 0% 100%; /* Branco */
-    --card-foreground: 204 70% 15%; /* Azul escuro */
+    --card-foreground: 210 50% 20%; /* Azul profundo texto */
     --popover: 0 0% 100%; /* Branco */
-    --popover-foreground: 204 70% 15%; /* Azul escuro */
-    --primary: 176 57% 40%; /* Verde-água (teal) */
+    --popover-foreground: 210 50% 20%; /* Azul profundo texto */
+    --primary: 175 65% 38%; /* Verde-água vibrante */
     --primary-foreground: 0 0% 100%; /* Branco */
-    --secondary: 204 65% 45%; /* Azul médio */
+    --secondary: 230 60% 55%; /* Azul médio mais vivo */
     --secondary-foreground: 0 0% 100%; /* Branco */
-    --muted: 204 15% 95%; /* Azul muito claro quase cinza */
-    --muted-foreground: 204 20% 40%; /* Azul médio-escuro */
-    --accent: 350 80% 60%; /* Rosa */
+    --muted: 196 25% 95%; /* Azul muito suave */
+    --muted-foreground: 210 30% 45%; /* Azul médio-escuro */
+    --accent: 320 80% 55%; /* Magenta inclusivo */
     --accent-foreground: 0 0% 100%; /* Branco */
-    --destructive: 0 70% 50%; /* Vermelho */
+    --destructive: 0 75% 50%; /* Vermelho */
     --destructive-foreground: 210 20% 98%; /* Quase branco */
-    --border: 204 20% 85%; /* Azul claro */
-    --input: 204 20% 92%; /* Azul mais claro que borda */
-    --ring: 176 57% 40%; /* Verde-água (teal) */
-    --chart-1: 176 57% 40%; /* Verde-água */
-    --chart-2: 204 65% 45%; /* Azul médio */
-    --chart-3: 350 80% 60%; /* Rosa */
-    --chart-4: 43 80% 60%; /* Amarelo */
-    --chart-5: 130 45% 50%; /* Verde */
-    --sidebar-background: 204 60% 20%; /* Azul escuro para sidebar */
+    --border: 196 30% 90%; /* Bordas sutis */
+    --input: 196 20% 95%; /* Input suave */
+    --ring: 175 65% 38%; /* Verde-água vibrante */
+    --chart-1: 175 65% 38%; /* Verde-água */
+    --chart-2: 230 60% 55%; /* Azul médio */
+    --chart-3: 320 80% 55%; /* Magenta */
+    --chart-4: 35 90% 55%; /* Laranja acessível */
+    --chart-5: 135 55% 45%; /* Verde folha */
+    --sidebar-background: 210 60% 25%; /* Sidebar moderna */
     --sidebar-foreground: 0 0% 100%; /* Branco */
-    --sidebar-primary: 176 57% 40%; /* Verde-água */
+    --sidebar-primary: 175 65% 38%; /* Verde-água vibrante */
     --sidebar-primary-foreground: 0 0% 100%; /* Branco */
-    --sidebar-accent: 204 40% 30%; /* Azul médio-escuro */
-    --sidebar-accent-foreground: 204 10% 90%; /* Azul muito claro */
-    --sidebar-border: 204 30% 30%; /* Azul escuro */
-    --sidebar-ring: 176 57% 40%; /* Verde-água */
+    --sidebar-accent: 210 40% 35%; /* Azul médio-escuro */
+    --sidebar-accent-foreground: 210 15% 95%; /* Azul muito claro */
+    --sidebar-border: 210 35% 30%; /* Azul escuro */
+    --sidebar-ring: 175 65% 38%; /* Verde-água vibrante */
     --radius: 0.5rem;
     
     /* Variáveis de tamanho de fonte para acessibilidade */
@@ -141,40 +141,40 @@
     --transition-fast: 0.15s;
   }
 
-  /* Tema escuro - Adaptado para nova paleta */
+  /* Tema escuro - Harmonizado com a nova paleta */
   .dark {
-    --background: 204 50% 10%; /* Azul muito escuro */
-    --foreground: 204 10% 95%; /* Azul muito claro */
-    --card: 204 40% 15%; /* Azul escuro */
-    --card-foreground: 204 10% 95%; /* Azul muito claro */
-    --popover: 204 40% 15%; /* Azul escuro */
-    --popover-foreground: 204 10% 95%; /* Azul muito claro */
-    --primary: 176 57% 45%; /* Verde-água mais brilhante */
-    --primary-foreground: 204 10% 95%; /* Azul muito claro */
-    --secondary: 204 65% 60%; /* Azul médio mais brilhante */
-    --secondary-foreground: 204 10% 95%; /* Azul muito claro */
-    --muted: 204 30% 25%; /* Azul escuro meio acinzentado */
-    --muted-foreground: 204 15% 70%; /* Azul claro */
-    --accent: 350 70% 50%; /* Rosa um pouco mais escuro */
-    --accent-foreground: 204 10% 95%; /* Azul muito claro */
-    --destructive: 0 70% 40%; /* Vermelho mais escuro */
-    --destructive-foreground: 204 10% 95%; /* Azul muito claro */
-    --border: 204 30% 30%; /* Azul médio-escuro */
-    --input: 204 30% 25%; /* Um pouco mais claro que a cor de fundo */
-    --ring: 176 57% 45%; /* Verde-água mais brilhante */
-    --chart-1: 176 57% 45%; /* Verde-água */
-    --chart-2: 204 65% 60%; /* Azul médio */
-    --chart-3: 350 70% 50%; /* Rosa */
-    --chart-4: 43 70% 50%; /* Amarelo */
-    --chart-5: 130 40% 45%; /* Verde */
-    --sidebar-background: 204 60% 12%; /* Azul muito escuro para sidebar */
-    --sidebar-foreground: 204 10% 95%; /* Azul muito claro */
-    --sidebar-primary: 176 57% 45%; /* Verde-água mais brilhante */
-    --sidebar-primary-foreground: 204 10% 95%; /* Azul muito claro */
-    --sidebar-accent: 204 30% 30%; /* Azul médio-escuro */
-    --sidebar-accent-foreground: 204 15% 70%; /* Azul claro */
-    --sidebar-border: 204 40% 25%; /* Azul médio-escuro */
-    --sidebar-ring: 176 57% 45%; /* Verde-água mais brilhante */
+    --background: 210 45% 8%; /* Azul escuro profundo */
+    --foreground: 196 15% 95%; /* Azul muito claro */
+    --card: 210 40% 13%; /* Azul escuro */
+    --card-foreground: 196 15% 95%; /* Azul muito claro */
+    --popover: 210 40% 13%; /* Azul escuro */
+    --popover-foreground: 196 15% 95%; /* Azul muito claro */
+    --primary: 175 65% 42%; /* Verde-água mais vibrante */
+    --primary-foreground: 196 15% 95%; /* Azul muito claro */
+    --secondary: 230 60% 60%; /* Azul médio mais vivo */
+    --secondary-foreground: 196 15% 95%; /* Azul muito claro */
+    --muted: 210 35% 20%; /* Azul escuro acinzentado */
+    --muted-foreground: 196 20% 75%; /* Azul claro */
+    --accent: 320 70% 45%; /* Magenta mais escuro */
+    --accent-foreground: 196 15% 95%; /* Azul muito claro */
+    --destructive: 0 70% 45%; /* Vermelho mais escuro */
+    --destructive-foreground: 196 15% 95%; /* Azul muito claro */
+    --border: 210 30% 25%; /* Azul médio-escuro */
+    --input: 210 30% 18%; /* Um pouco mais claro que a cor de fundo */
+    --ring: 175 65% 42%; /* Verde-água mais vibrante */
+    --chart-1: 175 65% 42%; /* Verde-água */
+    --chart-2: 230 60% 60%; /* Azul médio */
+    --chart-3: 320 70% 45%; /* Magenta */
+    --chart-4: 35 80% 45%; /* Laranja */
+    --chart-5: 135 50% 40%; /* Verde */
+    --sidebar-background: 210 55% 10%; /* Azul muito escuro para sidebar */
+    --sidebar-foreground: 196 15% 95%; /* Azul muito claro */
+    --sidebar-primary: 175 65% 42%; /* Verde-água mais vibrante */
+    --sidebar-primary-foreground: 196 15% 95%; /* Azul muito claro */
+    --sidebar-accent: 210 35% 25%; /* Azul médio-escuro */
+    --sidebar-accent-foreground: 196 20% 75%; /* Azul claro */
+    --sidebar-border: 210 40% 20%; /* Azul médio-escuro */
+    --sidebar-ring: 175 65% 42%; /* Verde-água mais vibrante */
     
     /* Foco mais visível em modo escuro */
     --focus-ring-color: hsl(var(--accent));
