@@ -895,6 +895,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   );
 
+  // Excluir uma sala (ou marcar como inativa)
+  app.delete(`${apiPrefix}/rooms/:id`, 
+    requireAuth, 
+    checkPermission('facilities', 'delete'),
+    async (req: Request, res: Response) => {
+      try {
+        const { id } = req.params;
+        const { forceDelete } = req.query;
+        
+        // Validar ID
+        if (!id || isNaN(parseInt(id))) {
+          return res.status(400).json({ error: "ID da sala inválido" });
+        }
+        
+        const roomId = parseInt(id);
+        
+        // Verificar se a sala existe
+        const existingRoom = await db.query.rooms.findFirst({
+          where: eq(rooms.id, roomId),
+          with: {
+            facility: true
+          }
+        });
+        
+        if (!existingRoom) {
+          return res.status(404).json({ error: "Sala não encontrada" });
+        }
+        
+        // Verificar se há agendamentos associados a esta sala
+        const appointments = await db.query.appointments.findMany({
+          where: and(
+            eq(appointments.roomId, roomId),
+            gte(appointments.startTime, new Date()) // Considerando apenas agendamentos futuros
+          ),
+          limit: 1
+        });
+        
+        // Se houver agendamentos futuros e não estiver forçando a exclusão, retornar erro
+        if (appointments.length > 0 && forceDelete !== 'true') {
+          return res.status(400).json({ 
+            error: "Esta sala possui agendamentos futuros e não pode ser excluída",
+            hasAppointments: true
+          });
+        }
+        
+        // Se tiver agendamentos e forceDelete for true, marcar apenas como inativa
+        if (appointments.length > 0 && forceDelete === 'true') {
+          const [inactiveRoom] = await db
+            .update(rooms)
+            .set({
+              isActive: false,
+              updatedAt: new Date()
+            })
+            .where(eq(rooms.id, roomId))
+            .returning();
+          
+          // Log da auditoria
+          logAuditAction(req, 'deactivate', 'rooms', id, {
+            roomName: existingRoom.name,
+            facilityId: existingRoom.facilityId,
+            facilityName: existingRoom.facility?.name,
+            hasAppointments: true
+          });
+          
+          return res.json({
+            success: true,
+            message: "Sala marcada como inativa",
+            room: inactiveRoom
+          });
+        }
+        
+        // Se não tiver agendamentos, excluir definitivamente
+        await db.delete(rooms).where(eq(rooms.id, roomId));
+        
+        // Log da auditoria
+        logAuditAction(req, 'delete', 'rooms', id, {
+          roomName: existingRoom.name,
+          facilityId: existingRoom.facilityId,
+          facilityName: existingRoom.facility?.name
+        });
+        
+        res.json({
+          success: true,
+          message: "Sala excluída com sucesso"
+        });
+      } catch (error) {
+        console.error("Erro ao excluir sala:", error);
+        res.status(500).json({ error: "Erro ao excluir sala" });
+      }
+    }
+  );
+
   // Professionals endpoints
   app.get(`${apiPrefix}/professionals`, 
     requireAuth, 
