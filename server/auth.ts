@@ -147,6 +147,9 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", (req, res, next) => {
+    // Forçar resposta como JSON
+    res.setHeader('Content-Type', 'application/json');
+    
     try {
       console.log("SERVIDOR: Recebendo solicitação de login:", JSON.stringify(req.body));
       
