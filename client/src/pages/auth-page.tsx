@@ -26,7 +26,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, LogIn, UserPlus } from "lucide-react";
-import LoginWithReplit from "@/components/auth/login-with-replit";
+// Autenticação com Replit removida
 
 // Login form schema
 const loginSchema = z.object({
