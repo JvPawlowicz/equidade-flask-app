@@ -107,7 +107,7 @@ export function CalendarView({ facilityId, professionalId, patientId }: Calendar
         title: "Agendamento excluído",
         description: "O agendamento foi excluído com sucesso.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+      queryClient.invalidateQueries({ queryKey: ['/api/appointments'] });
       setIsDeleteDialogOpen(false);
       setIsAppointmentDetailsOpen(false);
     } catch (error) {
@@ -192,7 +192,7 @@ export function CalendarView({ facilityId, professionalId, patientId }: Calendar
         title: "Status atualizado",
         description: `O status do agendamento foi alterado para "${getStatusText(status)}".`,
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+      queryClient.invalidateQueries({ queryKey: ['/api/appointments'] });
       setIsAppointmentDetailsOpen(false);
     } catch (error) {
       toast({

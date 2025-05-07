@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/app-layout";
 import { Button } from "@/components/ui/button";
@@ -46,6 +46,7 @@ import { z } from "zod";
 import { Loader2, Search, FileText, Eye, CheckCircle, XCircle } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import { useFacility } from "@/hooks/use-facility";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatDate, getProcedureText } from "@/lib/utils";
 
@@ -61,6 +62,7 @@ type EvolutionFormValues = z.infer<typeof evolutionSchema>;
 export default function EvolutionsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { selectedFacilityId } = useFacility();
   const [searchTerm, setSearchTerm] = useState("");
   const [isEvolutionFormOpen, setIsEvolutionFormOpen] = useState(false);
   const [selectedEvolution, setSelectedEvolution] = useState<any>(null);
@@ -70,14 +72,51 @@ export default function EvolutionsPage() {
   const isIntern = user?.role === "intern";
   const isSupervisor = isProfessional;
   
-  // Fetch evolutions based on user role and status filter
+  // Build query parameters for evolutions
+  const buildQueryParams = () => {
+    const params = new URLSearchParams();
+    
+    if (searchTerm) {
+      params.append("search", searchTerm);
+    }
+    
+    if (selectedFacilityId !== null) {
+      params.append("facilityId", selectedFacilityId.toString());
+    }
+    
+    return params.toString();
+  };
+  
+  // Fetch evolutions based on user role, facility and search filter
   const { data: evolutions, isLoading } = useQuery<any[]>({
-    queryKey: [`/api/evolutions${searchTerm ? `?search=${searchTerm}` : ""}`],
+    queryKey: ['/api/evolutions', selectedFacilityId, searchTerm],
+    queryFn: async () => {
+      const queryParams = buildQueryParams();
+      const url = `/api/evolutions${queryParams ? `?${queryParams}` : ""}`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error('Erro ao buscar evoluções');
+      }
+      return response.json();
+    }
   });
 
   // Fetch appointments for form
   const { data: appointments } = useQuery<any[]>({
-    queryKey: ["/api/appointments?status=completed"],
+    queryKey: ['/api/appointments', 'completed', selectedFacilityId],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.append("status", "completed");
+      if (selectedFacilityId !== null) {
+        params.append("facilityId", selectedFacilityId.toString());
+      }
+      
+      const response = await fetch(`/api/appointments?${params.toString()}`);
+      if (!response.ok) {
+        throw new Error('Erro ao buscar agendamentos');
+      }
+      return response.json();
+    },
     enabled: isEvolutionFormOpen,
   });
 
@@ -108,7 +147,7 @@ export default function EvolutionsPage() {
         title: "Evolução registrada",
         description: "A evolução foi registrada com sucesso.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/evolutions"] });
+      queryClient.invalidateQueries({ queryKey: ['/api/evolutions'] });
       setIsEvolutionFormOpen(false);
       form.reset();
     },
@@ -134,7 +173,7 @@ export default function EvolutionsPage() {
         title: "Evolução aprovada",
         description: "A evolução foi aprovada com sucesso.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/evolutions"] });
+      queryClient.invalidateQueries({ queryKey: ['/api/evolutions'] });
       setSelectedEvolution(null);
     },
     onError: (error: Error) => {
@@ -159,7 +198,7 @@ export default function EvolutionsPage() {
         title: "Evolução rejeitada",
         description: "A evolução foi rejeitada com sucesso.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/evolutions"] });
+      queryClient.invalidateQueries({ queryKey: ['/api/evolutions'] });
       setSelectedEvolution(null);
     },
     onError: (error: Error) => {
