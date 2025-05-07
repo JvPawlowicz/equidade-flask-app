@@ -1,7 +1,7 @@
 import { createContext, ReactNode, useContext, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
-import { getQueryFn } from "@/lib/queryClient";
+import { getQueryFn, queryClient } from "@/lib/queryClient";
 import { LgpdTermConsent } from "@/components/lgpd/term-consent";
 
 type LgpdContextType = {
@@ -22,17 +22,17 @@ export function LgpdProvider({ children }: LgpdProviderProps) {
   const [showLgpdTerm, setShowLgpdTerm] = useState(false);
   const [lgpdAccepted, setLgpdAccepted] = useState(false);
   
-  // Busca se o profissional já aceitou o termo LGPD
-  const { data: professionalData } = useQuery({
-    queryKey: ['/api/professionals/me'],
+  // Busca se o usuário já aceitou o termo LGPD
+  const { data: lgpdStatus } = useQuery({
+    queryKey: ['/api/users/lgpd-status'],
     queryFn: getQueryFn(),
     enabled: !!user,
   });
   
   // Quando o usuário faz login, verifica se já aceitou o termo LGPD
   useEffect(() => {
-    if (user && professionalData) {
-      if (!professionalData.lgpdAccepted) {
+    if (user && lgpdStatus) {
+      if (!lgpdStatus.lgpdAccepted) {
         // Se não aceitou, mostra o termo
         setShowLgpdTerm(true);
         setLgpdAccepted(false);
@@ -41,11 +41,35 @@ export function LgpdProvider({ children }: LgpdProviderProps) {
         setLgpdAccepted(true);
       }
     }
-  }, [user, professionalData]);
+  }, [user, lgpdStatus]);
   
-  const handleAccept = () => {
-    setLgpdAccepted(true);
-    setShowLgpdTerm(false);
+  const handleAccept = async () => {
+    try {
+      // Envia aceitação para API
+      await fetch('/api/users/lgpd-consent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include'
+      });
+      
+      // Atualiza estado local
+      setLgpdAccepted(true);
+      setShowLgpdTerm(false);
+      
+      // Invalida o cache para atualizar os dados de status LGPD
+      queryClient.invalidateQueries({ queryKey: ['/api/users/lgpd-status'] });
+      
+      // Se for profissional, invalida também os dados profissionais
+      if (user?.role === 'professional') {
+        queryClient.invalidateQueries({ queryKey: ['/api/professionals/me'] });
+      }
+    } catch (error) {
+      console.error('Erro ao salvar consentimento LGPD:', error);
+      // Mesmo em caso de erro, fechamos o modal para não bloquear o usuário
+      setShowLgpdTerm(false);
+    }
   };
   
   const closeLgpdTerm = () => {

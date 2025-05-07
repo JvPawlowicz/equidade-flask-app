@@ -909,7 +909,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Rota para aceitar o termo LGPD
+  // Rota para verificar aceitação LGPD do usuário atual
+  app.get(`${apiPrefix}/users/lgpd-status`, requireAuth, async (req: Request, res: Response) => {
+    try {
+      const userId = req.user?.id;
+      
+      if (!userId) {
+        return res.status(401).json({ error: 'Usuário não autenticado' });
+      }
+      
+      const user = await db.query.users.findFirst({
+        where: eq(users.id, userId),
+        columns: {
+          lgpdAccepted: true,
+          lgpdAcceptedAt: true
+        }
+      });
+      
+      if (!user) {
+        return res.status(404).json({ error: 'Usuário não encontrado' });
+      }
+      
+      res.json({
+        lgpdAccepted: user.lgpdAccepted || false,
+        lgpdAcceptedAt: user.lgpdAcceptedAt
+      });
+    } catch (error) {
+      console.error('Error fetching LGPD status:', error);
+      res.status(500).json({ error: 'Erro ao verificar status LGPD' });
+    }
+  });
+  
+  // Rota para aceitar o termo LGPD para qualquer usuário
+  app.post(`${apiPrefix}/users/lgpd-consent`, requireAuth, async (req: Request, res: Response) => {
+    try {
+      const userId = req.user?.id;
+      
+      if (!userId) {
+        return res.status(401).json({ error: 'Usuário não autenticado' });
+      }
+      
+      // Obter o IP do cliente
+      const ip = req.ip || req.socket.remoteAddress || 'unknown';
+      
+      // Atualizar o status de aceitação LGPD do usuário
+      const [updatedUser] = await db
+        .update(users)
+        .set({
+          lgpdAccepted: true,
+          lgpdAcceptedAt: new Date(),
+          lgpdAcceptedIp: ip,
+        })
+        .where(eq(users.id, userId))
+        .returning({
+          id: users.id,
+          lgpdAccepted: users.lgpdAccepted,
+          lgpdAcceptedAt: users.lgpdAcceptedAt
+        });
+      
+      // Se o usuário for profissional, atualizar também na tabela de profissionais
+      const professional = await db.query.professionals.findFirst({
+        where: eq(professionals.userId, userId),
+      });
+      
+      if (professional) {
+        await db
+          .update(professionals)
+          .set({
+            lgpdAccepted: true,
+            lgpdAcceptedAt: new Date(),
+            lgpdAcceptedIp: ip,
+          })
+          .where(eq(professionals.id, professional.id));
+      }
+      
+      // Logs de auditoria para monitoramento
+      await logAuditAction(req, 'update', 'lgpd_consent', userId.toString(), {
+        message: 'Aceitação do termo LGPD',
+        ip: ip,
+        userRole: req.user?.role
+      });
+      
+      res.status(200).json(updatedUser);
+    } catch (error) {
+      console.error('Error updating LGPD consent:', error);
+      res.status(500).json({ error: 'Erro ao atualizar aceitação do termo LGPD' });
+    }
+  });
+  
+  // Rota para aceitar o termo LGPD específica para profissionais (mantida para compatibilidade)
   app.post(`${apiPrefix}/professionals/lgpd-consent`, requireAuth, async (req: Request, res: Response) => {
     try {
       const userId = req.user?.id;
@@ -918,39 +1006,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: 'Usuário não autenticado' });
       }
       
-      // Buscar o profissional pelo ID do usuário
-      const professional = await db.query.professionals.findFirst({
-        where: eq(professionals.userId, userId),
-      });
-      
-      if (!professional) {
-        return res.status(404).json({ error: 'Profissional não encontrado' });
-      }
-      
-      // Obter o IP do cliente
-      const ip = req.ip || req.socket.remoteAddress || 'unknown';
-      
-      // Atualizar o status de aceitação LGPD
-      const updatedProfessional = await db
-        .update(professionals)
-        .set({
-          lgpdAccepted: true,
-          lgpdAcceptedAt: new Date(),
-          lgpdAcceptedIp: ip,
-        })
-        .where(eq(professionals.id, professional.id))
-        .returning();
-      
-      // Logs de auditoria para monitoramento
-      await logAuditAction(req, 'update', 'lgpd_consent', professional.id.toString(), {
-        message: 'Aceitação do termo LGPD',
-        ip: ip
-      });
-      
-      res.status(200).json(updatedProfessional[0]);
+      // Redirecionar para a nova rota
+      return res.redirect(307, `${apiPrefix}/users/lgpd-consent`);
     } catch (error) {
-      console.error('Error updating LGPD consent:', error);
-      res.status(500).json({ error: 'Erro ao atualizar aceitação do termo LGPD' });
+      console.error('Error redirecting LGPD consent:', error);
+      res.status(500).json({ error: 'Erro ao processar aceitação do termo LGPD' });
     }
   });
 
