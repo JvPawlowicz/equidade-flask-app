@@ -9,7 +9,7 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import ptBrLocale from '@fullcalendar/core/locales/pt-br';
-import { CalendarContext } from '../../contexts/CalendarContext';
+import { CalendarContext, useCalendar } from '../../contexts/CalendarContext';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { useFacility } from '@/hooks/use-facility';
@@ -31,18 +31,27 @@ import {
 const Schedule = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { selectedFacility } = useFacility();
-  const { events, addEvent, updateEvent, deleteEvent, fetchEvents } = useContext(CalendarContext);
+  const { selectedFacility, selectedFacilityId: contextFacilityId, setSelectedFacilityId: setContextFacilityId } = useFacility();
+  const { events, addEvent, updateEvent, deleteEvent, fetchEvents, isLoading: eventsLoading } = useCalendar();
   const [view, setView] = useState('timeGridWeek');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [facilities, setFacilities] = useState([]);
   const [professionals, setProfessionals] = useState([]);
-  const [selectedFacilityId, setSelectedFacilityId] = useState(selectedFacility?.id || '');
+  const [selectedFacilityId, setSelectedFacilityId] = useState(contextFacilityId?.toString() || '');
   const [selectedProfessionalId, setSelectedProfessionalId] = useState('');
   const [filteredEvents, setFilteredEvents] = useState([]);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const calendarRef = useRef(null);
+
+  // Sincronizar com o contexto global quando contextFacilityId mudar
+  useEffect(() => {
+    if (contextFacilityId && isInitialLoad) {
+      setSelectedFacilityId(contextFacilityId.toString());
+      setIsInitialLoad(false);
+    }
+  }, [contextFacilityId, isInitialLoad]);
 
   // Buscar unidades disponíveis
   useEffect(() => {
@@ -53,6 +62,8 @@ const Schedule = () => {
         // Se ainda não houver unidade selecionada, usar a primeira
         if (!selectedFacilityId && response.length > 0) {
           setSelectedFacilityId(response[0].id);
+          // Atualizar também o contexto global
+          setContextFacilityId(parseInt(response[0].id));
         }
       } catch (error) {
         toast({
@@ -150,6 +161,13 @@ const Schedule = () => {
   const handleFacilityChange = (facilityId) => {
     setSelectedFacilityId(facilityId);
     setSelectedProfessionalId(''); // Resetar seleção de profissional ao mudar de unidade
+    
+    // Atualizar o contexto global de unidade
+    if (facilityId) {
+      setContextFacilityId(parseInt(facilityId));
+    } else {
+      setContextFacilityId(null);
+    }
   };
 
   const handleProfessionalChange = (professionalId) => {
