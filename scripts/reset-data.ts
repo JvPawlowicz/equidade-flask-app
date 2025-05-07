@@ -1,17 +1,4 @@
 import { db } from "../db";
-import { 
-  patients, 
-  patientFacilities, 
-  professionals, 
-  appointments, 
-  evolutions, 
-  documents, 
-  chatMessages, 
-  chatGroups, 
-  chatGroupMembers, 
-  notifications,
-  auditLogs
-} from "../shared/schema";
 import { sql } from "drizzle-orm";
 
 /**
@@ -26,55 +13,41 @@ async function resetData() {
     // Desabilitar verificações de foreign key temporariamente para permitir a exclusão
     await db.execute(sql`SET CONSTRAINTS ALL DEFERRED`);
     
-    console.log("Removendo notificações...");
-    await db.delete(notifications);
+    console.log("Removendo todos os dados de teste...");
     
-    console.log("Removendo mensagens e grupos de chat...");
-    await db.delete(chatGroupMembers);
-    await db.delete(chatMessages);
-    await db.delete(chatGroups);
+    // Remover logs de auditoria
+    await db.execute(sql`TRUNCATE audit_logs CASCADE`);
     
-    console.log("Removendo documentos...");
-    await db.delete(documents);
+    // Remover notificações
+    await db.execute(sql`TRUNCATE notifications CASCADE`);
     
-    console.log("Removendo evoluções...");
-    await db.delete(evolutions);
+    // Remover chat
+    await db.execute(sql`TRUNCATE chat_group_members CASCADE`);
+    await db.execute(sql`TRUNCATE chat_messages CASCADE`);
+    await db.execute(sql`TRUNCATE chat_groups CASCADE`);
     
-    console.log("Removendo agendamentos...");
-    await db.delete(appointments);
+    // Remover documentos
+    await db.execute(sql`TRUNCATE documents CASCADE`);
     
-    console.log("Removendo vínculos de pacientes com unidades...");
-    await db.delete(patientFacilities);
+    // Remover evoluções
+    await db.execute(sql`TRUNCATE evolutions CASCADE`);
     
-    console.log("Removendo pacientes...");
-    await db.delete(patients);
+    // Remover agendamentos
+    await db.execute(sql`TRUNCATE appointments CASCADE`);
     
-    console.log("Removendo profissionais (exceto administrativos)...");
-    // Recuperar IDs de profissionais que também são administradores ou coordenadores para preservar
-    const adminProfessionals = await db.query.professionals.findMany({
-      with: {
-        user: true
-      },
-      where: (professionals, { eq, or }) => or(
-        eq(professionals.user.role, "admin"),
-        eq(professionals.user.role, "coordinator")
+    // Remover vínculos de pacientes com unidades e pacientes
+    await db.execute(sql`TRUNCATE patient_facilities CASCADE`);
+    await db.execute(sql`TRUNCATE patients CASCADE`);
+    
+    // Remover profissionais (exceto administradores)
+    await db.execute(sql`
+      DELETE FROM professionals
+      WHERE id IN (
+        SELECT p.id FROM professionals p
+        JOIN users u ON p.user_id = u.id
+        WHERE u.role NOT IN ('admin', 'coordinator')
       )
-    });
-    
-    const adminProfessionalIds = adminProfessionals.map(p => p.id);
-    console.log(`Encontrados ${adminProfessionalIds.length} profissionais administrativos que serão preservados`);
-    
-    if (adminProfessionalIds.length > 0) {
-      // Excluir apenas profissionais que não são administradores
-      await db.delete(professionals)
-        .where(sql`id NOT IN (${adminProfessionalIds.join(',')})`);
-    } else {
-      // Se não encontrou nenhum administrador, não exclui profissionais para evitar erro
-      console.log("AVISO: Nenhum profissional administrativo encontrado. Nenhum profissional será removido para evitar a exclusão de todos os usuários.");
-    }
-    
-    console.log("Removendo logs de auditoria...");
-    await db.delete(auditLogs);
+    `);
     
     // Reabilitar verificações de foreign key
     await db.execute(sql`SET CONSTRAINTS ALL IMMEDIATE`);
@@ -89,20 +62,18 @@ async function resetData() {
   }
 }
 
-// Executar o reset apenas se o script for chamado diretamente
-if (require.main === module) {
-  resetData()
-    .then(result => {
-      if (result.success) {
-        process.exit(0);
-      } else {
-        process.exit(1);
-      }
-    })
-    .catch(error => {
-      console.error("Erro fatal:", error);
+// Executar o reset automaticamente
+resetData()
+  .then(result => {
+    if (result.success) {
+      process.exit(0);
+    } else {
       process.exit(1);
-    });
-}
+    }
+  })
+  .catch(error => {
+    console.error("Erro fatal:", error);
+    process.exit(1);
+  });
 
 export default resetData;
