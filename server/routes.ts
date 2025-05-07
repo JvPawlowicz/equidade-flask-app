@@ -1363,14 +1363,171 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const patientDocuments = await db.query.documents.findMany({
         where: eq(documents.patientId, parseInt(id)),
       });
+      
+      // Reformatar as unidades para maior facilidade de uso no frontend
+      const formattedFacilities = patient.facilities?.map(f => ({
+        id: f.facility.id,
+        name: f.facility.name,
+        address: f.facility.address,
+        city: f.facility.city,
+        state: f.facility.state,
+      }));
 
       res.json({
         ...patient,
+        facilities: formattedFacilities,
         documents: patientDocuments,
       });
     } catch (error) {
       console.error("Error fetching patient:", error);
       res.status(500).json({ error: "Erro ao buscar paciente" });
+    }
+  });
+  
+  // Adicionar paciente a uma unidade
+  app.post(`${apiPrefix}/patients/:id/facilities`, checkPermission('patients', 'update'), async (req, res) => {
+    try {
+      const patientId = parseInt(req.params.id);
+      const { facilityId } = req.body;
+      
+      if (!facilityId) {
+        return res.status(400).json({ error: "ID da unidade é obrigatório" });
+      }
+      
+      // Verificar se o paciente existe
+      const patient = await db.query.patients.findFirst({
+        where: eq(patients.id, patientId)
+      });
+      
+      if (!patient) {
+        return res.status(404).json({ error: "Paciente não encontrado" });
+      }
+      
+      // Verificar se a unidade existe
+      const facility = await db.query.facilities.findFirst({
+        where: eq(facilities.id, facilityId)
+      });
+      
+      if (!facility) {
+        return res.status(404).json({ error: "Unidade não encontrada" });
+      }
+      
+      // Verificar se o relacionamento já existe
+      const existingRelation = await db.select()
+        .from(patientFacilities)
+        .where(
+          and(
+            eq(patientFacilities.patientId, patientId),
+            eq(patientFacilities.facilityId, facilityId)
+          )
+        );
+      
+      if (existingRelation.length > 0) {
+        return res.status(400).json({ error: "Paciente já está vinculado a esta unidade" });
+      }
+      
+      // Criar o relacionamento
+      await db.insert(patientFacilities).values({
+        patientId,
+        facilityId
+      });
+      
+      // Registrar ação no log de auditoria
+      await logAuditAction(
+        req, 
+        'update', 
+        'patients', 
+        patientId.toString(), 
+        { message: `Paciente vinculado à unidade ${facility.name}` }
+      );
+      
+      res.status(201).json({ 
+        message: "Paciente vinculado à unidade com sucesso",
+        patientId,
+        facilityId
+      });
+    } catch (error) {
+      console.error("Error adding patient to facility:", error);
+      res.status(500).json({ error: "Erro ao vincular paciente à unidade" });
+    }
+  });
+  
+  // Remover paciente de uma unidade
+  app.delete(`${apiPrefix}/patients/:id/facilities/:facilityId`, checkPermission('patients', 'update'), async (req, res) => {
+    try {
+      const patientId = parseInt(req.params.id);
+      const facilityId = parseInt(req.params.facilityId);
+      
+      // Verificar se o paciente existe
+      const patient = await db.query.patients.findFirst({
+        where: eq(patients.id, patientId)
+      });
+      
+      if (!patient) {
+        return res.status(404).json({ error: "Paciente não encontrado" });
+      }
+      
+      // Verificar se a unidade existe
+      const facility = await db.query.facilities.findFirst({
+        where: eq(facilities.id, facilityId)
+      });
+      
+      if (!facility) {
+        return res.status(404).json({ error: "Unidade não encontrada" });
+      }
+      
+      // Verificar se o relacionamento existe
+      const existingRelation = await db.select()
+        .from(patientFacilities)
+        .where(
+          and(
+            eq(patientFacilities.patientId, patientId),
+            eq(patientFacilities.facilityId, facilityId)
+          )
+        );
+      
+      if (existingRelation.length === 0) {
+        return res.status(404).json({ error: "Paciente não está vinculado a esta unidade" });
+      }
+      
+      // Contar quantas unidades o paciente está vinculado
+      const totalFacilities = await db.select({ count: sql`count(*)` })
+        .from(patientFacilities)
+        .where(eq(patientFacilities.patientId, patientId));
+      
+      // Verificar se é a última unidade do paciente
+      if (totalFacilities[0].count <= 1) {
+        return res.status(400).json({ 
+          error: "Não é possível remover a única unidade do paciente. O paciente deve estar vinculado a pelo menos uma unidade." 
+        });
+      }
+      
+      // Remover o relacionamento
+      await db.delete(patientFacilities)
+        .where(
+          and(
+            eq(patientFacilities.patientId, patientId),
+            eq(patientFacilities.facilityId, facilityId)
+          )
+        );
+      
+      // Registrar ação no log de auditoria
+      await logAuditAction(
+        req, 
+        'update', 
+        'patients', 
+        patientId.toString(), 
+        { message: `Paciente desvinculado da unidade ${facility.name}` }
+      );
+      
+      res.json({ 
+        message: "Paciente desvinculado da unidade com sucesso",
+        patientId,
+        facilityId
+      });
+    } catch (error) {
+      console.error("Error removing patient from facility:", error);
+      res.status(500).json({ error: "Erro ao desvincular paciente da unidade" });
     }
   });
 
