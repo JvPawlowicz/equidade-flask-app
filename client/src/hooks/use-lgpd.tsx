@@ -31,8 +31,11 @@ export function LgpdProvider({ children }: LgpdProviderProps) {
   
   // Quando o usuário faz login, verifica se já aceitou o termo LGPD
   useEffect(() => {
-    if (user && lgpdStatus) {
-      if (!lgpdStatus.lgpdAccepted) {
+    // Verificação de segurança para garantir que lgpdStatus tenha o formato esperado
+    if (user && lgpdStatus && typeof lgpdStatus === 'object') {
+      const hasAccepted = lgpdStatus.lgpdAccepted === true;
+      
+      if (!hasAccepted) {
         // Se não aceitou, mostra o termo
         setShowLgpdTerm(true);
         setLgpdAccepted(false);

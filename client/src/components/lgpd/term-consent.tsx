@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from "react";
-import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -60,20 +59,7 @@ export function LgpdTermConsent({ open, onAccept, onClose }: LgpdTermProps) {
   const [accepted, setAccepted] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   
-  const acceptTermMutation = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/users/lgpd-consent", {});
-      return await res.json();
-    },
-    onSuccess: () => {
-      onAccept();
-    },
-    onError: (error) => {
-      console.error('Erro ao aceitar termo LGPD:', error);
-      // Mesmo em caso de erro, permitimos que o usuário prossiga
-      onAccept();
-    }
-  });
+  const [isProcessing, setIsProcessing] = useState(false);
   
   // Detecta quando o usuário rola até o final do documento
   const handleScroll = () => {
@@ -92,12 +78,21 @@ export function LgpdTermConsent({ open, onAccept, onClose }: LgpdTermProps) {
     if (open) {
       setHasScrolledToBottom(false);
       setAccepted(false);
+      setIsProcessing(false);
     }
   }, [open]);
   
-  const handleAccept = () => {
+  const handleAcceptClick = () => {
     if (hasScrolledToBottom && accepted) {
-      acceptTermMutation.mutate();
+      setIsProcessing(true);
+      
+      try {
+        onAccept();
+      } catch (error) {
+        console.error('Erro ao aceitar termo LGPD:', error);
+        // Mesmo em caso de erro, fechamos o modal
+        onClose();
+      }
     }
   };
   
@@ -145,10 +140,10 @@ export function LgpdTermConsent({ open, onAccept, onClose }: LgpdTermProps) {
             Sair
           </Button>
           <Button 
-            onClick={handleAccept} 
-            disabled={!hasScrolledToBottom || !accepted || acceptTermMutation.isPending}
+            onClick={handleAcceptClick} 
+            disabled={!hasScrolledToBottom || !accepted || isProcessing}
           >
-            {acceptTermMutation.isPending ? (
+            {isProcessing ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Processando...
