@@ -88,26 +88,30 @@ export default function PatientsPage() {
   // Check if user can create patients
   const canCreatePatients = ["admin", "coordinator"].includes(user?.role || "");
 
-  // Construir URL da API com parâmetros de filtro
-  const buildApiUrl = () => {
-    const params = new URLSearchParams();
-    
-    if (searchTerm) {
-      params.append('search', searchTerm);
-    }
-    
-    if (selectedFacilityId !== null) {
-      params.append('facilityId', selectedFacilityId.toString());
-    }
-    
-    const queryString = params.toString();
-    return `/api/patients${queryString ? `?${queryString}` : ''}`;
-  };
-  
   // Fetch patients
   const { data: patients, isLoading } = useQuery<any[]>({
-    queryKey: [buildApiUrl()],
+    queryKey: ['/api/patients', searchTerm, selectedFacilityId, isPatientFormOpen],
     enabled: !isPatientFormOpen, // Não buscar pacientes quando o formulário estiver aberto
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      
+      if (searchTerm) {
+        params.append('search', searchTerm);
+      }
+      
+      if (selectedFacilityId !== null) {
+        params.append('facilityId', selectedFacilityId.toString());
+      }
+      
+      const queryString = params.toString();
+      const url = `/api/patients${queryString ? `?${queryString}` : ''}`;
+      
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error('Erro ao buscar pacientes');
+      }
+      return response.json();
+    }
   });
 
   // Fetch facilities for form
@@ -166,7 +170,7 @@ export default function PatientsPage() {
         title: "Paciente criado",
         description: "O paciente foi criado com sucesso.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/patients"] });
+      queryClient.invalidateQueries({ queryKey: ['/api/patients', searchTerm, selectedFacilityId] });
       setIsPatientFormOpen(false);
       form.reset();
     },
@@ -181,13 +185,13 @@ export default function PatientsPage() {
 
   // Efeito para atualizar a lista quando a unidade selecionada mudar
   useEffect(() => {
-    queryClient.invalidateQueries({ queryKey: [buildApiUrl()] });
-  }, [selectedFacilityId]);
+    queryClient.invalidateQueries({ queryKey: ['/api/patients', searchTerm, selectedFacilityId] });
+  }, [selectedFacilityId, searchTerm]);
   
   // Handle search
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    queryClient.invalidateQueries({ queryKey: [buildApiUrl()] });
+    queryClient.invalidateQueries({ queryKey: ['/api/patients', searchTerm, selectedFacilityId] });
   };
 
   // Handle form submission
