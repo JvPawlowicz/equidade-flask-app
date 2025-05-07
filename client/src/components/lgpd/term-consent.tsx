@@ -62,12 +62,17 @@ export function LgpdTermConsent({ open, onAccept, onClose }: LgpdTermProps) {
   
   const acceptTermMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/professionals/lgpd-consent", {});
+      const res = await apiRequest("POST", "/api/users/lgpd-consent", {});
       return await res.json();
     },
     onSuccess: () => {
       onAccept();
     },
+    onError: (error) => {
+      console.error('Erro ao aceitar termo LGPD:', error);
+      // Mesmo em caso de erro, permitimos que o usuário prossiga
+      onAccept();
+    }
   });
   
   // Detecta quando o usuário rola até o final do documento

@@ -84,6 +84,9 @@ export const users = pgTable('users', {
   lastLogin: timestamp('last_login'),
   profileImageUrl: text('profile_image_url'),
   isActive: boolean('is_active').default(true).notNull(),
+  lgpdAccepted: boolean('lgpd_accepted').default(false).notNull(),
+  lgpdAcceptedAt: timestamp('lgpd_accepted_at'),
+  lgpdAcceptedIp: text('lgpd_accepted_ip'),
 });
 
 // Professionals Table
