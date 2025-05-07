@@ -97,36 +97,78 @@ function validateInput(schema: z.ZodTypeAny) {
 }
 
 // Ensure uploads directory exists
-const uploadDir = path.join(process.cwd(), "uploads");
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+// Configurar diretórios de upload
+const uploadsBaseDir = path.join(process.cwd(), "uploads");
+const documentsDir = path.join(uploadsBaseDir, "documents");
+const profilesDir = path.join(uploadsBaseDir, "profiles");
+
+// Criar diretórios se não existirem
+if (!fs.existsSync(uploadsBaseDir)) {
+  fs.mkdirSync(uploadsBaseDir, { recursive: true });
+}
+if (!fs.existsSync(documentsDir)) {
+  fs.mkdirSync(documentsDir, { recursive: true });
+}
+if (!fs.existsSync(profilesDir)) {
+  fs.mkdirSync(profilesDir, { recursive: true });
 }
 
-// Configure multer for file uploads
-const storage_config = multer.diskStorage({
+// Configuração para arquivos de documentos
+const documentStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, uploadDir);
+    cb(null, documentsDir);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
     const extension = path.extname(file.originalname);
-    cb(null, file.fieldname + "-" + uniqueSuffix + extension);
+    cb(null, "doc-" + uniqueSuffix + extension);
   },
 });
 
+// Configuração para imagens de perfil
+const profileStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, profilesDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    const extension = path.extname(file.originalname);
+    cb(null, "profile-" + uniqueSuffix + extension);
+  },
+});
+
+// Configuração do upload de documentos
 const upload = multer({
-  storage: storage_config,
+  storage: documentStorage,
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB
   },
   fileFilter: (req, file, cb) => {
-    // Accept only PDF, DOC, DOCX
+    // Accept PDF, DOC, DOCX
     const allowedTypes = [".pdf", ".doc", ".docx"];
     const ext = path.extname(file.originalname).toLowerCase();
     if (allowedTypes.includes(ext)) {
       cb(null, true);
     } else {
       cb(new Error("Tipo de arquivo não suportado. Apenas PDF, DOC e DOCX são permitidos."));
+    }
+  },
+});
+
+// Configuração do upload de fotos de perfil
+const uploadProfile = multer({
+  storage: profileStorage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB
+  },
+  fileFilter: (req, file, cb) => {
+    // Accept image files only
+    const allowedTypes = [".jpg", ".jpeg", ".png"];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowedTypes.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Tipo de arquivo não suportado. Apenas JPG, JPEG e PNG são permitidos."));
     }
   },
 });
@@ -2564,7 +2606,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Removidos os campos não existentes no banco: needsSignature e parentDocumentId
       const documentData = {
         name: name || req.file.originalname,
-        fileUrl: `/uploads/${req.file.filename}`,
+        fileUrl: `/uploads/documents/${req.file.filename}`,
         fileType: req.file.mimetype,
         fileSize: req.file.size,
         description: description || null,
@@ -3545,6 +3587,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // API para atualizar perfil do usuário
+  // Rota para upload de foto de perfil
+  app.post(`${apiPrefix}/users/profile-image`, requireAuth, uploadProfile.single('profileImage'), async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ error: "Usuário não autenticado" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ error: "Nenhuma imagem enviada" });
+      }
+
+      const userId = req.user.id;
+
+      // Verificar se o usuário existe
+      const user = await db.query.users.findFirst({
+        where: eq(users.id, userId)
+      });
+
+      if (!user) {
+        return res.status(404).json({ error: "Usuário não encontrado" });
+      }
+
+      // Caminho da imagem relativo à raiz do projeto
+      const imagePath = `/uploads/profiles/${req.file.filename}`;
+
+      // Atualizar o perfil do usuário com a nova URL da imagem
+      const [updatedUser] = await db
+        .update(users)
+        .set({
+          profileImageUrl: imagePath,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, userId))
+        .returning();
+
+      // Remover senha antes de retornar
+      if (updatedUser) {
+        const { password, ...userWithoutPassword } = updatedUser;
+        
+        // Log da auditoria
+        await logAuditAction(req, 'update', 'users', userId.toString(), { 
+          profileImage: true,
+          fileSize: req.file.size,
+          fileType: req.file.mimetype
+        });
+        
+        return res.json({
+          success: true,
+          user: userWithoutPassword,
+          message: "Foto de perfil atualizada com sucesso"
+        });
+      } else {
+        return res.status(500).json({ error: "Erro ao atualizar foto de perfil" });
+      }
+    } catch (error) {
+      console.error("Erro ao fazer upload da foto de perfil:", error);
+      res.status(500).json({ error: "Erro ao fazer upload da foto de perfil" });
+    }
+  });
+
   app.put(`${apiPrefix}/users/profile`, requireAuth, async (req: Request, res: Response) => {
     try {
       if (!req.user || !req.user.id) {
@@ -3654,8 +3756,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Static files for uploaded documents
-  app.use("/uploads", express.static(uploadDir));
+  // Static files for uploaded documents and profiles
+  app.use("/uploads/documents", express.static(documentsDir));
+  app.use("/uploads/profiles", express.static(profilesDir));
 
   return httpServer;
 }
