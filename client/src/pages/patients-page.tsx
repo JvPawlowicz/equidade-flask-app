@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { AppLayout } from "@/components/layout/app-layout";
@@ -25,6 +25,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useFacility } from "@/hooks/use-facility";
 import {
   Form,
   FormControl,
@@ -80,15 +81,33 @@ type PatientFormValues = z.infer<typeof patientSchema>;
 export default function PatientsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { selectedFacilityId } = useFacility();
   const [searchTerm, setSearchTerm] = useState("");
   const [isPatientFormOpen, setIsPatientFormOpen] = useState(false);
   
   // Check if user can create patients
   const canCreatePatients = ["admin", "coordinator"].includes(user?.role || "");
 
+  // Construir URL da API com parâmetros de filtro
+  const buildApiUrl = () => {
+    const params = new URLSearchParams();
+    
+    if (searchTerm) {
+      params.append('search', searchTerm);
+    }
+    
+    if (selectedFacilityId !== null) {
+      params.append('facilityId', selectedFacilityId.toString());
+    }
+    
+    const queryString = params.toString();
+    return `/api/patients${queryString ? `?${queryString}` : ''}`;
+  };
+  
   // Fetch patients
   const { data: patients, isLoading } = useQuery<any[]>({
-    queryKey: [`/api/patients${searchTerm ? `?search=${searchTerm}` : ""}`],
+    queryKey: [buildApiUrl()],
+    enabled: !isPatientFormOpen, // Não buscar pacientes quando o formulário estiver aberto
   });
 
   // Fetch facilities for form
@@ -160,10 +179,15 @@ export default function PatientsPage() {
     },
   });
 
+  // Efeito para atualizar a lista quando a unidade selecionada mudar
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: [buildApiUrl()] });
+  }, [selectedFacilityId]);
+  
   // Handle search
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    queryClient.invalidateQueries({ queryKey: [`/api/patients?search=${searchTerm}`] });
+    queryClient.invalidateQueries({ queryKey: [buildApiUrl()] });
   };
 
   // Handle form submission

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/app-layout";
 import { CalendarView } from "@/components/appointments/calendar-view";
@@ -16,9 +16,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, Search, Plus, Filter } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { useFacility } from "@/hooks/use-facility";
 
 export default function AppointmentsPage() {
   const { user } = useAuth();
+  const { selectedFacilityId } = useFacility();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [filterFacilityId, setFilterFacilityId] = useState<number | undefined>(undefined);
   const [filterProfessionalId, setFilterProfessionalId] = useState<number | undefined>(undefined);
@@ -26,6 +28,13 @@ export default function AppointmentsPage() {
   const [filterStatus, setFilterStatus] = useState<string | undefined>(undefined);
   const [searchTerm, setSearchTerm] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  
+  // Sincronizar o filtro de unidade com a unidade selecionada no contexto global
+  useEffect(() => {
+    if (selectedFacilityId !== null) {
+      setFilterFacilityId(selectedFacilityId);
+    }
+  }, [selectedFacilityId]);
 
   // Fetch facilities for filters
   const { data: facilities } = useQuery<any[]>({
