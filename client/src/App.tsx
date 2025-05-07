@@ -162,14 +162,9 @@ function App() {
       
       {/* Conteúdo principal da aplicação */}
       <main id="main-content" tabIndex={-1}>
-        {/* Provider para seleção de unidades e termos LGPD */}
+        {/* Provider para seleção de unidades */}
         <FacilityProvider>
-          <LgpdProvider>
           <Switch>
-            {/* Rotas simplificadas para fallback */}
-            <Route path="/simple-login" component={SimpleLogin} />
-            <Route path="/simple-dashboard" component={SimpleDashboard} />
-            
             {/* Rota de autenticação */}
             <Route path="/auth" component={AuthPage} />
             
@@ -218,7 +213,6 @@ function App() {
               }}
             />
           )}
-          </LgpdProvider>
         </FacilityProvider>
       </main>
     </>
