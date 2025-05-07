@@ -145,7 +145,7 @@ export function Sidebar({ isOpen: externalIsOpen, setIsOpen: setExternalIsOpen }
       {/* Sidebar */}
       <aside 
         className={cn(
-          "fixed inset-y-0 left-0 z-20 w-64 bg-sidebar-background text-sidebar-foreground shadow-lg border-r border-sidebar-border transition-transform duration-300",
+          "fixed inset-y-0 left-0 z-20 w-64 bg-sidebar-background text-white shadow-lg border-r border-sidebar-border transition-transform duration-300",
           isMobile && !isOpen && "-translate-x-full",
           isMobile && isOpen && "translate-x-0"
         )}
@@ -175,7 +175,7 @@ export function Sidebar({ isOpen: externalIsOpen, setIsOpen: setExternalIsOpen }
             role="banner"
           >
             <h1 className="text-xl font-semibold text-primary">
-              EQUIDADE
+              EQUIDADE+
             </h1>
           </div>
 
@@ -193,8 +193,8 @@ export function Sidebar({ isOpen: externalIsOpen, setIsOpen: setExternalIsOpen }
                 </AvatarFallback>
               </Avatar>
               <div className="ml-3">
-                <p className="text-sm font-semibold">{user.fullName}</p>
-                <p className="text-xs text-muted-foreground" aria-label={`Função: ${
+                <p className="text-sm font-semibold text-white">{user.fullName}</p>
+                <p className="text-xs text-white" aria-label={`Função: ${
                   user.role === "admin" ? "Administrador" : 
                   user.role === "coordinator" ? "Coordenador" : 
                   user.role === "professional" ? "Profissional" : 
@@ -227,7 +227,7 @@ export function Sidebar({ isOpen: externalIsOpen, setIsOpen: setExternalIsOpen }
                   "flex items-center px-2 py-2 text-sm font-medium rounded-md group transition-colors",
                   location === item.path 
                     ? "text-primary bg-primary/10"
-                    : "text-sidebar-foreground hover:text-primary hover:bg-primary/10"
+                    : "text-white hover:text-primary hover:bg-primary/10"
                 )}
                 aria-current={location === item.path ? "page" : undefined}
                 ref={index === 0 ? firstNavItemRef : undefined}
@@ -244,13 +244,13 @@ export function Sidebar({ isOpen: externalIsOpen, setIsOpen: setExternalIsOpen }
             role="contentinfo"
             aria-label="Data atual e localização"
           >
-            <div className="text-xs text-sidebar-foreground/70">
+            <div className="text-xs text-white">
               <p className="mb-1">{currentDate}</p>
               <p>{currentCity}, Brasil</p>
             </div>
             <Button
               variant="ghost"
-              className="flex items-center w-full mt-3 text-sm justify-start p-2 font-medium"
+              className="flex items-center w-full mt-3 text-sm justify-start p-2 font-medium text-white hover:text-primary hover:bg-primary/10"
               onClick={handleLogout}
               aria-label="Sair do sistema"
             >
