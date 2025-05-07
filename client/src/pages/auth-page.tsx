@@ -200,9 +200,15 @@ export default function AuthPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col lg:flex-row">
       {/* Hero Section */}
-      <div className="bg-primary text-white lg:w-1/2 p-8 lg:p-16 flex flex-col justify-center">
+      <div className="bg-sidebar text-white lg:w-1/2 p-8 lg:p-16 flex flex-col justify-center" style={{ backgroundColor: 'hsl(204, 60%, 20%)' }}>
         <div className="max-w-lg mx-auto">
-          <h1 className="text-3xl lg:text-5xl font-bold mb-6">EQUIDADE</h1>
+          <img 
+            src="/assets/images/logo.svg" 
+            alt="Equidade Clínica" 
+            className="h-16 mb-6"
+            aria-hidden="true"
+          />
+          <h1 className="sr-only">Equidade Clínica</h1>
           <p className="text-xl lg:text-2xl font-medium mb-4">
             Gerenciamento de Clínicas Multi e Interdisciplinares
           </p>
@@ -211,26 +217,26 @@ export default function AuthPage() {
             Desenvolvida com foco em clínicas interdisciplinares para pessoas com deficiência.
           </p>
           <div className="grid grid-cols-2 gap-4 text-sm">
-            <div className="bg-primary-foreground/10 p-4 rounded-lg">
-              <h3 className="font-medium mb-2">Agendamento Simplificado</h3>
+            <div className="bg-primary/10 p-4 rounded-lg border border-primary/30 shadow-sm hover:shadow-md transition-all duration-300">
+              <h3 className="font-medium mb-2 text-primary-foreground">Agendamento Simplificado</h3>
               <p className="text-primary-foreground/90">
                 Agende e gerencie consultas com facilidade, visualizando por dia, semana ou mês.
               </p>
             </div>
-            <div className="bg-primary-foreground/10 p-4 rounded-lg">
-              <h3 className="font-medium mb-2">Prontuários Integrados</h3>
+            <div className="bg-primary/10 p-4 rounded-lg border border-primary/30 shadow-sm hover:shadow-md transition-all duration-300">
+              <h3 className="font-medium mb-2 text-primary-foreground">Prontuários Integrados</h3>
               <p className="text-primary-foreground/90">
                 Registre e acompanhe o histórico de atendimentos e evoluções dos pacientes.
               </p>
             </div>
-            <div className="bg-primary-foreground/10 p-4 rounded-lg">
-              <h3 className="font-medium mb-2">Equipe Multidisciplinar</h3>
+            <div className="bg-primary/10 p-4 rounded-lg border border-primary/30 shadow-sm hover:shadow-md transition-all duration-300">
+              <h3 className="font-medium mb-2 text-primary-foreground">Equipe Multidisciplinar</h3>
               <p className="text-primary-foreground/90">
                 Colaboração entre diferentes profissionais com acesso adaptado às funções.
               </p>
             </div>
-            <div className="bg-primary-foreground/10 p-4 rounded-lg">
-              <h3 className="font-medium mb-2">Supervisão de Estagiários</h3>
+            <div className="bg-primary/10 p-4 rounded-lg border border-primary/30 shadow-sm hover:shadow-md transition-all duration-300">
+              <h3 className="font-medium mb-2 text-primary-foreground">Supervisão de Estagiários</h3>
               <p className="text-primary-foreground/90">
                 Supervisione evoluções de estagiários com sistema de aprovação integrado.
               </p>
@@ -286,7 +292,7 @@ export default function AuthPage() {
                     />
                     <Button
                       type="submit"
-                      className="w-full"
+                      className="w-full bg-primary hover:bg-primary/90"
                       disabled={loginForm.formState.isSubmitting}
                     >
                       {loginForm.formState.isSubmitting ? (
@@ -410,7 +416,7 @@ export default function AuthPage() {
                     />
                     <Button
                       type="submit"
-                      className="w-full"
+                      className="w-full bg-primary hover:bg-primary/90"
                       disabled={registerForm.formState.isSubmitting}
                     >
                       {registerForm.formState.isSubmitting ? (
