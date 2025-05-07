@@ -1,7 +1,19 @@
-import { pgTable, text, serial, integer, boolean, timestamp, pgEnum, primaryKey, uniqueIndex, date, json } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, pgEnum, primaryKey, uniqueIndex, date, json, varchar, index, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
+
+// Session storage table.
+// (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
+export const sessions = pgTable(
+  "sessions",
+  {
+    sid: varchar("sid").primaryKey(),
+    sess: jsonb("sess").notNull(),
+    expire: timestamp("expire").notNull(),
+  },
+  (table) => [index("IDX_session_expire").on(table.expire)],
+);
 
 // User Roles Enum
 export const roleEnum = pgEnum('role', ['admin', 'coordinator', 'professional', 'intern', 'secretary']);
