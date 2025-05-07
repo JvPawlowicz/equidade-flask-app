@@ -47,8 +47,8 @@ export function AppLayout({ children, onSearch, title }: AppLayoutProps) {
   };
 
   // Determinar título da página para o elemento title
-  const pageTitle = title || "Equidade+ Multidisciplinar";
-  const fullTitle = `${pageTitle} | Sistema Equidade+`;
+  const pageTitle = title || "Clínica de Reabilitação";
+  const fullTitle = `${pageTitle} | Sistema Clínico`;
 
   // Atualizar título do documento
   useEffect(() => {
@@ -82,11 +82,6 @@ export function AppLayout({ children, onSearch, title }: AppLayoutProps) {
         >
           {children}
         </main>
-        
-        {/* Footer com copyright */}
-        <footer className="py-3 px-4 border-t border-border text-center text-xs text-muted-foreground">
-          © {new Date().getFullYear()} Todos os direitos reservados - João Victor Gonzalez Pawlowicz - JVGP
-        </footer>
       </div>
     </div>
   );

@@ -77,15 +77,15 @@ export function Sidebar({ isOpen: externalIsOpen, setIsOpen: setExternalIsOpen }
   };
 
   const navItems = [
-    { path: "/", label: "Dashboard", icon: <BarChart className="h-5 w-5 text-amber-200" aria-hidden="true" /> },
-    { path: "/agenda", label: "Agenda", icon: <Calendar className="h-5 w-5 text-amber-200" aria-hidden="true" /> },
-    { path: "/pacientes", label: "Pacientes", icon: <Users className="h-5 w-5 text-amber-200" aria-hidden="true" /> },
-    { path: "/profissionais", label: "Profissionais", icon: <User className="h-5 w-5 text-amber-200" aria-hidden="true" /> },
-    { path: "/unidades", label: "Unidades", icon: <Building2 className="h-5 w-5 text-amber-200" aria-hidden="true" /> },
-    { path: "/evolucoes", label: "Evoluções", icon: <FileText className="h-5 w-5 text-amber-200" aria-hidden="true" /> },
-    { path: "/documentos", label: "Documentos", icon: <File className="h-5 w-5 text-amber-200" aria-hidden="true" /> },
-    { path: "/relatorios", label: "Relatórios", icon: <FileBarChart className="h-5 w-5 text-amber-200" aria-hidden="true" /> },
-    { path: "/chat", label: "Chat", icon: <MessageCircle className="h-5 w-5 text-amber-200" aria-hidden="true" /> },
+    { path: "/", label: "Dashboard", icon: <BarChart className="h-5 w-5" aria-hidden="true" /> },
+    { path: "/agenda", label: "Agenda", icon: <Calendar className="h-5 w-5" aria-hidden="true" /> },
+    { path: "/pacientes", label: "Pacientes", icon: <Users className="h-5 w-5" aria-hidden="true" /> },
+    { path: "/profissionais", label: "Profissionais", icon: <User className="h-5 w-5" aria-hidden="true" /> },
+    { path: "/unidades", label: "Unidades", icon: <Building2 className="h-5 w-5" aria-hidden="true" /> },
+    { path: "/evolucoes", label: "Evoluções", icon: <FileText className="h-5 w-5" aria-hidden="true" /> },
+    { path: "/documentos", label: "Documentos", icon: <File className="h-5 w-5" aria-hidden="true" /> },
+    { path: "/relatorios", label: "Relatórios", icon: <FileBarChart className="h-5 w-5" aria-hidden="true" /> },
+    { path: "/chat", label: "Chat", icon: <MessageCircle className="h-5 w-5" aria-hidden="true" /> },
   ];
 
   // Filter items based on user role
@@ -123,7 +123,7 @@ export function Sidebar({ isOpen: externalIsOpen, setIsOpen: setExternalIsOpen }
       aria-expanded="false"
       aria-controls="sidebar-navigation"
     >
-      <ChevronRight className="h-4 w-4 text-amber-200" aria-hidden="true" />
+      <ChevronRight className="h-4 w-4" aria-hidden="true" />
     </Button>
   );
 
@@ -145,7 +145,7 @@ export function Sidebar({ isOpen: externalIsOpen, setIsOpen: setExternalIsOpen }
       {/* Sidebar */}
       <aside 
         className={cn(
-          "fixed inset-y-0 left-0 z-20 w-64 bg-primary text-primary-foreground shadow-lg border-r border-primary/20 transition-transform duration-300",
+          "fixed inset-y-0 left-0 z-20 w-64 bg-sidebar-background text-sidebar-foreground shadow-lg border-r border-sidebar-border transition-transform duration-300",
           isMobile && !isOpen && "-translate-x-full",
           isMobile && isOpen && "translate-x-0"
         )}
@@ -171,18 +171,18 @@ export function Sidebar({ isOpen: externalIsOpen, setIsOpen: setExternalIsOpen }
 
           {/* Logo */}
           <div 
-            className="flex items-center justify-center h-16 px-6 border-b border-primary/20"
+            className="flex items-center justify-center h-16 px-6 border-b border-sidebar-border"
             role="banner"
           >
-            <h1 className="text-xl font-bold text-white">
-              <span className="text-amber-200">EQUIDADE</span><span className="text-white">+</span>
+            <h1 className="text-xl font-semibold text-primary">
+              EQUIDADE
             </h1>
           </div>
 
           {/* User Info */}
           {user && (
             <div 
-              className="flex items-center px-6 py-3 border-b border-primary/20"
+              className="flex items-center px-6 py-3 border-b border-sidebar-border"
               role="region"
               aria-label="Informações do usuário"
             >
@@ -193,8 +193,8 @@ export function Sidebar({ isOpen: externalIsOpen, setIsOpen: setExternalIsOpen }
                 </AvatarFallback>
               </Avatar>
               <div className="ml-3">
-                <p className="text-sm font-semibold text-amber-200">{user.fullName}</p>
-                <p className="text-xs text-amber-200" aria-label={`Função: ${
+                <p className="text-sm font-semibold">{user.fullName}</p>
+                <p className="text-xs text-muted-foreground" aria-label={`Função: ${
                   user.role === "admin" ? "Administrador" : 
                   user.role === "coordinator" ? "Coordenador" : 
                   user.role === "professional" ? "Profissional" : 
@@ -226,8 +226,8 @@ export function Sidebar({ isOpen: externalIsOpen, setIsOpen: setExternalIsOpen }
                 className={cn(
                   "flex items-center px-2 py-2 text-sm font-medium rounded-md group transition-colors",
                   location === item.path 
-                    ? "bg-amber-200/20 text-amber-200 font-bold"
-                    : "text-amber-200 hover:bg-amber-200/10"
+                    ? "text-primary bg-primary/10"
+                    : "text-sidebar-foreground hover:text-primary hover:bg-primary/10"
                 )}
                 aria-current={location === item.path ? "page" : undefined}
                 ref={index === 0 ? firstNavItemRef : undefined}
@@ -240,21 +240,21 @@ export function Sidebar({ isOpen: externalIsOpen, setIsOpen: setExternalIsOpen }
 
           {/* Footer */}
           <div 
-            className="px-4 py-3 border-t border-primary/20"
+            className="px-4 py-3 border-t border-sidebar-border"
             role="contentinfo"
             aria-label="Data atual e localização"
           >
-            <div className="text-xs text-amber-200">
+            <div className="text-xs text-sidebar-foreground/70">
               <p className="mb-1">{currentDate}</p>
               <p>{currentCity}, Brasil</p>
             </div>
             <Button
               variant="ghost"
-              className="flex items-center w-full mt-3 text-sm justify-start p-2 font-medium text-amber-200 hover:bg-amber-200/10"
+              className="flex items-center w-full mt-3 text-sm justify-start p-2 font-medium"
               onClick={handleLogout}
               aria-label="Sair do sistema"
             >
-              <LogOut className="mr-2 h-4 w-4 text-amber-200" aria-hidden="true" />
+              <LogOut className="mr-2 h-4 w-4" aria-hidden="true" />
               Sair
             </Button>
           </div>
