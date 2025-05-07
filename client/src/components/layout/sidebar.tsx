@@ -145,7 +145,7 @@ export function Sidebar({ isOpen: externalIsOpen, setIsOpen: setExternalIsOpen }
       {/* Sidebar */}
       <aside 
         className={cn(
-          "fixed inset-y-0 left-0 z-20 w-64 bg-sidebar-background text-sidebar-foreground shadow-lg border-r border-sidebar-border transition-transform duration-300",
+          "fixed inset-y-0 left-0 z-20 w-64 bg-sidebar-background text-sidebar-foreground shadow-lg transition-transform duration-300",
           isMobile && !isOpen && "-translate-x-full",
           isMobile && isOpen && "translate-x-0"
         )}
@@ -171,10 +171,10 @@ export function Sidebar({ isOpen: externalIsOpen, setIsOpen: setExternalIsOpen }
 
           {/* Logo */}
           <div 
-            className="flex items-center justify-center h-16 px-6 border-b border-sidebar-border"
+            className="flex items-center justify-center h-20 px-6 bg-sidebar-primary/90 text-sidebar-primary-foreground"
             role="banner"
           >
-            <h1 className="text-xl font-semibold text-primary">
+            <h1 className="text-2xl font-bold tracking-wide">
               EQUIDADE
             </h1>
           </div>
@@ -182,19 +182,19 @@ export function Sidebar({ isOpen: externalIsOpen, setIsOpen: setExternalIsOpen }
           {/* User Info */}
           {user && (
             <div 
-              className="flex items-center px-6 py-3 border-b border-sidebar-border"
+              className="flex items-center px-6 py-4 bg-sidebar-accent text-sidebar-accent-foreground"
               role="region"
               aria-label="Informações do usuário"
             >
-              <Avatar>
+              <Avatar className="h-12 w-12 border-2 border-white/30 shadow-md">
                 <AvatarImage src={user.profileImageUrl || undefined} alt="" />
-                <AvatarFallback className="bg-primary/10 text-primary" aria-hidden="true">
+                <AvatarFallback className="bg-primary text-white font-bold" aria-hidden="true">
                   {user.fullName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <div className="ml-3">
-                <p className="text-sm font-semibold">{user.fullName}</p>
-                <p className="text-xs text-muted-foreground" aria-label={`Função: ${
+                <p className="text-sm font-bold">{user.fullName}</p>
+                <p className="text-xs mt-0.5" aria-label={`Função: ${
                   user.role === "admin" ? "Administrador" : 
                   user.role === "coordinator" ? "Coordenador" : 
                   user.role === "professional" ? "Profissional" : 
@@ -215,7 +215,7 @@ export function Sidebar({ isOpen: externalIsOpen, setIsOpen: setExternalIsOpen }
 
           {/* Navigation */}
           <nav 
-            className="flex-1 px-4 py-4 space-y-1 overflow-y-auto"
+            className="flex-1 py-4 overflow-y-auto bg-sidebar-background"
             id="sidebar-navigation"
             aria-label="Menu de navegação"
           >
@@ -224,10 +224,10 @@ export function Sidebar({ isOpen: externalIsOpen, setIsOpen: setExternalIsOpen }
                 key={item.path} 
                 href={item.path}
                 className={cn(
-                  "flex items-center px-2 py-2 text-sm font-medium rounded-md group transition-colors",
+                  "flex items-center px-6 py-3 text-sm font-medium group transition-colors border-l-4",
                   location === item.path 
-                    ? "text-primary bg-primary/10"
-                    : "text-sidebar-foreground hover:text-primary hover:bg-primary/10"
+                    ? "border-l-primary bg-primary/10 text-primary font-bold"
+                    : "border-l-transparent text-sidebar-foreground hover:border-l-primary/50 hover:bg-primary/5 hover:text-primary"
                 )}
                 aria-current={location === item.path ? "page" : undefined}
                 ref={index === 0 ? firstNavItemRef : undefined}
@@ -240,17 +240,17 @@ export function Sidebar({ isOpen: externalIsOpen, setIsOpen: setExternalIsOpen }
 
           {/* Footer */}
           <div 
-            className="px-4 py-3 border-t border-sidebar-border"
+            className="px-6 py-4 bg-sidebar-accent/50"
             role="contentinfo"
             aria-label="Data atual e localização"
           >
-            <div className="text-xs text-sidebar-foreground/70">
-              <p className="mb-1">{currentDate}</p>
-              <p>{currentCity}, Brasil</p>
+            <div className="text-xs">
+              <p className="mb-1 font-medium">{currentDate}</p>
+              <p className="text-sidebar-accent-foreground">{currentCity}, Brasil</p>
             </div>
             <Button
-              variant="ghost"
-              className="flex items-center w-full mt-3 text-sm justify-start p-2 font-medium"
+              variant="outline"
+              className="flex items-center w-full mt-4 text-sm justify-start p-2 font-medium border-primary/20 hover:bg-primary/10 hover:text-primary hover:border-primary/30"
               onClick={handleLogout}
               aria-label="Sair do sistema"
             >
