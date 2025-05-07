@@ -1,7 +1,8 @@
 import express, { type Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, requireAuth } from "./auth";
+import { setupAuth as setupLocalAuth, requireAuth } from "./auth";
+import { setupAuth as setupReplitAuth, isAuthenticated } from "./replitAuth";
 import { checkPermission, requireApproval, isOwnerOrSupervisor, getResourceText, getActionText, resourceTranslations, actionTranslations } from "./permissions";
 import { healthCheck } from "./healthcheck";
 import WebSocket, { WebSocketServer } from "ws";
@@ -133,7 +134,14 @@ const upload = multer({
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
-  setupAuth(app);
+  // Usar autenticação Replit se estiver com ambiente configurado, senão usar local
+  if (process.env.REPLIT_DOMAINS) {
+    console.log("Usando autenticação Replit");
+    await setupReplitAuth(app);
+  } else {
+    console.log("Usando autenticação local");
+    setupLocalAuth(app);
+  }
 
   // Rota de login com HTML estático
   app.get('/login-direto', (req, res) => {
