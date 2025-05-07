@@ -56,7 +56,7 @@ const professionalSchema = z.object({
   fullName: z.string().min(3, "Nome completo deve ter pelo menos 3 caracteres"),
   email: z.string().email("Email inválido"),
   phone: z.string().optional(),
-  role: z.enum(["professional", "intern"]),
+  role: z.enum(["admin", "coordinator", "professional", "intern", "secretary"]),
   facilityId: z.string().min(1, "Unidade é obrigatória"),
   professionalType: z.string().min(1, "Tipo profissional é obrigatório"),
   licenseNumber: z.string().optional(),
@@ -309,7 +309,7 @@ export default function ProfessionalsPage() {
 
       {/* New Professional Dialog */}
       <Dialog open={isProfessionalFormOpen} onOpenChange={setIsProfessionalFormOpen}>
-        <DialogContent className="sm:max-w-[700px]">
+        <DialogContent className="sm:max-w-[620px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Cadastrar Novo Profissional</DialogTitle>
           </DialogHeader>
@@ -361,8 +361,15 @@ export default function ProfessionalsPage() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
+                            {user?.role === "admin" && (
+                              <>
+                                <SelectItem value="admin">Administrador</SelectItem>
+                                <SelectItem value="coordinator">Coordenador</SelectItem>
+                              </>
+                            )}
                             <SelectItem value="professional">Profissional</SelectItem>
                             <SelectItem value="intern">Estagiário</SelectItem>
+                            <SelectItem value="secretary">Secretário(a)</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
