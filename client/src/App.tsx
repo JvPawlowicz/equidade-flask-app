@@ -28,6 +28,7 @@ import { useNetworkStatus } from "@/hooks/use-mobile";
 import { useResponsive } from "@/hooks/use-mobile";
 import { registerServiceWorker } from "@/lib/offline-utils";
 import { FacilityProvider } from "@/hooks/use-facility";
+import { LgpdProvider } from "@/hooks/use-lgpd";
 
 // Componente para anúncios de leitores de tela
 function ScreenReaderAnnouncer() {
@@ -161,8 +162,9 @@ function App() {
       
       {/* Conteúdo principal da aplicação */}
       <main id="main-content" tabIndex={-1}>
-        {/* Provider para seleção de unidades */}
+        {/* Provider para seleção de unidades e termos LGPD */}
         <FacilityProvider>
+          <LgpdProvider>
           <Switch>
             {/* Rotas simplificadas para fallback */}
             <Route path="/simple-login" component={SimpleLogin} />
@@ -216,6 +218,7 @@ function App() {
               }}
             />
           )}
+          </LgpdProvider>
         </FacilityProvider>
       </main>
     </>
