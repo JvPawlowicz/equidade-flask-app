@@ -918,13 +918,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: 'Usuário não autenticado' });
       }
       
-      const user = await db.query.users.findFirst({
-        where: eq(users.id, userId),
-        columns: {
-          lgpdAccepted: true,
-          lgpdAcceptedAt: true
-        }
-      });
+      // Consulta simplificada, para evitar problemas com colunas recém-adicionadas
+      const [user] = await db
+        .select({
+          lgpdAccepted: users.lgpdAccepted,
+          lgpdAcceptedAt: users.lgpdAcceptedAt
+        })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
       
       if (!user) {
         return res.status(404).json({ error: 'Usuário não encontrado' });
@@ -953,19 +955,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const ip = req.ip || req.socket.remoteAddress || 'unknown';
       
       // Atualizar o status de aceitação LGPD do usuário
-      const [updatedUser] = await db
+      await db
         .update(users)
         .set({
           lgpdAccepted: true,
           lgpdAcceptedAt: new Date(),
           lgpdAcceptedIp: ip,
         })
-        .where(eq(users.id, userId))
-        .returning({
+        .where(eq(users.id, userId));
+
+      // Buscar o registro atualizado
+      const [updatedUser] = await db
+        .select({
           id: users.id,
           lgpdAccepted: users.lgpdAccepted,
           lgpdAcceptedAt: users.lgpdAcceptedAt
-        });
+        })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
       
       // Se o usuário for profissional, atualizar também na tabela de profissionais
       const professional = await db.query.professionals.findFirst({
