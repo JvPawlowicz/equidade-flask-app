@@ -8,6 +8,7 @@ import PatientDetails from "@/pages/patient-details";
 import ProfessionalsPage from "@/pages/professionals-page";
 import ProfessionalDetails from "@/pages/professional-details";
 import AppointmentsPage from "@/pages/appointments-page";
+import SchedulePage from "@/pages/schedule-page"; // Nova página de agenda
 import EvolutionsPage from "@/pages/evolutions-page";
 import FacilitiesPage from "@/pages/facilities-page";
 import FacilityDetails from "@/pages/facility-details";
@@ -176,6 +177,7 @@ function App() {
             <ProtectedRoute path="/profissionais" component={ProfessionalsPage} />
             <ProtectedRoute path="/profissionais/:id" component={ProfessionalDetails} />
             <ProtectedRoute path="/agenda" component={AppointmentsPage} />
+            <ProtectedRoute path="/agenda-calendario" component={SchedulePage} />
             <ProtectedRoute path="/evolucoes" component={EvolutionsPage} />
             <ProtectedRoute path="/unidades" component={FacilitiesPage} />
             <ProtectedRoute path="/unidades/:id" component={FacilityDetails} />
