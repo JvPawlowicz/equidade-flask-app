@@ -49,4 +49,4 @@ fi
 
 # Iniciar a aplicação
 echo "🚀 Iniciando aplicação..."
-node dist/index.js
+node dist/server/index.js
