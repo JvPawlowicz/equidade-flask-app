@@ -67,7 +67,20 @@ async function seed() {
       contactInfo: "(11) 2222-4444",
     }).returning();
 
-    // Create admin user
+    // Create admin users
+    // Admin principal
+    const joaoAdminPassword = await hashPassword("muda1234");
+    const [joaoAdminUser] = await db.insert(schema.users).values({
+      username: "joao.victor",
+      password: joaoAdminPassword,
+      email: "joao.victor@grupoequidade.com.br",
+      fullName: "João Victor",
+      role: "admin",
+      facilityId: mainFacility.id,
+      phone: "(11) 97777-0000",
+      profileImageUrl: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
+    }).returning();
+    
     const adminPassword = await hashPassword("admin123");
     const [adminUser] = await db.insert(schema.users).values({
       username: "admin",
@@ -386,11 +399,12 @@ async function seed() {
     // Create chat groups
     const [clinicalTeamGroup] = await db.insert(schema.chatGroups).values({
       name: "Equipe Clínica",
-      createdById: adminUser.id,
+      createdById: joaoAdminUser.id,
     }).returning();
 
     // Add members to chat groups
     await db.insert(schema.chatGroupMembers).values([
+      { groupId: clinicalTeamGroup.id, userId: joaoAdminUser.id },
       { groupId: clinicalTeamGroup.id, userId: adminUser.id },
       { groupId: clinicalTeamGroup.id, userId: coordinatorUser.id },
       { groupId: clinicalTeamGroup.id, userId: professionalUsers[0][0].id },
@@ -402,7 +416,7 @@ async function seed() {
     // Create chat messages
     await db.insert(schema.chatMessages).values([
       {
-        senderId: adminUser.id,
+        senderId: joaoAdminUser.id,
         groupId: clinicalTeamGroup.id,
         content: "Bem-vindos ao nosso novo sistema de gerenciamento clínico! Qualquer dúvida podem me contatar.",
         isRead: false,

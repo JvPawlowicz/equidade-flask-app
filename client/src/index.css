@@ -106,13 +106,13 @@
     --chart-3: 280 60% 50%; /* Violeta */
     --chart-4: 30 80% 55%; /* Laranja */
     --chart-5: 130 45% 50%; /* Verde */
-    --sidebar-background: 220 60% 25%; /* Sidebar azul royal escuro */
-    --sidebar-foreground: 0 0% 100%; /* Branco */
+    --sidebar-background: 0 0% 100%; /* Branco */
+    --sidebar-foreground: 220 80% 18%; /* Azul royal escuro */
     --sidebar-primary: 220 75% 40%; /* Azul royal */
     --sidebar-primary-foreground: 0 0% 100%; /* Branco */
-    --sidebar-accent: 220 40% 35%; /* Azul royal médio */
-    --sidebar-accent-foreground: 220 15% 95%; /* Azul muito claro */
-    --sidebar-border: 220 35% 30%; /* Azul escuro */
+    --sidebar-accent: 220 25% 95%; /* Azul muito suave */
+    --sidebar-accent-foreground: 220 40% 40%; /* Azul médio */
+    --sidebar-border: 220 30% 90%; /* Bordas sutis */
     --sidebar-ring: 220 75% 40%; /* Azul royal */
     --radius: 0.5rem;
     
@@ -167,13 +167,13 @@
     --chart-3: 280 60% 45%; /* Violeta */
     --chart-4: 30 80% 45%; /* Laranja */
     --chart-5: 130 50% 40%; /* Verde */
-    --sidebar-background: 220 55% 10%; /* Azul royal muito escuro para sidebar */
+    --sidebar-background: 0 0% 100%; /* Branco */
     --sidebar-foreground: 220 15% 95%; /* Azul royal muito claro */
     --sidebar-primary: 220 75% 45%; /* Azul royal mais vibrante */
     --sidebar-primary-foreground: 220 15% 95%; /* Azul royal muito claro */
-    --sidebar-accent: 220 35% 25%; /* Azul royal médio-escuro */
-    --sidebar-accent-foreground: 220 20% 75%; /* Azul royal claro */
-    --sidebar-border: 220 40% 20%; /* Azul royal médio-escuro */
+    --sidebar-accent: 220 40% 20%; /* Azul royal escuro */
+    --sidebar-accent-foreground: 220 15% 90%; /* Azul royal muito claro */
+    --sidebar-border: 220 30% 90%; /* Bordas sutis */
     --sidebar-ring: 220 75% 45%; /* Azul royal mais vibrante */
     
     /* Foco mais visível em modo escuro */
