@@ -60,11 +60,6 @@ app.use((req, res, next) => {
   // ALWAYS serve the app on port 5000
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  // Add root health check route
-  app.get('/', (req, res) => {
-    res.status(200).send('OK');
-  });
-
   const port = 5000;
   server.listen(port, "0.0.0.0", () => {
     log(`serving on port ${port}`);
