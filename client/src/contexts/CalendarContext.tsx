@@ -19,6 +19,7 @@ export interface CalendarEvent {
   roomName?: string;
   notes?: string;
   facilityId?: number;
+  facilityName?: string;
 }
 
 // Define o tipo para o contexto
@@ -26,7 +27,7 @@ interface CalendarContextType {
   events: CalendarEvent[];
   isLoading: boolean;
   error: Error | null;
-  fetchEvents: (start?: Date, end?: Date) => Promise<void>;
+  fetchEvents: (start?: Date, end?: Date, facilityId?: number | string, professionalId?: number | string) => Promise<CalendarEvent[] | undefined>;
   addEvent: (event: CalendarEvent) => void;
   updateEvent: (id: number, updatedEvent: Partial<CalendarEvent>) => void;
   deleteEvent: (id: number) => void;
@@ -37,7 +38,7 @@ export const CalendarContext = createContext<CalendarContextType>({
   events: [],
   isLoading: false,
   error: null,
-  fetchEvents: async () => {},
+  fetchEvents: async () => [] as CalendarEvent[], // Retorna um array vazio do tipo CalendarEvent[]
   addEvent: () => {},
   updateEvent: () => {},
   deleteEvent: () => {},
@@ -52,23 +53,36 @@ export const CalendarProvider: React.FC<{children: ReactNode}> = ({ children }) 
   const { toast } = useToast();
 
   // Função para buscar eventos no servidor
-  const fetchEvents = async (start?: Date, end?: Date) => {
-    if (!user) return;
+  const fetchEvents = async (start?: Date, end?: Date, facilityId?: number | string, professionalId?: number | string): Promise<CalendarEvent[]> => {
+    if (!user) return [];
     
     setIsLoading(true);
     setError(null);
     
     try {
-      // Construir query params para filtrar por datas se fornecidas
-      let url = '/api/appointments';
+      // Construir query params para os filtros fornecidos
+      const params = new URLSearchParams();
+      
       if (start && end) {
-        url += `?startDate=${start.toISOString()}&endDate=${end.toISOString()}`;
+        params.append('startDate', start.toISOString());
+        params.append('endDate', end.toISOString());
       }
       
-      const response = await apiRequest('GET', url);
+      if (facilityId) {
+        params.append('facilityId', facilityId.toString());
+      }
+      
+      if (professionalId) {
+        params.append('professionalId', professionalId.toString());
+      }
+      
+      // Construir a URL com os query params
+      const url = `/api/appointments${params.toString() ? `?${params.toString()}` : ''}`;
+      
+      const responseData = await apiRequest('GET', url);
       
       // Processar os eventos recebidos
-      const formattedEvents = response.map((appointment: any) => ({
+      const formattedEvents = responseData.map((appointment: any) => ({
         id: appointment.id,
         title: appointment.title || `${appointment.patient?.fullName} - ${appointment.procedureType}`,
         startTime: appointment.startTime,
@@ -82,10 +96,12 @@ export const CalendarProvider: React.FC<{children: ReactNode}> = ({ children }) 
         roomId: appointment.roomId,
         roomName: appointment.room?.name || 'Sem sala',
         notes: appointment.notes,
-        facilityId: appointment.facilityId
+        facilityId: appointment.facilityId,
+        facilityName: appointment.facility?.name || 'Sem unidade'
       }));
       
       setEvents(formattedEvents);
+      return formattedEvents;
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Erro desconhecido ao buscar eventos'));
       toast({
@@ -93,6 +109,7 @@ export const CalendarProvider: React.FC<{children: ReactNode}> = ({ children }) 
         description: "Não foi possível carregar os agendamentos",
         variant: "destructive"
       });
+      return [];
     } finally {
       setIsLoading(false);
     }
