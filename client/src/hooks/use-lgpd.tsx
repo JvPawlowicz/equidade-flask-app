@@ -22,40 +22,56 @@ export function LgpdProvider({ children }: LgpdProviderProps) {
   const [showLgpdTerm, setShowLgpdTerm] = useState(false);
   const [lgpdAccepted, setLgpdAccepted] = useState(false);
   
-  // Busca se o usuário já aceitou o termo LGPD
-  const { data: lgpdStatus } = useQuery({
-    queryKey: ['/api/users/lgpd-status'],
-    queryFn: getQueryFn(),
-    enabled: !!user,
-  });
-  
-  // Quando o usuário faz login, verifica se já aceitou o termo LGPD
+  // Versão simplificada que não depende da resposta da API inicialmente
   useEffect(() => {
-    // Verificação de segurança para garantir que lgpdStatus tenha o formato esperado
-    if (user && lgpdStatus && typeof lgpdStatus === 'object') {
-      const hasAccepted = lgpdStatus.lgpdAccepted === true;
-      
-      if (!hasAccepted) {
-        // Se não aceitou, mostra o termo
+    // Se temos um usuário logado, vamos verificar o status LGPD via API
+    if (user && user.id) {
+      fetch('/api/users/lgpd-status', {
+        credentials: 'include'
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Erro ao obter status LGPD');
+        }
+        return response.json();
+      })
+      .then(data => {
+        // Verificar se o usuário aceitou o termo
+        const hasAccepted = data && data.lgpdAccepted === true;
+        
+        if (!hasAccepted) {
+          // Se não aceitou, mostra o termo
+          setShowLgpdTerm(true);
+          setLgpdAccepted(false);
+        } else {
+          // Se já aceitou, atualiza o estado
+          setLgpdAccepted(true);
+          setShowLgpdTerm(false);
+        }
+      })
+      .catch(error => {
+        console.error('Erro ao verificar status LGPD:', error);
+        // Em caso de erro, assumimos que não aceitou
         setShowLgpdTerm(true);
         setLgpdAccepted(false);
-      } else {
-        // Se já aceitou, atualiza o estado
-        setLgpdAccepted(true);
-      }
+      });
     }
-  }, [user, lgpdStatus]);
+  }, [user]);
   
   const handleAccept = async () => {
     try {
       // Envia aceitação para API
-      await fetch('/api/users/lgpd-consent', {
+      const response = await fetch('/api/users/lgpd-consent', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         credentials: 'include'
       });
+      
+      if (!response.ok) {
+        throw new Error('Erro ao salvar consentimento LGPD');
+      }
       
       // Atualiza estado local
       setLgpdAccepted(true);
