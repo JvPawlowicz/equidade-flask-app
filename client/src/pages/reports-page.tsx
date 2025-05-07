@@ -221,7 +221,7 @@ export default function ReportsPage() {
     // Add title and logo
     doc.setFontSize(18);
     doc.setTextColor(44, 62, 80);
-    doc.text("Equidade Clínica", 105, 15, { align: 'center' });
+    doc.text("Equidade+ Multidisciplinar", 105, 15, { align: 'center' });
     
     doc.setFontSize(14);
     doc.text(title, 105, 25, { align: 'center' });

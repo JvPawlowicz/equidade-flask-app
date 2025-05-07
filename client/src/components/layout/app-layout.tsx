@@ -47,8 +47,8 @@ export function AppLayout({ children, onSearch, title }: AppLayoutProps) {
   };
 
   // Determinar título da página para o elemento title
-  const pageTitle = title || "Clínica de Reabilitação";
-  const fullTitle = `${pageTitle} | Sistema Clínico`;
+  const pageTitle = title || "Equidade+ Multidisciplinar";
+  const fullTitle = `${pageTitle} | Sistema Equidade+`;
 
   // Atualizar título do documento
   useEffect(() => {
