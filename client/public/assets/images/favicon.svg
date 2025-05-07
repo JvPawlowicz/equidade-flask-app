@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Círculo primário -->
+  <circle cx="40" cy="40" r="36" fill="#24b0a0"/>
+  
+  <!-- Símbolo dentro do círculo (representando inclusão) -->
+  <path d="M40 12C24.6 12 12 24.6 12 40C12 55.4 24.6 68 40 68" stroke="white" stroke-width="6" stroke-linecap="round"/>
+  <path d="M40 68C55.4 68 68 55.4 68 40C68 24.6 55.4 12 40 12" stroke="white" stroke-width="4" stroke-linecap="round" stroke-dasharray="5 5"/>
+  
+  <!-- Ícone de pessoa estilizado -->
+  <circle cx="40" cy="32" r="9" fill="white"/>
+  <path d="M26 64C26 52 34 48 40 48C46 48 54 52 54 64" fill="white"/>
+</svg>
