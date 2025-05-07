@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { AppLayout } from "@/components/layout/app-layout";
 import { CalendarView } from "@/components/appointments/calendar-view";
 import { Button } from "@/components/ui/button";
@@ -74,6 +75,16 @@ export default function AppointmentsPage() {
           >
             <Filter className="h-4 w-4" />
             Filtros
+          </Button>
+          <Button 
+            variant="outline"
+            className="gap-2"
+            asChild
+          >
+            <Link href="/agenda-calendario">
+              <Calendar className="h-4 w-4" />
+              Visualização Alternativa
+            </Link>
           </Button>
           {canCreateAppointments && (
             <Button onClick={() => setIsFormOpen(true)} className="gap-2">

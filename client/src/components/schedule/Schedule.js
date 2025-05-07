@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useContext } from 'react';
+import { Link } from 'wouter';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon, ChevronLeft, ChevronRight, List } from 'lucide-react';
+import { CalendarIcon, ChevronLeft, ChevronRight, List, ArrowLeft } from 'lucide-react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -101,9 +102,21 @@ const Schedule = () => {
 
   return (
     <div className="container mx-auto p-4">
+      <div className="mb-4">
+        <Button 
+          variant="outline"
+          className="gap-2"
+          asChild
+        >
+          <Link href="/agenda">
+            <ArrowLeft className="h-4 w-4" />
+            Voltar para visualização padrão
+          </Link>
+        </Button>
+      </div>
       <Card className="shadow-lg">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-xl font-bold">Agenda</CardTitle>
+          <CardTitle className="text-xl font-bold">Agenda - Visualização Alternativa</CardTitle>
           
           <div className="flex space-x-2">
             <Button variant="outline" size="sm" onClick={handleToday}>
