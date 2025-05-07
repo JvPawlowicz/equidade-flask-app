@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, requireAuth } from "./auth";
 import { checkPermission, requireApproval, isOwnerOrSupervisor, getResourceText, getActionText, resourceTranslations, actionTranslations } from "./permissions";
+import { healthCheck } from "./healthcheck";
 import WebSocket, { WebSocketServer } from "ws";
 import { db } from "@db";
 import {
