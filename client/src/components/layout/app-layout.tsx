@@ -12,7 +12,7 @@ interface AppLayoutProps {
   title?: string;
 }
 
-export function AppLayout({ children, onSearch, title }: AppLayoutProps) {
+function AppLayout({ children, onSearch, title }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user } = useAuth();
   const { announce } = useAccessibility();
@@ -86,3 +86,5 @@ export function AppLayout({ children, onSearch, title }: AppLayoutProps) {
     </div>
   );
 }
+
+export default AppLayout;
