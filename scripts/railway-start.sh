@@ -47,6 +47,36 @@ else
   echo "✅ Banco de dados OK - Nenhuma alteração necessária"
 fi
 
+# Verificar e corrigir a estrutura de arquivos gerada pelo build
+echo "📁 Executando script de pós-build para verificar arquivos..."
+if [ -f "scripts/post-build.js" ]; then
+  node scripts/post-build.js
+else
+  echo "⚠️ Script post-build.js não encontrado"
+fi
+
+# Verificar a estrutura de arquivos gerada pelo build
+echo "📁 Verificando arquivos de build..."
+if [ -f "dist/index.js" ]; then
+  # Arquivo encontrado no local padrão
+  MAIN_FILE="dist/index.js"
+elif [ -f "dist/server/index.js" ]; then
+  # Arquivo encontrado em dist/server
+  MAIN_FILE="dist/server/index.js"
+else
+  # Procurar em todas as pastas
+  FOUND_FILES=$(find dist -name "index.js" | head -n 1)
+  if [ -n "$FOUND_FILES" ]; then
+    MAIN_FILE=$FOUND_FILES
+    echo "📄 Arquivo principal encontrado em: $MAIN_FILE"
+  else
+    echo "❌ ERRO: Não foi possível encontrar arquivo index.js na pasta dist"
+    echo "📋 Listando conteúdo da pasta dist:"
+    ls -la dist/
+    exit 1
+  fi
+fi
+
 # Iniciar a aplicação
-echo "🚀 Iniciando aplicação..."
-node dist/server/index.js
+echo "🚀 Iniciando aplicação com: $MAIN_FILE"
+node $MAIN_FILE
