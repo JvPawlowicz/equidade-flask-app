@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { z } from "zod";
+import { LoginWithReplit } from "@/components/auth/login-with-replit";
 import {
   Card,
   CardContent,
@@ -302,6 +303,17 @@ export default function AuthPage() {
                     </Button>
                   </form>
                 </Form>
+                
+                <div className="relative my-4">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-gray-300" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-white px-2 text-gray-500">Ou</span>
+                  </div>
+                </div>
+                
+                <LoginWithReplit />
               </CardContent>
               <CardFooter className="flex justify-center">
                 {/* Link de cadastro removido */}
