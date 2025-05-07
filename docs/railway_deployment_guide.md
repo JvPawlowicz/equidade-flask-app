@@ -48,11 +48,19 @@ Antes de iniciar a implantação, certifique-se de que o projeto está pronto:
 
 ### 5. Configuração de Construção e Implantação
 
-1. Na seção "Settings" do seu projeto:
-2. Verifique se o diretório raiz está configurado corretamente (normalmente "/")
-3. Configure os comandos de construção e inicialização:
-   - Build Command: `npm run build`
-   - Start Command: `npm start`
+O projeto já inclui um arquivo `railway.json` que define as configurações de deploy. Este arquivo configura:
+
+1. O comando de build: `npm run build`
+2. O comando de inicialização: `./scripts/railway-start.sh`
+3. Configurações de healthcheck para monitoramento
+4. Política de reinicialização em caso de falha
+
+Além disso, foram configurados diversos arquivos para otimizar a implantação:
+- `scripts/railway-start.sh`: Script de inicialização específico para o Railway
+- `drizzle.production.config.ts`: Configuração de banco de dados para produção
+- `nginx.conf`: Configuração do servidor web para produção
+- `scripts/backup.sh`: Script para backup automático do banco de dados
+- `.github/workflows/railway-deploy.yml`: Configuração para CI/CD com GitHub Actions
 
 ### 6. Implantação
 
