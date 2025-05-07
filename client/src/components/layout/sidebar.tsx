@@ -145,7 +145,7 @@ export function Sidebar({ isOpen: externalIsOpen, setIsOpen: setExternalIsOpen }
       {/* Sidebar */}
       <aside 
         className={cn(
-          "fixed inset-y-0 left-0 z-20 w-64 bg-sidebar-background text-white shadow-lg border-r border-sidebar-border transition-transform duration-300",
+          "fixed inset-y-0 left-0 z-20 w-64 bg-primary text-primary-foreground shadow-lg border-r border-primary/20 transition-transform duration-300",
           isMobile && !isOpen && "-translate-x-full",
           isMobile && isOpen && "translate-x-0"
         )}
@@ -171,10 +171,10 @@ export function Sidebar({ isOpen: externalIsOpen, setIsOpen: setExternalIsOpen }
 
           {/* Logo */}
           <div 
-            className="flex items-center justify-center h-16 px-6 border-b border-sidebar-border"
+            className="flex items-center justify-center h-16 px-6 border-b border-primary/20"
             role="banner"
           >
-            <h1 className="text-xl font-semibold text-primary">
+            <h1 className="text-xl font-bold text-white">
               EQUIDADE+
             </h1>
           </div>
@@ -182,7 +182,7 @@ export function Sidebar({ isOpen: externalIsOpen, setIsOpen: setExternalIsOpen }
           {/* User Info */}
           {user && (
             <div 
-              className="flex items-center px-6 py-3 border-b border-sidebar-border"
+              className="flex items-center px-6 py-3 border-b border-primary/20"
               role="region"
               aria-label="Informações do usuário"
             >
@@ -226,8 +226,8 @@ export function Sidebar({ isOpen: externalIsOpen, setIsOpen: setExternalIsOpen }
                 className={cn(
                   "flex items-center px-2 py-2 text-sm font-medium rounded-md group transition-colors",
                   location === item.path 
-                    ? "text-primary bg-primary/10"
-                    : "text-white hover:text-primary hover:bg-primary/10"
+                    ? "bg-white/20 text-white font-bold"
+                    : "text-white hover:bg-white/10"
                 )}
                 aria-current={location === item.path ? "page" : undefined}
                 ref={index === 0 ? firstNavItemRef : undefined}
@@ -240,7 +240,7 @@ export function Sidebar({ isOpen: externalIsOpen, setIsOpen: setExternalIsOpen }
 
           {/* Footer */}
           <div 
-            className="px-4 py-3 border-t border-sidebar-border"
+            className="px-4 py-3 border-t border-primary/20"
             role="contentinfo"
             aria-label="Data atual e localização"
           >
@@ -250,7 +250,7 @@ export function Sidebar({ isOpen: externalIsOpen, setIsOpen: setExternalIsOpen }
             </div>
             <Button
               variant="ghost"
-              className="flex items-center w-full mt-3 text-sm justify-start p-2 font-medium text-white hover:text-primary hover:bg-primary/10"
+              className="flex items-center w-full mt-3 text-sm justify-start p-2 font-medium text-white hover:bg-white/10"
               onClick={handleLogout}
               aria-label="Sair do sistema"
             >
