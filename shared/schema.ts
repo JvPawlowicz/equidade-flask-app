@@ -113,9 +113,11 @@ export const professionals = pgTable('professionals', {
   employmentType: employmentTypeEnum('employment_type').notNull(),
   hourlyRate: integer('hourly_rate'),
   supervisorId: integer('supervisor_id').references(() => professionals.id),
+  facilityId: integer('facility_id').references(() => facilities.id),
   bio: text('bio'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
   lgpdAccepted: boolean('lgpd_accepted').default(false).notNull(),
   lgpdAcceptedAt: timestamp('lgpd_accepted_at'),
   lgpdAcceptedIp: text('lgpd_accepted_ip'),
@@ -309,6 +311,7 @@ export const roomsRelations = relations(rooms, ({ one }) => ({
 export const facilityRelations = relations(facilities, ({ many }) => ({
   rooms: many(rooms),
   users: many(users),
+  professionals: many(professionals),
   patientFacilities: many(patientFacilities),
 }));
 
@@ -332,6 +335,10 @@ export const professionalRelations = relations(professionals, ({ one, many }) =>
   user: one(users, {
     fields: [professionals.userId],
     references: [users.id],
+  }),
+  facility: one(facilities, {
+    fields: [professionals.facilityId],
+    references: [facilities.id],
   }),
   supervisor: one(professionals, {
     fields: [professionals.supervisorId],
