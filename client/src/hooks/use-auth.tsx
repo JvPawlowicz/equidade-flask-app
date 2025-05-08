@@ -75,12 +75,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         password: credentials.password
       };
 
-      const res = await apiRequest("POST", "/api/login", cleanedCredentials);
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Erro ao fazer login");
+      try {
+        const res = await apiRequest("POST", "/api/login", cleanedCredentials);
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.error || "Erro ao fazer login");
+        }
+        const data = await res.json();
+        if (!data || !data.id) {
+          throw new Error("Resposta de login inválida");
+        }
+        return data;
+      } catch (error) {
+        console.error("Erro durante login:", error);
+        throw error;
       }
-      return res.json();
     },
     onSuccess: (user: User) => {
       console.log("Login bem-sucedido, usuário:", user);

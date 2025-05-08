@@ -18,7 +18,7 @@ declare global {
 
 const scryptAsync = promisify(crypto.scrypt);
 
-export async function hashPassword(password: string) {
+async function hashPassword(password: string) {
   try {
     const salt = crypto.randomBytes(16).toString("hex");
     const buf = (await scryptAsync(password, salt, 64)) as Buffer;
@@ -30,10 +30,19 @@ export async function hashPassword(password: string) {
 }
 
 async function comparePasswords(supplied: string, stored: string) {
-  const [hashed, salt] = stored.split(".");
-  const hashedBuf = Buffer.from(hashed, "hex");
-  const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
-  return crypto.timingSafeEqual(hashedBuf, suppliedBuf);
+  try {
+    const [hashed, salt] = stored.split(".");
+    if (!hashed || !salt) {
+      console.error("Formato de senha armazenada inválido");
+      return false;
+    }
+    const hashedBuf = Buffer.from(hashed, "hex");
+    const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
+    return crypto.timingSafeEqual(hashedBuf, suppliedBuf);
+  } catch (error) {
+    console.error("Erro ao comparar senhas:", error);
+    return false;
+  }
 }
 
 // Middleware de autenticação para proteção de rotas
@@ -51,15 +60,14 @@ async function logLoginAttempt(userId: number | null, username: string, success:
     await db.insert(auditLogs).values({
       action: success ? 'login_success' : 'login_failed',
       resource: 'auth',
-      resource_id: userId ? userId.toString() : null,
-      user_id: userId,
-      ip_address: ip,
-      user_agent: 'login system',
+      resourceId: userId ? userId.toString() : null,
+      userId: userId,
       details: {
         username,
+        ip,
         timestamp: new Date().toISOString(),
       },
-      timestamp: new Date(),
+      createdAt: new Date(),
     });
   } catch (error) {
     console.error("Erro ao registrar tentativa de login:", error);
@@ -224,15 +232,14 @@ export function setupAuth(app: Express) {
       db.insert(auditLogs).values({
         action: 'logout',
         resource: 'auth',
-        resource_id: userId.toString(),
-        user_id: userId,
-        ip_address: clientIp,
-        user_agent: req.headers['user-agent'] || 'unknown',
+        resourceId: userId.toString(),
+        userId: userId,
         details: {
           username,
+          ip: clientIp,
           timestamp: new Date().toISOString(),
         },
-        timestamp: new Date(),
+        createdAt: new Date(),
       }).catch(error => {
         console.error("Erro ao registrar logout:", error);
       });

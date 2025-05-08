@@ -27,13 +27,23 @@ export function ProtectedRoute({ path, component: Component }: ProtectedRoutePro
       setIsVerifying(true);
       
       try {
-        // Primeiro, verifique se já temos um usuário no contexto de autenticação
-        if (auth.user) {
+        // Verificar cache do usuário primeiro
+        if (auth.user && auth.user.id) {
           console.log("Protected Route: User already in auth context", auth.user.username);
           setIsAuthenticated(true);
           setIsVerifying(false);
           return;
         }
+
+        // Sempre verificar com o servidor para garantir sessão válida
+        const timestamp = new Date().getTime();
+        const response = await fetch(`/api/user?_=${timestamp}`, {
+          credentials: 'include',
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
+        });
         
         // Verificar se o usuário está autenticado com cache-busting
         const timestamp = new Date().getTime();

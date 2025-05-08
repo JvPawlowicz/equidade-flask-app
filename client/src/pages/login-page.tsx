@@ -18,8 +18,14 @@ export default function LoginPage() {
     setIsLoading(true);
     setLoginStatus("Tentando login...");
     
-    if (!username || !password) {
+    if (!username?.trim() || !password?.trim()) {
       setLoginStatus("Usuário e senha são obrigatórios");
+      setIsLoading(false);
+      return;
+    }
+
+    if (username.length < 3 || password.length < 6) {
+      setLoginStatus("Usuário e senha devem ter comprimento mínimo");
       setIsLoading(false);
       return;
     }
