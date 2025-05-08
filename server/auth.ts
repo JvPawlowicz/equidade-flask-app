@@ -1,3 +1,4 @@
+
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { Express, Request, Response, NextFunction } from "express";
@@ -18,7 +19,7 @@ declare global {
 
 const scryptAsync = promisify(crypto.scrypt);
 
-async function hashPassword(password: string) {
+export async function hashPassword(password: string) {
   try {
     const salt = crypto.randomBytes(16).toString("hex");
     const buf = (await scryptAsync(password, salt, 64)) as Buffer;
