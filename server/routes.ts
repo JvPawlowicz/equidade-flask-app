@@ -275,7 +275,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Rota para listar todos os usuários - com dados sensíveis removidos
   app.get(`${apiPrefix}/users`, checkPermission('users', 'read'), async (req: Request, res: Response) => {
     try {
-      const allUsers = await db.query.users.findMany();
+      const allUsers = await db.query.users.findMany({
+        orderBy: asc(users.fullName),
+      });
       // Remover senhas antes de retornar para o cliente
       const safeUsers = allUsers.map(user => {
         const { password, ...userWithoutPassword } = user;
@@ -285,6 +287,172 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Erro ao buscar usuários:", error);
       res.status(500).json({ error: "Erro ao buscar usuários" });
+    }
+  });
+  
+  // Rota para criar um novo usuário
+  app.post(`${apiPrefix}/users`, checkPermission('users', 'create'), async (req: Request, res: Response) => {
+    try {
+      // Validar entrada
+      let userData;
+      try {
+        userData = insertUserSchema.parse(req.body);
+      } catch (error) {
+        if (handleZodError(error, res)) return;
+        throw error;
+      }
+      
+      // Verificar se usuário já existe
+      const existingUser = await db.query.users.findFirst({
+        where: or(
+          eq(users.username, userData.username),
+          eq(users.email, userData.email)
+        )
+      });
+      
+      if (existingUser) {
+        if (existingUser.username === userData.username) {
+          return res.status(400).json({ error: "Nome de usuário já está em uso" });
+        }
+        if (existingUser.email === userData.email) {
+          return res.status(400).json({ error: "Email já está em uso" });
+        }
+      }
+      
+      // Hash da senha
+      const hashedPassword = await hashPassword(userData.password);
+      
+      // Criar o usuário
+      const [newUser] = await db.insert(users).values({
+        ...userData,
+        password: hashedPassword,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }).returning({
+        id: users.id,
+        username: users.username,
+        email: users.email,
+        fullName: users.fullName,
+        role: users.role,
+        facilityId: users.facilityId,
+        phone: users.phone,
+        createdAt: users.createdAt,
+        updatedAt: users.updatedAt,
+        isActive: users.isActive,
+      });
+      
+      // Log da auditoria
+      logAuditAction(req, 'create', 'users', newUser.id.toString(), {
+        username: newUser.username,
+        role: newUser.role,
+        email: newUser.email
+      });
+      
+      res.status(201).json(newUser);
+    } catch (error) {
+      console.error("Erro ao criar usuário:", error);
+      res.status(500).json({ error: "Erro ao criar usuário" });
+    }
+  });
+  
+  // Rota para atualizar um usuário
+  app.put(`${apiPrefix}/users/:id`, checkPermission('users', 'update'), async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      
+      // Validar ID
+      if (!id || isNaN(parseInt(id))) {
+        return res.status(400).json({ error: "ID do usuário inválido" });
+      }
+      
+      const userId = parseInt(id);
+      
+      // Verificar se o usuário existe
+      const existingUser = await db.query.users.findFirst({
+        where: eq(users.id, userId)
+      });
+      
+      if (!existingUser) {
+        return res.status(404).json({ error: "Usuário não encontrado" });
+      }
+      
+      // Verificar se o usuário está tentando atualizar o admin principal (id=1) e não é um admin
+      if (userId === 1 && (!req.user || req.user.role !== 'admin' || req.user.id !== 1)) {
+        return res.status(403).json({ error: "Não é permitido modificar o usuário administrador principal" });
+      }
+      
+      // Remover propriedades que não devem ser atualizadas
+      const { id: _, createdAt, ...userData } = req.body;
+      
+      // Tratar senha se fornecida
+      if (userData.password) {
+        userData.password = await hashPassword(userData.password);
+      } else {
+        delete userData.password; // Não atualizar senha se não fornecida
+      }
+      
+      // Verificar se o novo username ou email já existem
+      if (userData.username && userData.username !== existingUser.username) {
+        const usernameExists = await db.query.users.findFirst({
+          where: eq(users.username, userData.username)
+        });
+        
+        if (usernameExists) {
+          return res.status(400).json({ error: "Nome de usuário já está em uso" });
+        }
+      }
+      
+      if (userData.email && userData.email !== existingUser.email) {
+        const emailExists = await db.query.users.findFirst({
+          where: eq(users.email, userData.email)
+        });
+        
+        if (emailExists) {
+          return res.status(400).json({ error: "Email já está em uso" });
+        }
+      }
+      
+      // Atualizar usuário
+      const [updatedUser] = await db
+        .update(users)
+        .set({
+          ...userData,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, userId))
+        .returning({
+          id: users.id,
+          username: users.username,
+          email: users.email,
+          fullName: users.fullName,
+          role: users.role,
+          facilityId: users.facilityId,
+          phone: users.phone,
+          createdAt: users.createdAt,
+          updatedAt: users.updatedAt,
+          isActive: users.isActive,
+        });
+      
+      // Log da auditoria
+      logAuditAction(req, 'update', 'users', id, {
+        before: {
+          username: existingUser.username,
+          role: existingUser.role,
+          email: existingUser.email,
+          isActive: existingUser.isActive
+        },
+        after: {
+          username: updatedUser.username,
+          role: updatedUser.role,
+          email: updatedUser.email,
+          isActive: updatedUser.isActive
+        }
+      });
+      
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Erro ao atualizar usuário:", error);
+      res.status(500).json({ error: "Erro ao atualizar usuário" });
     }
   });
   
