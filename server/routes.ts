@@ -1,7 +1,7 @@
 import express, { type Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth as setupLocalAuth, requireAuth } from "./auth";
+import { setupAuth as setupLocalAuth, requireAuth, hashPassword } from "./auth";
 import { checkPermission, requireApproval, isOwnerOrSupervisor, getResourceText, getActionText, resourceTranslations, actionTranslations } from "./permissions";
 import { healthCheck } from "./healthcheck";
 import WebSocket, { WebSocketServer } from "ws";
@@ -26,6 +26,7 @@ import {
   rooms,
   users,
   // Esquemas de validação para endpoints
+  insertUserSchema,
   insertFacilitySchema, 
   insertRoomSchema,
   insertProfessionalSchema,
@@ -67,7 +68,7 @@ async function logAuditAction(req: Request, action: string, resource: string, re
     if (!req.user) return;
     
     await db.insert(auditLogs).values({
-      userId: req.user.id,
+      user_id: req.user.id,
       action,
       resource,
       resourceId,

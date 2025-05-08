@@ -18,7 +18,7 @@ declare global {
 
 const scryptAsync = promisify(crypto.scrypt);
 
-async function hashPassword(password: string) {
+export async function hashPassword(password: string) {
   try {
     const salt = crypto.randomBytes(16).toString("hex");
     const buf = (await scryptAsync(password, salt, 64)) as Buffer;
