@@ -67,18 +67,21 @@ async function logAuditAction(req: Request, action: string, resource: string, re
   try {
     if (!req.user) return;
     
+    const ip = req.ip || req.socket.remoteAddress || 'unknown';
+    const userAgent = req.headers['user-agent'] || 'unknown';
+    
     await db.insert(auditLogs).values({
-      userId: req.user.id,
+      user_id: req.user.id,
       action,
       resource,
-      resourceId,
+      resource_id: resourceId,
+      ip_address: ip,
+      user_agent: userAgent,
       details: {
         ...details,
-        ip: req.ip || req.socket.remoteAddress || 'unknown',
-        userAgent: req.headers['user-agent'] || 'unknown',
         timestamp: new Date().toISOString()
       },
-      createdAt: new Date()
+      timestamp: new Date()
     });
   } catch (error) {
     console.error(`Erro ao registrar auditoria (${action} ${resource}):`, error);

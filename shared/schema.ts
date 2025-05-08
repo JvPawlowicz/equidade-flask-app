@@ -289,12 +289,14 @@ export const reports = pgTable('reports', {
 // Audit Logs Table
 export const auditLogs = pgTable('audit_logs', {
   id: serial('id').primaryKey(),
-  userId: integer('user_id').references(() => users.id).notNull(),
+  user_id: integer('user_id').references(() => users.id),
   action: text('action').notNull(),
   resource: text('resource').notNull(),
-  resourceId: text('resource_id'),
-  details: json('details'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
+  resource_id: text('resource_id'),
+  details: jsonb('details'),
+  ip_address: text('ip_address'),
+  user_agent: text('user_agent'),
+  timestamp: timestamp('timestamp').defaultNow().notNull(),
 });
 
 // Relations
@@ -487,7 +489,7 @@ export const reportRelations = relations(reports, ({ one }) => ({
 
 export const auditLogRelations = relations(auditLogs, ({ one }) => ({
   user: one(users, {
-    fields: [auditLogs.userId],
+    fields: [auditLogs.user_id],
     references: [users.id],
   }),
 }));

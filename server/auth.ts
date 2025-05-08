@@ -51,14 +51,15 @@ async function logLoginAttempt(userId: number | null, username: string, success:
     await db.insert(auditLogs).values({
       action: success ? 'login_success' : 'login_failed',
       resource: 'auth',
-      resourceId: userId ? userId.toString() : null,
-      userId: userId,
+      resource_id: userId ? userId.toString() : null,
+      user_id: userId,
+      ip_address: ip,
+      user_agent: 'login system',
       details: {
         username,
-        ip,
         timestamp: new Date().toISOString(),
       },
-      createdAt: new Date(),
+      timestamp: new Date(),
     });
   } catch (error) {
     console.error("Erro ao registrar tentativa de login:", error);
@@ -223,14 +224,15 @@ export function setupAuth(app: Express) {
       db.insert(auditLogs).values({
         action: 'logout',
         resource: 'auth',
-        resourceId: userId.toString(),
-        userId: userId,
+        resource_id: userId.toString(),
+        user_id: userId,
+        ip_address: clientIp,
+        user_agent: req.headers['user-agent'] || 'unknown',
         details: {
           username,
-          ip: clientIp,
           timestamp: new Date().toISOString(),
         },
-        createdAt: new Date(),
+        timestamp: new Date(),
       }).catch(error => {
         console.error("Erro ao registrar logout:", error);
       });
