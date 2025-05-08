@@ -68,7 +68,7 @@ async function logAuditAction(req: Request, action: string, resource: string, re
     if (!req.user) return;
     
     await db.insert(auditLogs).values({
-      user_id: req.user.id,
+      userId: req.user.id,
       action,
       resource,
       resourceId,

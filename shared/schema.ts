@@ -292,11 +292,9 @@ export const auditLogs = pgTable('audit_logs', {
   userId: integer('user_id').references(() => users.id).notNull(),
   action: text('action').notNull(),
   resource: text('resource').notNull(),
-  resourceId: integer('resource_id'),
-  ipAddress: text('ip_address'),
-  userAgent: text('user_agent'),
-  details: text('details'),
-  timestamp: timestamp('timestamp').defaultNow().notNull(),
+  resourceId: text('resource_id'),
+  details: json('details'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
 // Relations
