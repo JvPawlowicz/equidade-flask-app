@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h2>Perfil do Usuário</h2>
+    
+    {% if current_user.is_admin() %}
+        <div class="alert alert-info">
+            Você tem privilégios de administrador
+        </div>
+        <a href="{{ url_for('auth.admin_dashboard') }}" class="btn btn-primary">
+            Painel Admin
+        </a>
+    {% endif %}
+    
+    <!-- Restante do conteúdo do perfil -->
+</div>
+{% endblock %}

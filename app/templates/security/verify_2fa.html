@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Verificação em Duas Etapas</h2>
+    <p>Insira o código de 6 dígitos do seu aplicativo autenticador</p>
+    
+    <form method="POST" action="{{ url_for('security.verify_2fa') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        
+        <div class="mb-3">
+            <label for="code" class="form-label">Código de Verificação</label>
+            <input type="text" class="form-control" id="code" name="code" 
+                   placeholder="123456" required autocomplete="off">
+        </div>
+        
+        <button type="submit" class="btn btn-primary">Verificar</button>
+    </form>
+    
+    <div class="mt-3">
+        <a href="#" data-bs-toggle="modal" data-bs-target="#backupCodesModal">
+            Usar código de backup
+        </a>
+    </div>
+</div>
+
+{% include 'security/_backup_codes_modal.html' %}
+{% endblock %}

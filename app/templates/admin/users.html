@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Gestão de Usuários</h2>
+    
+    <div class="mb-3">
+        <a href="?status=active" class="btn btn-sm btn-outline-primary">Ativos</a>
+        <a href="?status=inactive" class="btn btn-sm btn-outline-secondary">Inativos</a>
+        <a href="?role=admin" class="btn btn-sm btn-outline-danger">Admins</a>
+        <a href="?role=user" class="btn btn-sm btn-outline-success">Usuários</a>
+    </div>
+    
+    <table id="usersTable" class="table table-striped">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users.items %}
+            <tr>
+                <td>{{ user.id }}</td>
+                <td>{{ user.email }}</td>
+                <td>{{ user.role.value }}</td>
+                <td>{% if user.is_active %}Ativo{% else %}Inativo{% endif %}</td>
+                <td>
+                    <form method="POST" action="{{ url_for('auth.admin_users') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <input type="hidden" name="user_id" value="{{ user.id }}"/>
+                        <select name="new_role" class="form-select form-select-sm">
+                            {% for role in Role %}
+                            <option value="{{ role.value }}" {% if user.role == role %}selected{% endif %}>
+                                {{ role.value }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit" class="btn btn-sm btn-primary mt-1">Atualizar</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    {% include 'admin/_pagination.html' %}
+</div>
+
+{% block scripts %}
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script>
+    $(document).ready(function() {
+        $('#usersTable').DataTable({
+            paging: false,
+            searching: false,
+            info: false
+        });
+    });
+</script>
+{% endblock %}
+{% endblock %}
