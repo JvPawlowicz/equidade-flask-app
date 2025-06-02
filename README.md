@@ -182,4 +182,25 @@ Para dúvidas, consulte a [documentação oficial do Render para Python](https:/
 
 ---
 
+# Guia rápido para deploy no Railway (Flask)
+
+1. **Procfile**: já configurado para `web: ./scripts/railway-start.sh`
+2. **requirements.txt**: já inclui gunicorn e dependências Flask
+3. **nixpacks.toml**: já configurado para Python/Flask
+4. **.env**: configure as variáveis de ambiente no painel do Railway (use `.env` como exemplo)
+5. **Banco de dados**: por padrão usa SQLite, mas recomenda-se PostgreSQL em produção (ajuste `DATABASE_URL`)
+6. **Diretório `instance/`**: Railway precisa de permissão de escrita para SQLite, ou use PostgreSQL
+7. **Comando de inicialização**: Railway usará automaticamente o comando do Procfile
+
+**Passos:**
+- Faça push do repositório para o GitHub
+- Crie um novo projeto no Railway, conecte ao repositório
+- Defina as variáveis de ambiente conforme `.env`
+- (Opcional) Ajuste `DATABASE_URL` para PostgreSQL
+- Deploy!
+
+Para dúvidas, consulte a [documentação oficial do Railway para Python](https://docs.railway.app/deploy/deployments/python/).
+
+---
+
 Desenvolvido com ❤️ para melhorar o atendimento às pessoas com deficiência.

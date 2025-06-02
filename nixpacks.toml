@@ -1,6 +1,6 @@
 [phases.setup]
 nixPkgs = ["python310", "pip", "git"]
-aptPkgs = ["postgresql-client", "gzip", "openssl", "ca-certificates", "nginx"]
+aptPkgs = ["postgresql-client", "gzip", "openssl", "ca-certificates"]
 
 [phases.install]
 cmds = [
@@ -14,7 +14,7 @@ cmds = [
 ]
 
 [phases.start]
-cmd = "gunicorn run:app"
+cmd = "./scripts/railway-start.sh"
 
 [variables]
 NODE_ENV = "production"
