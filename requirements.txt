@@ -22,3 +22,4 @@ bleach
 markdown
 wtforms
 qrcode
+python-json-logger

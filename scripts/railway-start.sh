@@ -48,11 +48,14 @@ else
   echo "✅ Banco de dados OK - Nenhuma alteração necessária"
 fi
 
-# Inicializa banco de dados se necessário
+# Criar diretórios necessários
+mkdir -p instance uploads
+
+# Inicializar banco de dados se necessário
 if [ -f "app/seed_admin.py" ]; then
-  echo "🌱 Rodando seed_admin.py para criar admin padrão (ignora erro se já existir)"
-  python app/seed_admin.py || true
+    echo "🌱 Rodando seed_admin.py para criar admin padrão (ignora erro se já existir)"
+    python app/seed_admin.py || true
 fi
 
-# Inicia o servidor Flask com Gunicorn
-exec gunicorn run:app
+# Iniciar o servidor Flask com Gunicorn
+exec gunicorn run:app --bind 0.0.0.0:$PORT

@@ -12,8 +12,10 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from decouple import config
 from dotenv import load_dotenv
+import sys
 import os
-from utils.logging import setup_logging
+sys.path.append(os.path.join(os.path.dirname(__file__), 'utils'))
+from app.utils.logging import setup_logging
 
 # Extensões globais
 csrf = CSRFProtect()

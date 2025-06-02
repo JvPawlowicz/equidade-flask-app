@@ -1,11 +1,11 @@
 [phases.setup]
-nixPkgs = ["python310", "pip", "git"]
-aptPkgs = ["postgresql-client", "gzip", "openssl", "ca-certificates"]
+nixPkgs = ["python310", "gcc", "git"]
+aptPkgs = ["postgresql-client", "openssl", "ca-certificates"]
 
 [phases.install]
 cmds = [
-  "pip install --upgrade pip",
-  "pip install -r requirements.txt"
+  "python -m pip install --upgrade pip",
+  "python -m pip install -r requirements.txt"
 ]
 
 [phases.build]
@@ -13,8 +13,8 @@ cmds = [
   "python app/seed_admin.py || true"
 ]
 
-[phases.start]
-cmd = "./scripts/railway-start.sh"
+[start]
+cmd = "gunicorn run:app"
 
 [variables]
 NODE_ENV = "production"
