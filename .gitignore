@@ -1,6 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.pdb
+*.egg-info/
+*.egg
+*.log
+
+# Virtualenv
+venv/
+ENV/
+.env
+.env.*
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+
+# macOS
+.DS_Store
+
+# Railway/Render
+instance/*.db
+uploads/
+
+# Testes
+.coverage
+htmlcov/
+
+# Outros
+*.sqlite3
+
+# Node/JS legacy
 node_modules
 dist
-.DS_Store
 server/public
 vite.config.ts.*
 *.tar.gz

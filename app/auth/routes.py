@@ -10,6 +10,8 @@ from .forms import LoginForm, RegistrationForm
 from ..models import User, Role
 from .. import db
 from .decorators import role_required
+from datetime import datetime
+from .admin_routes import InviteToken
 
 auth = Blueprint('auth', __name__)
 

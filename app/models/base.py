@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer
+from sqlalchemy import Column, Integer, DateTime, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql import func
 
