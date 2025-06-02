@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}404 - Página não encontrada{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8 text-center">
+        <div>
+            <h2 class="mt-6 text-6xl font-extrabold text-gray-900">404</h2>
+            <p class="mt-2 text-3xl font-bold text-gray-900">Página não encontrada</p>
+            <p class="mt-2 text-sm text-gray-600">
+                Desculpe, não conseguimos encontrar a página que você está procurando.
+            </p>
+        </div>
+        <div class="mt-8">
+            <a href="{{ url_for('main.index') }}" class="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">
+                Voltar para a página inicial
+            </a>
+        </div>
+        <div class="mt-4">
+            <p class="text-sm text-gray-500">
+                Se você acha que isso é um erro, por favor entre em contato com o suporte.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,1 +1,1 @@
-web: ./scripts/railway-start.sh
+web: gunicorn run:app

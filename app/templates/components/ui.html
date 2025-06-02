@@ -1,0 +1,36 @@
+{% macro loading_spinner(size="md") %}
+{% set sizes = {
+    "sm": "h-4 w-4",
+    "md": "h-8 w-8",
+    "lg": "h-12 w-12"
+} %}
+<div class="flex justify-center items-center">
+    <div class="animate-spin rounded-full border-4 border-blue-200 border-t-blue-600 {{ sizes[size] }}"></div>
+</div>
+{% endmacro %}
+
+{% macro loading_overlay() %}
+<div x-show="loading" 
+     x-cloak 
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+    <div class="bg-white p-4 rounded-lg shadow-xl flex items-center space-x-4">
+        {{ loading_spinner() }}
+        <p class="text-gray-700">Carregando...</p>
+    </div>
+</div>
+{% endmacro %}
+
+{% macro form_group(label, field) %}
+<div class="mb-4">
+    <label class="block text-gray-700 text-sm font-bold mb-2" for="{{ field.id }}">
+        {{ label }}
+    </label>
+    {{ field(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline " + 
+             ("border-red-500" if field.errors else "")) }}
+    {% if field.errors %}
+        {% for error in field.errors %}
+            <p class="text-red-500 text-xs italic mt-1">{{ error }}</p>
+        {% endfor %}
+    {% endif %}
+</div>
+{% endmacro %}

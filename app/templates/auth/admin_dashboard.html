@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}Painel Administrativo{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-2xl font-bold mb-6">Painel Administrativo</h2>
+        
+        <!-- Stats Overview -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-blue-100 p-4 rounded-lg">
+                <h3 class="text-lg font-semibold text-blue-800">Total de Usuários</h3>
+                <p class="text-3xl font-bold text-blue-900">{{ stats.total_users }}</p>
+            </div>
+            <div class="bg-green-100 p-4 rounded-lg">
+                <h3 class="text-lg font-semibold text-green-800">Usuários Ativos</h3>
+                <p class="text-3xl font-bold text-green-900">{{ stats.active_users }}</p>
+            </div>
+            <div class="bg-purple-100 p-4 rounded-lg">
+                <h3 class="text-lg font-semibold text-purple-800">Administradores</h3>
+                <p class="text-3xl font-bold text-purple-900">{{ stats.admin_users }}</p>
+            </div>
+        </div>
+
+        <!-- Recent Users -->
+        <div class="mb-8">
+            <h3 class="text-xl font-semibold mb-4">Usuários Recentes</h3>
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuário</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        {% for user in recent_users %}
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap">{{ user.username }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">{{ user.email }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                    {% if user.is_active %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                                    {{ "Ativo" if user.is_active else "Inativo" }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <button class="text-indigo-600 hover:text-indigo-900 mr-3">Editar</button>
+                                {% if user.is_active %}
+                                <button class="text-red-600 hover:text-red-900">Desativar</button>
+                                {% else %}
+                                <button class="text-green-600 hover:text-green-900">Ativar</button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div>
+            <h3 class="text-xl font-semibold mb-4">Ações Rápidas</h3>
+            <div class="flex space-x-4">
+                <a href="#" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                    Adicionar Usuário
+                </a>
+                <a href="#" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                    Relatórios
+                </a>
+                <a href="#" class="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded">
+                    Configurações
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

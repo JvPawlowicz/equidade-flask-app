@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8" x-data="{ activeTab: 'overview' }">
+    <!-- Welcome Section -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8 fade-in">
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="text-2xl font-bold text-gray-800">Olá, {{ current_user.username }}!</h2>
+                <p class="text-gray-600 mt-1">Bem-vindo ao painel do sistema Equidade.</p>
+            </div>
+            <div class="flex space-x-4">
+                <a href="{{ url_for('auth.profile') }}" class="hover-lift btn-primary">
+                    <i class="fas fa-user-circle mr-2"></i>Perfil
+                </a>
+                <a href="{{ url_for('main.logout') }}" class="hover-lift btn-danger">
+                    <i class="fas fa-sign-out-alt mr-2"></i>Sair
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <!-- Total Users Card -->
+        <div class="bg-white rounded-lg shadow p-6 hover-lift transition-all">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-blue-100 text-blue-600">
+                    <i class="fas fa-users fa-2x"></i>
+                </div>
+                <div class="ml-4">
+                    <h4 class="text-lg font-semibold text-gray-700">Total de Usuários</h4>
+                    <p class="text-3xl font-bold text-gray-900" x-data="{ count: 0 }" x-init="count = {{ user_count }}">
+                        <span x-text="count"></span>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Sessions Card -->
+        <div class="bg-white rounded-lg shadow p-6 hover-lift transition-all">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-green-100 text-green-600">
+                    <i class="fas fa-clock fa-2x"></i>
+                </div>
+                <div class="ml-4">
+                    <h4 class="text-lg font-semibold text-gray-700">Sessões Ativas</h4>
+                    <p class="text-3xl font-bold text-gray-900" x-data="{ count: 0 }" x-init="count = {{ active_sessions }}">
+                        <span x-text="count"></span>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Status Card -->
+        <div class="bg-white rounded-lg shadow p-6 hover-lift transition-all">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-purple-100 text-purple-600">
+                    <i class="fas fa-server fa-2x"></i>
+                </div>
+                <div class="ml-4">
+                    <h4 class="text-lg font-semibold text-gray-700">Status do Sistema</h4>
+                    <p class="text-lg font-medium text-green-600">
+                        <i class="fas fa-check-circle mr-2"></i>Operacional
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Tabs -->
+    <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+        <!-- Tab Navigation -->
+        <div class="border-b border-gray-200">
+            <nav class="flex -mb-px">
+                <button @click="activeTab = 'overview'" 
+                        :class="{'border-blue-500 text-blue-600': activeTab === 'overview'}"
+                        class="flex-1 py-4 px-6 text-center border-b-2 font-medium hover:text-blue-600 transition-all">
+                    <i class="fas fa-th-large mr-2"></i>Visão Geral
+                </button>
+                <button @click="activeTab = 'activities'" 
+                        :class="{'border-blue-500 text-blue-600': activeTab === 'activities'}"
+                        class="flex-1 py-4 px-6 text-center border-b-2 font-medium hover:text-blue-600 transition-all">
+                    <i class="fas fa-history mr-2"></i>Atividades Recentes
+                </button>
+                <button @click="activeTab = 'actions'" 
+                        :class="{'border-blue-500 text-blue-600': activeTab === 'actions'}"
+                        class="flex-1 py-4 px-6 text-center border-b-2 font-medium hover:text-blue-600 transition-all">
+                    <i class="fas fa-bolt mr-2"></i>Ações Rápidas
+                </button>
+            </nav>
+        </div>
+
+        <!-- Tab Content -->
+        <div class="p-6">
+            <!-- Overview Tab -->
+            <div x-show="activeTab === 'overview'" class="space-y-6 fade-in">
+                <!-- Performance Chart -->
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-4">Desempenho do Sistema</h3>
+                    <div class="h-64 bg-white rounded-lg p-4">
+                        <!-- Add your chart component here -->
+                        <p class="text-gray-500 text-center">Gráfico de desempenho será exibido aqui</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Activities Tab -->
+            <div x-show="activeTab === 'activities'" class="space-y-4 fade-in">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-700">Atividades Recentes</h3>
+                    <button class="text-blue-600 hover:text-blue-700" @click="refreshActivities()">
+                        <i class="fas fa-sync-alt mr-1"></i>Atualizar
+                    </button>
+                </div>
+                <!-- Activity List -->
+                <div class="space-y-4">
+                    {% for activity in recent_activities %}
+                    <div class="flex items-start p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-{{ activity.icon }} text-{{ activity.color }}-500 fa-lg"></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-900">{{ activity.description }}</p>
+                            <p class="text-sm text-gray-500">{{ activity.timestamp }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Actions Tab -->
+            <div x-show="activeTab === 'actions'" class="grid grid-cols-1 md:grid-cols-2 gap-4 fade-in">
+                <!-- Quick Action Cards -->
+                {% if current_user.is_admin %}
+                <a href="{{ url_for('admin.users') }}" class="block p-6 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all">
+                    <div class="flex items-center">
+                        <i class="fas fa-users-cog text-blue-500 fa-2x"></i>
+                        <div class="ml-4">
+                            <h4 class="text-lg font-medium text-gray-900">Gerenciar Usuários</h4>
+                            <p class="text-gray-600">Adicionar, editar ou remover usuários do sistema</p>
+                        </div>
+                    </div>
+                </a>
+                {% endif %}
+                
+                <a href="{{ url_for('auth.profile') }}" class="block p-6 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all">
+                    <div class="flex items-center">
+                        <i class="fas fa-user-edit text-green-500 fa-2x"></i>
+                        <div class="ml-4">
+                            <h4 class="text-lg font-medium text-gray-900">Atualizar Perfil</h4>
+                            <p class="text-gray-600">Editar suas informações pessoais</p>
+                        </div>
+                    </div>
+                </a>
+
+                <a href="#" @click.prevent="document.location.reload()" class="block p-6 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all">
+                    <div class="flex items-center">
+                        <i class="fas fa-sync text-purple-500 fa-2x"></i>
+                        <div class="ml-4">
+                            <h4 class="text-lg font-medium text-gray-900">Atualizar Dashboard</h4>
+                            <p class="text-gray-600">Recarregar dados do painel</p>
+                        </div>
+                    </div>
+                </a>
+
+                <a href="{{ url_for('main.logout') }}" class="block p-6 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all">
+                    <div class="flex items-center">
+                        <i class="fas fa-sign-out-alt text-red-500 fa-2x"></i>
+                        <div class="ml-4">
+                            <h4 class="text-lg font-medium text-gray-900">Sair do Sistema</h4>
+                            <p class="text-gray-600">Encerrar sua sessão atual</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Alpine.js Initialization -->
+<script>
+    function refreshActivities() {
+        // Add AJAX call to refresh activities
+        const refreshButton = document.querySelector('.fa-sync-alt');
+        refreshButton.classList.add('spin');
+        setTimeout(() => {
+            refreshButton.classList.remove('spin');
+            // Add your AJAX refresh logic here
+        }, 1000);
+    }
+</script>
+{% endblock %}

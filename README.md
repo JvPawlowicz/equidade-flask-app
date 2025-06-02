@@ -1,161 +1,184 @@
-# Equidade - Sistema de Gestão para Clínicas de Atendimento a Pessoas com Deficiência
+# ⚠️ Principais Problemas e Mudanças Necessárias (Auditoria 2025)
+
+Atenção: Esta plataforma requer ajustes para ser totalmente usável e segura. Veja abaixo os principais pontos identificados na auditoria:
+
+## Problemas Atuais
+- **Ambiguidade de Backend:** O README e parte do projeto descrevem um backend Node.js/Express/PostgreSQL, mas há uma implementação Flask/Python ativa (pasta `app/`, `run.py`, `requirements.txt`).
+- **Dependências e Inicialização:** O ambiente Python requer dependências específicas (ver `requirements.txt`) e inicialização via Flask, não Node.js.
+- **Banco de Dados:** Scripts de seed e migração estão em TypeScript (para Node.js), mas o backend Flask espera modelos SQLAlchemy. Não há integração automática entre os dois.
+- **Autenticação:** O fluxo de autenticação Flask está funcional, mas precisa de testes manuais e ajustes para integração total com o frontend.
+- **Proteção de Segurança:** Algumas proteções (CSRF, hash de senha, login_required) estão presentes, mas precisam ser revisadas e testadas.
+- **Modificações em Dependências:** Havia código indevido em `flask_limiter` (corrigido), mas é importante garantir que dependências de terceiros não sejam alteradas manualmente.
+- **Documentação Desatualizada:** O README não reflete o fluxo real de uso para o backend Flask.
+
+## Mudanças Recomendadas
+1. **Escolher e Documentar o Backend Oficial:** Definir se o backend principal será Flask/Python ou Node.js/Express, e remover/reorganizar arquivos para evitar confusão.
+2. **Atualizar o README:** Explicar claramente como rodar o backend Flask (comando, dependências, variáveis de ambiente, criação do banco, seed de usuários admin).
+3. **Padronizar Scripts de Seed:** Criar um comando Python para popular o banco de dados do Flask com usuários de teste/admin.
+4. **Testar e Corrigir Fluxo de Autenticação:** Garantir que login, cadastro, dashboard e logout funcionem ponta-a-ponta.
+5. **Revisar Segurança:** Validar CSRF, hash de senha, proteção de rotas e mensagens flash.
+6. **Remover ou Isolar Código Node.js se não for usado:** Para evitar conflitos e facilitar manutenção.
+7. **Adicionar Testes Automatizados:** Para rotas críticas de autenticação e dashboard.
+
+---
+
+## Como Tornar a Plataforma Usável (Backend Flask)
+
+### 1. Instalação do Backend Flask
+
+```bash
+# No diretório raiz do projeto:
+python -m venv venv
+.\venv\Scripts\activate  # Windows
+pip install -r requirements.txt
+```
+
+### 2. Configuração de Variáveis de Ambiente
+Crie um arquivo `.env` ou defina as variáveis necessárias, por exemplo:
+```
+FLASK_APP=run.py
+FLASK_ENV=development
+SECRET_KEY=sua-chave-secreta
+SQLALCHEMY_DATABASE_URI=sqlite:///equidade.db
+```
+
+### 3. Criação do Banco de Dados
+Abra o shell do Flask e execute:
+```powershell
+$env:FLASK_APP = "run.py"; flask shell
+```
+No shell interativo:
+```python
+from app import db
+from app.models import User
+# Cria as tabelas
+db.create_all()
+```
+
+### 4. (Opcional) Criar Usuário Admin Manualmente
+Você pode rodar o script automático:
+```powershell
+python app/seed_admin.py
+```
+Ou criar manualmente no shell do Flask:
+```python
+from app.models import User
+admin = User(username="admin", email="admin@admin.com")
+admin.set_password("admin123")
+db.session.add(admin)
+db.session.commit()
+```
+
+### 5. Rodar o Servidor Flask
+```powershell
+$env:FLASK_APP = "run.py"; flask run
+```
+Acesse em: http://localhost:5000
+
+### 6. Testar Fluxo de Autenticação
+- Acesse `/login` e `/cadastro` para testar login/cadastro.
+- Após login, acesse `/dashboard` (rota protegida).
+- Teste logout e mensagens flash.
+
+### 7. Recomendações de Organização
+- Se optar pelo backend Flask, remova ou mova para outra pasta os arquivos de Node.js/TypeScript para evitar confusão.
+- Atualize o README para refletir apenas o backend em uso.
+- Implemente um comando Flask CLI para seed de usuários, se desejar automatizar a criação de admins/testes.
+- Adicione testes automatizados com `pytest` e `Flask-Testing`.
+
+---
+
+# Equidade - Sistema de Gestão para Clínicas (Flask/Python)
 
 ## Visão Geral
-
-Equidade é um sistema completo de gestão para clínicas de atendimento a pessoas com deficiência, desenvolvido para otimizar o fluxo de trabalho e melhorar o atendimento aos pacientes. Este sistema integra funcionalidades de agendamento, gestão de prontuários, acompanhamento de evoluções terapêuticas, controle de unidades e salas, sistema de chat interno, e muito mais.
-
-## Principais Funcionalidades
-
-- **Gestão de Pacientes**: Cadastro completo com histórico médico, documentos e evoluções
-- **Agendamento Inteligente**: Sistema avançado de agendamento com alertas e notificações
-- **Controle de Unidades e Salas**: Gerenciamento de múltiplas unidades e disponibilidade de salas
-- **Evoluções Terapêuticas**: Documentação e acompanhamento do progresso dos pacientes
-- **Chat Interno**: Comunicação em tempo real entre profissionais
-- **Gestão de Documentos**: Upload, assinatura e compartilhamento de documentos
-- **Relatórios e Estatísticas**: Dados analíticos para tomada de decisão
-- **Controle de Acesso**: Diferentes níveis de permissão baseados em cargos
-- **Acessibilidade**: Interface adaptada para diferentes necessidades
-- **Suporte Offline**: Funcionalidades disponíveis mesmo sem conexão à internet
+Equidade é um sistema completo de gestão para clínicas de atendimento a pessoas com deficiência, desenvolvido em Python/Flask com foco em segurança, acessibilidade e usabilidade.
 
 ## Tecnologias Utilizadas
+- **Backend**: Python 3.10+ com Flask
+- **Banco de Dados**: SQLite/PostgreSQL com SQLAlchemy
+- **Frontend**: Templates Flask com TailwindCSS e Bootstrap
+- **Segurança**: Flask-Login, Flask-WTF (CSRF), Bcrypt, Flask-Talisman
+- **Rate Limiting**: Flask-Limiter
+- **Testes**: pytest, pytest-cov
 
-- **Frontend**: React, TailwindCSS, Shadcn/UI, React Query
-- **Backend**: Node.js, Express
-- **Banco de Dados**: PostgreSQL com Drizzle ORM
-- **Comunicação em Tempo Real**: WebSockets
-- **PWA**: Progressive Web App com suporte offline
-- **Autenticação**: Sistema de autenticação customizado com controle de sessão
+---
 
-## Requisitos
+## Instalação e Execução
 
-- Node.js 20.x ou superior
-- PostgreSQL 15.x ou superior
-- Navegador moderno (Chrome, Firefox, Safari, Edge)
-
-## Instalação para Desenvolvimento
-
-1. Clone o repositório:
-   ```bash
-   git clone https://github.com/equidade/sistema-clinica.git
-   cd sistema-clinica
-   ```
-
-2. Instale as dependências:
-   ```bash
-   npm install
-   ```
-
-3. Configure as variáveis de ambiente (copie o arquivo .env.example):
-   ```bash
-   cp .env.example .env
-   # Edite o arquivo .env com as configurações do seu ambiente
-   ```
-
-4. Configure o banco de dados:
-   ```bash
-   npm run db:push   # Cria/atualiza as tabelas do banco
-   npm run db:seed   # Popula o banco com dados iniciais
-   ```
-
-5. Inicie o servidor de desenvolvimento:
-   ```bash
-   npm run dev
-   ```
-
-6. Acesse a aplicação:
-   ```
-   http://localhost:5000
-   ```
-
-## Implantação em Produção
-
-Para implantar em produção, recomendamos utilizar o Railway, uma plataforma moderna e simples para hospedagem de aplicações web.
-
-### Arquivos de Configuração do Deploy
-
-O projeto conta com diversos arquivos para otimizar a implantação:
-
-- `railway.json`: Configuração principal para o Railway
-- `.railway/runtime.json`: Configurações de recursos e monitoramento
-- `nixpacks.toml`: Instruções para build do container
-- `Procfile`: Definição do comando de inicialização
-- `nginx.conf`: Configuração do servidor web
-- `scripts/railway-start.sh`: Script de inicialização específico para o Railway
-- `scripts/backup.sh`: Script para backup automático do banco de dados
-- `.github/workflows/railway-deploy.yml`: Configuração para CI/CD com GitHub Actions
-- `static.json`: Configuração para ativos estáticos
-- `.dockerignore`: Lista de arquivos a serem ignorados no build
-- `.gitattributes`: Configuração de atributos de arquivo
-- `.nvmrc`: Definição da versão do Node.js
-
-### Deployment com GitHub Actions
-
-Para configurar deploy automático via GitHub Actions:
-
-1. Faça fork do repositório para sua conta GitHub
-2. Crie um token de API no Railway (Settings > API > New Token)
-3. Adicione o token como um segredo no GitHub (Settings > Secrets > RAILWAY_TOKEN)
-4. Cada push para a branch principal iniciará automaticamente uma implantação
-
-### Deployment Manual
-
-1. Instale a CLI do Railway: `npm install -g @railway/cli`
-2. Faça login: `railway login`
-3. Vincule ao projeto: `railway link`
-4. Implante: `railway up`
-
-Para instruções detalhadas, consulte o [Guia de Implantação no Railway](docs/railway_deployment_guide.md).
-
-## Estrutura do Projeto
-
-```
-├── client/                 # Frontend da aplicação
-│   ├── public/             # Arquivos públicos
-│   └── src/                # Código-fonte do frontend
-│       ├── components/     # Componentes React
-│       ├── hooks/          # React Hooks customizados
-│       ├── lib/            # Utilitários e funções
-│       └── pages/          # Páginas da aplicação
-├── server/                 # Backend da aplicação
-│   ├── index.ts            # Ponto de entrada
-│   ├── routes.ts           # Definição de rotas da API
-│   └── auth.ts             # Sistema de autenticação
-├── db/                     # Configuração do banco de dados
-│   ├── index.ts            # Conexão com banco
-│   └── seed.ts             # População inicial
-├── shared/                 # Código compartilhado
-│   └── schema.ts           # Schemas do banco de dados
-├── scripts/                # Scripts de utilidade
-└── docs/                   # Documentação
+### 1. Instale as dependências
+```powershell
+python -m venv venv
+.\venv\Scripts\activate
+pip install -r requirements.txt
 ```
 
-## Usuários Padrão
+### 2. Configure as variáveis de ambiente
+Crie um arquivo `.env` na raiz do projeto:
+```
+SECRET_KEY=sua-chave-secreta
+DATABASE_URL=sqlite:///instance/db.sqlite
+FLASK_ENV=development
+```
 
-Para testes e desenvolvimento, os seguintes usuários são criados durante o seed:
+### 3. Inicialize o banco de dados
+```powershell
+python app/seed_admin.py  # Cria admin padrão
+# ou
+python -m flask db upgrade  # Se usar Flask-Migrate
+```
 
-- **Administrador**: admin / admin123
-- **Coordenador**: coordenador / coord123
-- **Profissional**: amanda / amanda123, carlos / carlos123, juliana / juliana123
-- **Estagiário**: estagiario / estagiario123
-- **Secretário**: secretaria / secretaria123
+### 4. Execute o servidor
+```powershell
+$env:FLASK_APP = "run.py"; flask run
+```
+Acesse: http://localhost:5000
 
-## Contribuição
+---
 
-Para contribuir com o desenvolvimento:
+## Testes Automatizados
 
-1. Crie um fork do repositório
-2. Crie um branch para sua feature (`git checkout -b feature/nome-da-feature`)
-3. Faça commit das suas alterações (`git commit -m 'Adiciona nova feature'`)
-4. Faça push para o branch (`git push origin feature/nome-da-feature`)
-5. Abra um Pull Request
+- Para rodar os testes:
+```powershell
+python -m pytest
+```
+- Para cobertura de código:
+```powershell
+python -m pytest --cov=app --cov-report=term-missing
+```
 
-## Suporte
+---
 
-Para obter suporte, entre em contato pelo e-mail suporte@equidade.com.br ou abra uma issue no repositório do projeto.
+## Auditoria e Pendências
 
-## Licença
+- Veja o arquivo `Kayron - Breno Prog/auditoria_pendente.md` para detalhes de erros, validações e recomendações.
+- Arquivos Node.js/TypeScript legados estão listados em `_legacy_node_typescript_files.txt`.
 
-Este projeto está licenciado sob a licença MIT - veja o arquivo LICENSE para mais detalhes.
+---
+
+## Observações
+- O backend oficial é Flask/Python. Arquivos Node.js/TypeScript não são mais utilizados.
+- Para dúvidas ou contribuições, consulte a documentação na pasta `docs/`.
+
+---
+
+# Guia rápido para deploy no Render.com (Flask)
+
+1. **Procfile**: já configurado para `web: gunicorn run:app`
+2. **requirements.txt**: já inclui gunicorn e dependências Flask
+3. **nixpacks.toml**: já configurado para Python/Flask
+4. **.env**: configure as variáveis de ambiente no painel do Render (use `.env` como exemplo)
+5. **Banco de dados**: por padrão usa SQLite, mas recomenda-se PostgreSQL em produção (ajuste `DATABASE_URL`)
+6. **Diretório `instance/`**: Render precisa de permissão de escrita para SQLite, ou use PostgreSQL
+7. **Comando de inicialização**: Render usará automaticamente o comando do Procfile
+
+**Passos:**
+- Faça push do repositório para o GitHub
+- Crie um novo serviço Web no Render, conecte ao repositório
+- Defina as variáveis de ambiente conforme `.env`
+- (Opcional) Ajuste `DATABASE_URL` para PostgreSQL
+- Deploy!
+
+Para dúvidas, consulte a [documentação oficial do Render para Python](https://render.com/docs/deploy-flask).
 
 ---
 
