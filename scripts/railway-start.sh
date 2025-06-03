@@ -51,6 +51,9 @@ fi
 # Criar diretórios necessários
 mkdir -p instance uploads
 
+# Ativar ambiente virtual
+. /opt/venv/bin/activate
+
 # Inicializar banco de dados se necessário
 if [ -f "app/seed_admin.py" ]; then
     echo "🌱 Rodando seed_admin.py para criar admin padrão (ignora erro se já existir)"

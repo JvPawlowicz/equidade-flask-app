@@ -1,20 +1,25 @@
 [phases.setup]
-nixPkgs = ["python310", "gcc", "git"]
+nixPkgs = ["python310", "python310Packages.pip", "gcc", "git"]
 aptPkgs = ["postgresql-client", "openssl", "ca-certificates"]
 
 [phases.install]
 cmds = [
-  "python -m pip install --upgrade pip",
-  "python -m pip install -r requirements.txt"
+  "python -m venv /opt/venv",
+  ". /opt/venv/bin/activate",
+  "pip install --upgrade pip setuptools wheel",
+  "pip install -r requirements.txt"
 ]
 
 [phases.build]
 cmds = [
+  ". /opt/venv/bin/activate",
   "python app/seed_admin.py || true"
 ]
 
 [start]
-cmd = "gunicorn run:app"
+cmd = ". /opt/venv/bin/activate && exec gunicorn run:app --bind 0.0.0.0:$PORT"
 
-[variables]
-NODE_ENV = "production"
+[environment]
+PYTHONPATH = "/app"
+VIRTUAL_ENV = "/opt/venv"
+PATH = "/opt/venv/bin:${PATH}"
