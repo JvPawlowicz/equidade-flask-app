@@ -1,5 +1,5 @@
 [phases.setup]
-nixPkgs = ["python310", "python310Packages.pip", "gcc", "git"]
+nixPkgs = ["python310", "python310Packages.pip", "gcc"]
 aptPkgs = ["postgresql-client", "openssl", "ca-certificates"]
 
 [phases.install]
@@ -13,6 +13,7 @@ cmds = [
 [phases.build]
 cmds = [
   ". /opt/venv/bin/activate",
+  "flask db upgrade || true",
   "python app/seed_admin.py || true"
 ]
 
