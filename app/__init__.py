@@ -68,8 +68,10 @@ def create_app():
 
     # Registrar blueprints
     from .routes import main
+    from .routes.health import health
     from .auth.routes import auth
     app.register_blueprint(main)
+    app.register_blueprint(health)  # Registra blueprint de health check
     app.register_blueprint(auth, url_prefix='/auth')
 
     # Registrar comandos CLI

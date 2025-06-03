@@ -4,61 +4,48 @@
 
 set -e
 
-echo "🚀 Preparando inicialização no Railway..."
+echo "🚀 Iniciando deploy no Railway..."
 
-# Verificar se o ambiente de produção está configurado
-if [ "$NODE_ENV" != "production" ]; then
-  export NODE_ENV="production"
-  echo "⚠️ NODE_ENV não definido, configurando para 'production'"
-fi
+# Ativar ambiente virtual
+echo "📦 Ativando ambiente virtual..."
+. /opt/venv/bin/activate
 
-# Verificar se a variável DATABASE_URL está definida
+# Verificar variáveis de ambiente
+echo "🔍 Verificando variáveis de ambiente..."
 if [ -z "$DATABASE_URL" ]; then
-  echo "❌ ERRO: DATABASE_URL não está definida"
-  exit 1
+    echo "❌ ERROR: DATABASE_URL não está definida"
+    exit 1
 fi
 
-# Verificar se a variável SESSION_SECRET está definida
-if [ -z "$SESSION_SECRET" ]; then
-  echo "❌ ERRO: SESSION_SECRET não está definida"
-  exit 1
-fi
-
-# Criar diretório de uploads se não existir
-if [ ! -d "uploads" ]; then
-  echo "📁 Criando diretório de uploads..."
-  mkdir -p uploads
-fi
-
-# Verificar e atualizar esquema do banco de dados
-echo "📊 Verificando banco de dados..."
-DB_STATUS=$(npx drizzle-kit check:pg --config=./drizzle.production.config.ts 2>&1)
-
-if [[ $DB_STATUS == *"ERROR"* ]] || [[ $DB_STATUS == *"migrations"* ]]; then
-  echo "⚠️ Esquema do banco de dados precisa ser atualizado"
-  echo "🔄 Aplicando alterações..."
-  npx drizzle-kit push --force --config=./drizzle.production.config.ts
-
-  # Verificar se o banco de dados está vazio
-  if [[ $DB_STATUS == *"tables created"* ]] || [ "$FORCE_SEED" = "true" ]; then
-    echo "🌱 Populando banco de dados..."
-    NODE_ENV=production tsx db/seed.ts
-  fi
-else
-  echo "✅ Banco de dados OK - Nenhuma alteração necessária"
+if [ -z "$SECRET_KEY" ]; then
+    echo "⚠️ WARNING: SECRET_KEY não definida, usando valor padrão"
+    export SECRET_KEY="dev-key-change-this"
 fi
 
 # Criar diretórios necessários
-mkdir -p instance uploads
+echo "📁 Criando diretórios..."
+mkdir -p instance uploads/documents uploads/profiles logs
 
-# Ativar ambiente virtual
-. /opt/venv/bin/activate
+# Aguardar banco de dados (se for PostgreSQL)
+if [[ $DATABASE_URL == postgresql* ]]; then
+    echo "⏳ Aguardando banco de dados..."
+    for i in {1..30}; do
+        python -c "from sqlalchemy import create_engine; create_engine('$DATABASE_URL').connect()" && break
+        echo "Tentativa $i/30"
+        sleep 1
+    done
+fi
+
+# Aplicar migrações do banco de dados
+echo "🔄 Aplicando migrações..."
+flask db upgrade || true
 
 # Inicializar banco de dados se necessário
 if [ -f "app/seed_admin.py" ]; then
-    echo "🌱 Rodando seed_admin.py para criar admin padrão (ignora erro se já existir)"
+    echo "🌱 Criando usuário admin padrão..."
     python app/seed_admin.py || true
 fi
 
-# Iniciar o servidor Flask com Gunicorn
-exec gunicorn run:app --bind 0.0.0.0:$PORT
+# Iniciar Gunicorn
+echo "🚀 Iniciando servidor..."
+exec gunicorn --workers=2 --threads=4 --timeout=0 --access-logfile=- --error-logfile=- --bind=0.0.0.0:$PORT run:app
