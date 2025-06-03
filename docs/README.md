@@ -1,64 +1,46 @@
-# Documentação do Sistema Equidade Clínica
+# Documentação - Sistema Equidade
 
-Bem-vindo à documentação completa do Sistema Equidade Clínica, uma plataforma de gerenciamento para clínicas multidisciplinares especializadas no atendimento a pessoas com deficiência.
+## Estrutura do Projeto
+```
+app/
+├── auth/         # Autenticação e autorização
+├── models/       # Modelos do banco de dados
+├── routes/       # Rotas da aplicação
+├── services/     # Lógica de negócio
+├── static/       # Arquivos estáticos (CSS/JS)
+├── templates/    # Templates HTML
+└── utils/        # Utilitários
+```
 
-## Documentos Disponíveis
+## Tecnologias
+- Backend: Python/Flask
+- Database: PostgreSQL/SQLite
+- ORM: SQLAlchemy
+- Autenticação: Flask-Login
+- Segurança: Flask-Talisman, Flask-WTF
 
-### Implantação e Instalação
+## Guias
+- [Deployment Railway](railway_deployment_guide.md)
+- [Permissões](permissoes_por_perfil.md)
+- [Recursos de Acessibilidade](recursos_acessibilidade.md)
+- [Funcionalidades](funcionalidades_implementadas.md)
 
-- [**Manual de Instalação no cPanel**](instalacao_cpanel.md) - Instruções detalhadas para implantação em hospedagem compartilhada com cPanel
-- [**Script de Preparação para Implantação**](preparar_implantacao.sh) - Script para preparar os arquivos para implantação
-- [**Comandos de Implantação**](comandos_implantacao.sh) - Script com os comandos necessários para instalação em produção
+## Desenvolvimento
+1. Clone o repositório
+2. Configure ambiente virtual Python
+3. Instale dependências: `pip install -r requirements.txt`
+4. Configure `.env`
+5. Rode migrations: `flask db upgrade`
+6. Inicie servidor: `flask run`
 
-### Funcionalidades e Recursos
+## Testes
+```bash
+pytest
+pytest --cov=app
+```
 
-- [**Funcionalidades Implementadas**](funcionalidades_implementadas.md) - Lista completa das funcionalidades disponíveis no sistema
-- [**Permissões por Perfil de Acesso**](permissoes_por_perfil.md) - Detalhamento das permissões de cada nível de acesso no sistema
-- [**Recursos de Acessibilidade**](recursos_acessibilidade.md) - Guia dos recursos de acessibilidade disponíveis no sistema
-- [**Guia de Recursos Mobile e Offline**](guia_mobile_offline.md) - Instruções para uso do sistema em dispositivos móveis e sem conexão
-
-### Credenciais Padrão
-
-| Perfil de Acesso | Usuário | Senha |
-|------------------|---------|-------|
-| Administrador | admin | admin123 |
-| Coordenador | coordenador | coord123 |
-| Profissional (Psicólogo) | amanda | amanda123 |
-| Profissional (Fisioterapeuta) | carlos | carlos123 |
-| Profissional (Fonoaudiólogo) | juliana | juliana123 |
-| Estagiário | estagiario | estagiario123 |
-| Secretário(a) | secretaria | secretaria123 |
-
-**IMPORTANTE**: Altere as senhas imediatamente após o primeiro acesso!
-
-## Visão Geral do Sistema
-
-O Equidade Clínica é uma plataforma completa para gerenciamento de clínicas multidisciplinares, desenvolvida com foco em:
-
-- **Acessibilidade:** Interface projetada para ser acessível a todos os usuários
-- **Mobilidade:** Funcionamento otimizado em dispositivos móveis
-- **Disponibilidade:** Recursos offline para garantir acesso mesmo sem internet
-- **Segurança:** Proteção de dados sensíveis de pacientes e profissionais
-- **Colaboração:** Ferramentas para trabalho em equipe multidisciplinar
-
-## Arquitetura Técnica
-
-O sistema foi desenvolvido utilizando tecnologias modernas:
-
-- **Frontend:** React.js, TypeScript, TailwindCSS, Shadcn UI
-- **Backend:** Node.js, Express, WebSockets
-- **Banco de Dados:** PostgreSQL com Drizzle ORM
-- **Autenticação:** Sistema de sessão seguro com Passport.js
-- **PWA:** Progressive Web App para experiência mobile nativa
-
-## Suporte e Contato
-
-Para assistência técnica, entre em contato através dos canais:
-
-- **E-mail de Suporte:** suporte@equidadeclinica.com.br
-- **Telefone:** (11) XXXX-XXXX
-- **Horário de Atendimento:** Segunda a Sexta, 9h às 18h
-
----
-
-© 2025 Equidade Clínica - Todos os direitos reservados
+## Deploy
+- Uso do Gunicorn em produção
+- PostgreSQL para banco de dados
+- Logs em JSON
+- Monitoramento via `/health`

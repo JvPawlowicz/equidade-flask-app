@@ -1,42 +1,33 @@
 # Python
 __pycache__/
 *.py[cod]
-*.pyo
-*.pyd
-*.pyc
-*.pdb
+*.so
+.Python
+venv/
+env/
 *.egg-info/
 *.egg
-*.log
-
-# Virtualenv
-venv/
-ENV/
-.env
-.env.*
-
-# IDEs
-.vscode/
-.idea/
-*.swp
-
-# macOS
-.DS_Store
-
-# Railway/Render
-instance/*.db
-uploads/
-
-# Testes
 .coverage
 htmlcov/
 
-# Outros
-*.sqlite3
+# Arquivos de ambiente
+.env
+.env.*
+!.env.example
 
-# Node/JS legacy
-node_modules
-dist
-server/public
-vite.config.ts.*
-*.tar.gz
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Arquivos de aplicação
+instance/*.db
+instance/*.sqlite
+logs/
+uploads/*
+!uploads/.gitkeep

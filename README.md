@@ -95,20 +95,20 @@ Equidade é um sistema completo de gestão para clínicas de atendimento a pesso
 
 ## Tecnologias Utilizadas
 - **Backend**: Python 3.10+ com Flask
-- **Banco de Dados**: SQLite/PostgreSQL com SQLAlchemy
-- **Frontend**: Templates Flask com TailwindCSS e Bootstrap
+- **Banco de Dados**: PostgreSQL com SQLAlchemy
+- **Frontend**: Templates Flask com Bootstrap
 - **Segurança**: Flask-Login, Flask-WTF (CSRF), Bcrypt, Flask-Talisman
 - **Rate Limiting**: Flask-Limiter
 - **Testes**: pytest, pytest-cov
 
----
-
 ## Instalação e Execução
 
 ### 1. Instale as dependências
-```powershell
+```bash
 python -m venv venv
-.\venv\Scripts\activate
+source venv/bin/activate  # Linux/Mac
+# ou
+.\venv\Scripts\activate  # Windows
 pip install -r requirements.txt
 ```
 
@@ -116,34 +116,48 @@ pip install -r requirements.txt
 Crie um arquivo `.env` na raiz do projeto:
 ```
 SECRET_KEY=sua-chave-secreta
-DATABASE_URL=sqlite:///instance/db.sqlite
+CSRF_SECRET=sua-chave-csrf
+DATABASE_URL=sqlite:///instance/equidade.db
 FLASK_ENV=development
 ```
 
 ### 3. Inicialize o banco de dados
-```powershell
+```bash
+flask db upgrade
 python app/seed_admin.py  # Cria admin padrão
-# ou
-python -m flask db upgrade  # Se usar Flask-Migrate
 ```
 
 ### 4. Execute o servidor
-```powershell
-$env:FLASK_APP = "run.py"; flask run
+```bash
+flask run
 ```
 Acesse: http://localhost:5000
 
----
+## Deploy
 
-## Testes Automatizados
+### Railway
+1. Configure as variáveis de ambiente no painel do Railway
+2. O deploy será automático a partir do GitHub
+3. O app usa gunicorn em produção
 
-- Para rodar os testes:
-```powershell
-python -m pytest
+## Desenvolvimento
+
+### Estrutura do Projeto
 ```
-- Para cobertura de código:
-```powershell
-python -m pytest --cov=app --cov-report=term-missing
+app/
+├── auth/         # Autenticação e autorização
+├── models/       # Modelos SQLAlchemy
+├── routes/       # Rotas e views
+├── services/     # Lógica de negócio
+├── static/       # Arquivos estáticos
+├── templates/    # Templates Jinja2
+└── utils/        # Utilitários
+```
+
+### Testes
+```bash
+pytest
+pytest --cov=app  # Com cobertura
 ```
 
 ---

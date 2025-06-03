@@ -22,22 +22,17 @@ mkdir -p $DIRETORIO
 cd $DIRETORIO
 
 # ========================================
-# 2. Instalação de dependências Node.js
+# 2. Atualização do código-fonte
 # ========================================
-echo "Instalando dependências..."
-npm install --production
+echo "Atualizando código-fonte..."
+git pull origin main
 
 # ========================================
-# 3. Configuração do arquivo .env
+# 3. Instalação de dependências Python
 # ========================================
-echo "Configurando variáveis de ambiente..."
-cat > .env << EOL
-NODE_ENV=production
-PORT=$PORTA_NODE
-DATABASE_URL=postgres://$DB_USER:$DB_PASS@$DB_HOST:5432/$DB_NAME
-SESSION_SECRET=$(openssl rand -hex 32)
-WEBSITE_URL=https://$DOMINIO
-EOL
+echo "Instalando dependências..."
+source venv/bin/activate || python -m venv venv
+pip install -r requirements.txt
 
 # ========================================
 # 4. Configuração do banco de dados
@@ -113,6 +108,14 @@ pm2 start ecosystem.config.js
 echo "Configurando inicialização automática..."
 pm2 save
 pm2 startup
+
+# Reiniciar Gunicorn (se necessário)
+echo "Reiniciando Gunicorn..."
+sudo systemctl restart gunicorn
+
+# Verificar status
+echo "Verificando status da aplicação..."
+curl http://localhost:5000/health
 
 echo ""
 echo "=============================================================="
